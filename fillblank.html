@@ -743,7 +743,10 @@ function diverDive(){
 async function callAI(systemPrompt, userPrompt, maxTokens=2000){
   const res = await fetch(PROXY, {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization': 'Bearer ' + S_KEY   // 👉 就是新增了这一行！注意有个空格
+    },
     body: JSON.stringify({
       messages:[
         {role:'system', content:systemPrompt},
