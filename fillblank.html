@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>句子填空 · FillBlank</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#060612;--panel:#0f0f22;--border:#252548;
+  --red:#e94560;--cyan:#00d4ff;--gold:#ffd700;
+  --green:#4eff91;--err:#ff4444;--purple:#b57bee;--orange:#ff8c42;
+  --text:#fff;--dim:#606080;--px:'Press Start 2P',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;overflow:hidden}
+.screen{display:none;position:fixed;inset:0;z-index:1;flex-direction:column;align-items:center;justify-content:center}
+.screen.active{display:flex}
+.grid-bg::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* TOAST */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);font-family:var(--px);font-size:9px;padding:12px 22px;border:2px solid;border-radius:3px;z-index:9999;animation:toastIn 2.8s ease forwards;white-space:nowrap;pointer-events:none}
+.toast.ok{color:var(--green);border-color:var(--green);background:rgba(78,255,145,.1)}
+.toast.err{color:var(--err);border-color:var(--err);background:rgba(255,68,68,.1)}
+@keyframes toastIn{0%{top:-50px;opacity:0}12%{top:20px;opacity:1}80%{top:20px;opacity:1}100%{top:-50px;opacity:0}}
+
+/* BUTTONS */
+.btn{font-family:var(--px);font-size:clamp(7px,1.2vw,9px);letter-spacing:1px;padding:clamp(10px,1.8vw,13px) clamp(14px,2.5vw,20px);border:2px solid;background:transparent;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;color:#fff;white-space:nowrap}
+.btn::after{content:'';position:absolute;inset:0;background:currentColor;opacity:0;transition:.15s}
+.btn:hover::after{opacity:.1}
+.btn:active{transform:scale(.95)}
+.btn-sm{padding:8px 13px;font-size:7px}
+.btn-xs{padding:5px 9px;font-size:6px}
+.btn-red{color:var(--red);border-color:var(--red);box-shadow:0 0 12px rgba(233,69,96,.2)}
+.btn-cyan{color:var(--cyan);border-color:var(--cyan);box-shadow:0 0 12px rgba(0,212,255,.15)}
+.btn-gold{color:var(--gold);border-color:var(--gold)}
+.btn-purple{color:var(--purple);border-color:var(--purple)}
+.btn-gray{color:var(--dim);border-color:var(--dim)}
+.btn-orange{color:var(--orange);border-color:var(--orange)}
+.btn-red:hover{box-shadow:0 0 28px rgba(233,69,96,.5)}
+.btn-cyan:hover{box-shadow:0 0 28px rgba(0,212,255,.4)}
+
+/* INPUTS */
+.inp{width:100%;background:#040410;border:2px solid var(--border);color:var(--text);padding:12px 14px;font-size:15px;font-family:inherit;border-radius:3px;outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--cyan);box-shadow:0 0 10px rgba(0,212,255,.1)}
+.ig{margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--dim);margin-bottom:5px}
+select{width:100%;background:#040410;border:2px solid var(--border);color:var(--text);padding:12px 14px;font-size:15px;font-family:inherit;border-radius:3px;outline:none}
+
+.panel{background:var(--panel);border:2px solid var(--border);border-radius:6px;padding:clamp(16px,3vw,28px);width:100%;max-width:500px}
+.panel-title{font-family:var(--px);font-size:clamp(8px,1.4vw,10px);color:var(--cyan);text-shadow:0 0 8px var(--cyan);margin-bottom:18px;padding-bottom:12px;border-bottom:2px solid var(--border);letter-spacing:2px}
+
+/* S-TITLE */
+#s-title{gap:18px;padding:20px;background:var(--bg)}
+.title-logo{font-size:clamp(56px,12vw,80px);animation:float 3s ease-in-out infinite;filter:drop-shadow(0 0 24px rgba(0,212,255,.6));position:relative;z-index:1}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.title-main{font-family:var(--px);font-size:clamp(12px,2.5vw,18px);color:var(--cyan);text-shadow:0 0 24px var(--cyan);letter-spacing:3px;position:relative;z-index:1}
+.title-sub{font-family:var(--px);font-size:clamp(6px,1vw,8px);color:var(--dim);letter-spacing:3px;position:relative;z-index:1}
+.pack-item{background:var(--bg);border:2px solid var(--border);border-radius:5px;padding:14px 16px;cursor:pointer;transition:all .2s;margin-bottom:8px;display:flex;align-items:center;gap:14px}
+.pack-item:hover{border-color:var(--cyan)}
+.pack-item.sel{border-color:var(--red);background:rgba(233,69,96,.05)}
+.pack-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.pack-meta{font-size:12px;color:var(--dim)}
+.pack-progress{font-size:11px;color:var(--gold);margin-top:3px}
+.pack-badge{font-family:var(--px);font-size:6px;padding:3px 7px;border-radius:2px;white-space:nowrap;flex-shrink:0}
+.pack-badge.ready{color:var(--green);border:1px solid var(--green)}
+.pack-badge.pending{color:var(--gold);border:1px solid var(--gold)}
+
+/* S-STAGE-MAP */
+#s-stage-map{padding:0;align-items:stretch;justify-content:flex-start;background:var(--bg)}
+.map-header{background:rgba(6,6,18,.95);border-bottom:2px solid var(--border);padding:12px clamp(14px,3vw,24px);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0}
+.map-title{font-family:var(--px);font-size:clamp(8px,1.3vw,10px);color:var(--cyan);letter-spacing:2px}
+.map-content{flex:1;overflow-y:auto;padding:clamp(14px,3vw,24px)}
+.map-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.stage-card{background:var(--panel);border:2px solid var(--border);border-radius:6px;padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s}
+.stage-card.done{border-color:rgba(78,255,145,.4);background:rgba(78,255,145,.04)}
+.stage-card.done:hover{border-color:var(--green);box-shadow:0 4px 16px rgba(78,255,145,.15)}
+.stage-card.locked{opacity:.3;cursor:not-allowed}
+.stage-card.available{border-color:rgba(233,69,96,.4)}
+.stage-card.available:hover{border-color:var(--red);box-shadow:0 4px 16px rgba(233,69,96,.2);transform:translateY(-2px)}
+.stage-num{font-family:var(--px);font-size:9px;color:var(--dim);margin-bottom:8px}
+.stage-creature{font-size:26px;margin-bottom:6px;display:block}
+.stage-status{font-family:var(--px);font-size:6px;letter-spacing:1px}
+.stage-card.done .stage-status{color:var(--green)}
+.stage-card.available .stage-status{color:var(--red)}
+.stage-card.locked .stage-status{color:var(--dim)}
+.stage-words{font-size:10px;color:var(--dim);margin-top:3px}
+
+/* S-GAME */
+#s-game{flex-direction:row;align-items:stretch;padding:0;background:var(--bg)}
+.ocean{flex:0 0 40%;max-width:40%;background:linear-gradient(180deg,#020810 0%,#031020 50%,#041830 100%);display:flex;flex-direction:column;align-items:center;padding:12px 10px;gap:10px;position:relative;overflow:hidden}
+.bubble{position:absolute;border-radius:50%;border:1px solid rgba(0,212,255,.2);animation:bubbleRise linear infinite;pointer-events:none}
+@keyframes bubbleRise{0%{transform:translateY(0);opacity:.5}100%{transform:translateY(-110vh);opacity:0}}
+.beam{position:absolute;top:0;width:2px;background:linear-gradient(180deg,rgba(0,212,255,.15),transparent);animation:beamSway 6s ease-in-out infinite;pointer-events:none}
+@keyframes beamSway{0%,100%{transform:skewX(-8deg);opacity:.7}50%{transform:skewX(8deg);opacity:1}}
+
+.ocean-top{width:100%;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;position:relative;z-index:2}
+.score-px{font-family:var(--px);font-size:clamp(8px,1.5vw,11px);color:var(--gold);text-shadow:0 0 8px var(--gold)}
+.combo-px{font-family:var(--px);font-size:clamp(7px,1.2vw,9px);color:var(--orange)}
+
+/* 氧气条 - 压迫感核心 */
+.o2-zone{width:100%;flex-shrink:0;position:relative;z-index:2}
+.o2-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.o2-label{font-family:var(--px);font-size:8px;color:var(--cyan);letter-spacing:2px}
+.o2-pct{font-family:var(--px);font-size:8px;color:var(--cyan)}
+.o2-track{height:16px;background:rgba(0,212,255,.06);border:2px solid rgba(0,212,255,.2);border-radius:8px;overflow:hidden}
+.o2-bar{height:100%;border-radius:6px;transition:width .6s ease;background:linear-gradient(90deg,var(--cyan),#00ff88)}
+.o2-bar.warn{background:linear-gradient(90deg,#ff8800,#ffcc00);animation:o2pulse .8s ease-in-out infinite}
+.o2-bar.danger{background:linear-gradient(90deg,var(--err),#ff8800);animation:o2pulse .4s ease-in-out infinite}
+@keyframes o2pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5)}}
+.o2-warn{font-family:var(--px);font-size:7px;color:var(--err);text-align:center;margin-top:4px;animation:blink .5s ease-in-out infinite;display:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+
+.diver-zone{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:2;flex:1;justify-content:center}
+.diver-el{font-size:clamp(40px,8vw,60px);display:block;animation:diverFloat 2.2s ease-in-out infinite;user-select:none}
+@keyframes diverFloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+.diver-name{font-family:var(--px);font-size:7px;color:var(--cyan);letter-spacing:2px}
+.diver-pet{font-size:18px;animation:petBob 1.6s ease-in-out infinite}
+@keyframes petBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+.depth-meter{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;z-index:2}
+.depth-track{width:6px;height:100px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15);border-radius:3px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end}
+.depth-fill{width:100%;border-radius:2px;transition:height .5s ease;background:linear-gradient(to top,var(--cyan),var(--purple))}
+.depth-lbl{font-family:var(--px);font-size:6px;color:var(--dim)}
+
+.creatures{display:flex;justify-content:space-around;width:100%;flex-shrink:0;position:relative;z-index:2;padding-bottom:4px}
+.creature-item{text-align:center;transition:all .3s}
+.creature-emoji{font-size:clamp(18px,3.5vw,26px);display:block;transition:all .3s}
+.creature-item.cur .creature-emoji{filter:drop-shadow(0 0 8px var(--cyan));transform:scale(1.3)}
+.creature-item.locked{opacity:.2}
+.creature-lbl{font-family:var(--px);font-size:5px;color:var(--dim);margin-top:3px}
+
+.fx-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:10}
+.flash-ok{position:absolute;inset:0;background:rgba(78,255,145,.18);animation:ff .35s ease forwards}
+.flash-err{position:absolute;inset:0;background:rgba(255,68,68,.22);animation:ff .35s ease forwards}
+@keyframes ff{0%{opacity:1}100%{opacity:0}}
+.particle{position:absolute;border-radius:50%;animation:pfly .7s ease forwards;pointer-events:none}
+@keyframes pfly{0%{opacity:1;transform:translate(0,0)}100%{opacity:0;transform:translate(var(--tx),var(--ty))}}
+.score-pop{position:absolute;font-family:var(--px);font-size:clamp(12px,2vw,16px);color:var(--gold);text-shadow:0 0 8px var(--gold);pointer-events:none;animation:spop .9s ease forwards}
+@keyframes spop{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-70px)}}
+
+/* 右侧题目区 */
+.quiz-zone{flex:1;display:flex;flex-direction:column;background:var(--bg);border-left:2px solid var(--border);overflow-y:auto;padding:clamp(12px,2vw,18px);gap:10px}
+.quiz-header{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.stage-lbl{font-family:var(--px);font-size:7px;color:var(--dim);letter-spacing:1px;white-space:nowrap}
+.prog-wrap{flex:1}
+.prog-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--dim);margin-bottom:3px}
+.prog-track{height:6px;background:var(--panel);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;transition:width .4s ease}
+.step-badge{font-family:var(--px);font-size:7px;white-space:nowrap;padding:4px 8px;border-radius:2px;border:1px solid}
+.s1{color:var(--cyan);border-color:var(--cyan)}
+.s2{color:var(--purple);border-color:var(--purple)}
+
+/* 语境提示 - 不显示英文单词！*/
+.ctx-card{background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.15);border-left:3px solid var(--cyan);border-radius:5px;padding:12px 14px;flex-shrink:0}
+.ctx-label{font-family:var(--px);font-size:7px;color:var(--dim);letter-spacing:2px;margin-bottom:6px}
+.ctx-cn{font-size:clamp(16px,2.8vw,20px);color:var(--text);font-weight:600;line-height:1.6}
+
+.sent-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:clamp(14px,2.5vw,20px);flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px}
+.sent-hint{font-family:var(--px);font-size:7px;color:var(--dim);letter-spacing:2px}
+.sent-en{font-size:clamp(17px,3vw,22px);line-height:2.1;color:var(--text);font-weight:600}
+.blank{display:inline-block;min-width:90px;border-bottom:3px solid var(--red);text-align:center;color:var(--red);padding:0 6px;font-weight:700}
+
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:9px;flex-shrink:0}
+.opt{padding:clamp(13px,2.5vw,17px) clamp(10px,1.8vw,14px);border:2px solid var(--border);border-radius:5px;background:var(--panel);font-size:clamp(15px,2.5vw,18px);color:var(--text);cursor:pointer;transition:all .15s;text-align:left;font-family:inherit;display:flex;align-items:center;gap:9px;font-weight:500}
+.opt:hover:not(:disabled){border-color:var(--cyan);background:rgba(0,212,255,.06);transform:translateY(-2px)}
+.opt.ok{border-color:var(--green)!important;background:rgba(78,255,145,.1)!important;color:var(--green)}
+.opt.fail{border-color:var(--err)!important;background:rgba(255,68,68,.08)!important;color:var(--err)}
+.opt:disabled{cursor:default}
+.opt-key{font-family:var(--px);font-size:7px;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--border);flex-shrink:0}
+
+.spell-zone{display:none;flex-direction:column;gap:10px;flex-shrink:0}
+.spell-prompt{font-size:clamp(16px,2.8vw,20px);color:var(--text);font-weight:600;line-height:1.7;text-align:center}
+.spell-prompt em{color:var(--purple);font-style:normal}
+.spell-fb{font-family:var(--px);font-size:9px;text-align:center;min-height:18px}
+.inp-spell{font-size:clamp(18px,3vw,24px);letter-spacing:4px;text-align:center;border-color:var(--purple)}
+.inp-spell:focus{border-color:var(--purple);box-shadow:0 0 16px rgba(181,123,238,.2)}
+
+.hint-card{background:rgba(233,69,96,.05);border:2px solid var(--red);border-radius:5px;padding:14px;flex-shrink:0;display:none;animation:su .25s ease}
+@keyframes su{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+.hint-title{font-family:var(--px);font-size:8px;color:var(--red);margin-bottom:10px;letter-spacing:1px}
+.hint-step{font-size:clamp(13px,2vw,14px);line-height:1.8;margin-bottom:7px}
+.hint-step strong{color:var(--cyan)}
+.hint-gp{font-size:clamp(12px,1.8vw,14px);color:var(--gold);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);line-height:1.6}
+
+/* S-RESULT */
+#s-result{padding:20px;gap:16px;overflow-y:auto;background:var(--bg)}
+.result-card{background:var(--panel);border:2px solid var(--border);border-radius:7px;padding:clamp(18px,3.5vw,28px);width:100%;max-width:580px;position:relative;z-index:1}
+.result-title{font-family:var(--px);font-size:clamp(10px,2vw,13px);color:var(--gold);text-shadow:0 0 12px var(--gold);margin-bottom:18px;text-align:center;letter-spacing:2px}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.stat-box{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;text-align:center}
+.stat-num{font-family:var(--px);font-size:clamp(13px,2.2vw,18px);display:block;margin-bottom:5px}
+.stat-lbl{font-size:11px;color:var(--dim)}
+.err-item{background:rgba(255,68,68,.04);border:1px solid rgba(255,68,68,.18);border-radius:4px;padding:10px 12px;margin-bottom:7px;font-size:13px;line-height:1.7}
+.err-word{color:var(--red);font-weight:700}
+.gtag{display:inline-block;background:rgba(181,123,238,.08);border:1px solid var(--purple);border-radius:12px;padding:2px 9px;font-size:11px;color:var(--purple);margin:3px}
+.ai-box{background:rgba(0,212,255,.03);border:1px solid rgba(0,212,255,.15);border-radius:4px;padding:12px;font-size:13px;color:var(--dim);line-height:1.8}
+.result-btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.result-btns .btn{flex:1;min-width:110px;text-align:center}
+
+/* S-GAMEOVER */
+#s-gameover{gap:18px;text-align:center;padding:24px;background:var(--bg)}
+.go-icon{font-size:68px;animation:float 2s ease-in-out infinite;filter:drop-shadow(0 0 20px rgba(255,68,68,.5))}
+.go-title{font-family:var(--px);font-size:clamp(14px,3vw,22px);color:var(--err);text-shadow:0 0 20px var(--err);letter-spacing:2px}
+.go-score{font-family:var(--px);font-size:clamp(10px,2vw,13px);color:var(--gold)}
+
+/* S-TEACHER */
+#s-teacher{padding:0;align-items:stretch;justify-content:flex-start;background:var(--bg)}
+.t-header{background:rgba(6,6,18,.95);border-bottom:1px solid var(--border);padding:12px clamp(14px,3vw,24px);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.t-header-title{font-family:var(--px);font-size:clamp(7px,1.2vw,9px);color:var(--purple);text-shadow:0 0 8px var(--purple);letter-spacing:2px}
+.t-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.t-tab{font-family:var(--px);font-size:7px;letter-spacing:1px;padding:11px 14px;border:none;background:transparent;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap}
+.t-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);background:rgba(0,212,255,.04)}
+.t-body{flex:1;overflow-y:auto;padding:clamp(14px,3vw,24px)}
+.t-sec{font-family:var(--px);font-size:8px;color:var(--cyan);text-shadow:0 0 8px var(--cyan);letter-spacing:2px;margin-bottom:14px}
+.t-card{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:14px 16px;margin-bottom:10px}
+.t-card-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.t-card-name{font-size:14px;font-weight:600}
+.t-card-meta{font-size:12px;color:var(--dim);margin-top:3px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:center;justify-content:center;padding:16px}
+.modal-bg.open{display:flex}
+.modal{background:var(--panel);border:2px solid var(--border);border-radius:7px;padding:clamp(18px,3.5vw,28px);width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-title{font-family:var(--px);font-size:clamp(8px,1.4vw,10px);color:var(--cyan);text-shadow:0 0 8px var(--cyan);margin-bottom:16px;letter-spacing:2px}
+
+@media(max-width:600px){
+  #s-game{flex-direction:column}
+  .ocean{flex:0 0 42vh;max-width:100%;border-bottom:2px solid var(--border)}
+  .depth-meter{display:none}
+  .opts{grid-template-columns:1fr 1fr}
+}
+@media(max-width:380px){.opts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- S-TITLE -->
+<div class="screen grid-bg active" id="s-title">
+  <div class="title-logo">🌊</div>
+  <div class="title-main">FILLBLANK</div>
+  <div class="title-sub">句子填空 · 潜水探索</div>
+  <div id="user-bar" style="display:none;font-family:var(--px);font-size:8px;color:var(--dim);letter-spacing:2px;position:relative;z-index:1"></div>
+  <div class="panel" id="pack-panel" style="max-width:480px;position:relative;z-index:1">
+    <div class="panel-title">选择词包 · SELECT PACK</div>
+    <div id="pack-list" style="max-height:260px;overflow-y:auto"><div style="text-align:center;color:var(--dim);padding:20px">载入中…</div></div>
+    <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn btn-cyan" style="flex:2;min-width:130px" onclick="showMap()">▶ 查看关卡地图</button>
+      <button class="btn btn-purple btn-sm" id="study-btn" style="flex:1;min-width:80px;display:none" onclick="openStudy()">📖 错题</button>
+      <button class="btn btn-gray btn-sm" id="teacher-btn" style="flex:1;min-width:80px;display:none" onclick="go('s-teacher');switchT('packs')">📚 教师</button>
+      <a href="./dashboard.html" class="btn btn-gray btn-sm" style="flex:1;min-width:80px;text-align:center;text-decoration:none">← 首页</a>
+    </div>
+  </div>
+  <div class="panel" id="login-panel" style="display:none;max-width:480px;position:relative;z-index:1">
+    <div class="panel-title" id="login-title">STUDENT LOGIN</div>
+    <div id="login-body"></div>
+  </div>
+</div>
+
+<!-- S-STAGE-MAP -->
+<div class="screen" id="s-stage-map">
+  <div class="map-header">
+    <div><div class="map-title">关卡地图 · STAGE MAP</div><div id="map-pack" style="font-size:13px;color:var(--dim)">—</div></div>
+    <button class="btn btn-gray btn-sm" onclick="go('s-title')">← 返回</button>
+  </div>
+  <div class="map-content"><div class="map-grid" id="stage-grid"></div></div>
+</div>
+
+<!-- S-GAME -->
+<div class="screen" id="s-game">
+  <div class="ocean" id="ocean">
+    <div class="fx-layer" id="fx"></div>
+    <div class="ocean-top">
+      <div class="score-px" id="score-el">SCORE 0</div>
+      <div class="combo-px" id="combo-el"></div>
+      <button class="btn btn-xs btn-gray" onclick="confirmQuit()" style="font-size:6px;padding:4px 8px">✕</button>
+    </div>
+    <div class="o2-zone">
+      <div class="o2-top"><span class="o2-label">⚠ O₂</span><span class="o2-pct" id="o2-pct">100%</span></div>
+      <div class="o2-track"><div class="o2-bar" id="o2-bar" style="width:100%"></div></div>
+      <div class="o2-warn" id="o2-warn">⚠ 氧气不足！答错继续消耗！</div>
+    </div>
+    <div class="diver-zone">
+      <span class="diver-el" id="diver-el">🤿</span>
+      <div class="diver-name" id="diver-name">DIVER</div>
+      <div class="diver-pet" id="diver-pet" style="display:none"></div>
+    </div>
+    <div class="depth-meter">
+      <div class="depth-lbl">深</div>
+      <div class="depth-track"><div class="depth-fill" id="depth-fill" style="height:0%"></div></div>
+      <div class="depth-lbl" id="depth-val">0m</div>
+    </div>
+    <div class="creatures" id="creatures"></div>
+  </div>
+  <div class="quiz-zone">
+    <div class="quiz-header">
+      <div class="stage-lbl" id="stage-lbl">关卡1</div>
+      <div class="prog-wrap">
+        <div class="prog-meta"><span id="q-num">1/5</span><span id="q-type" style="color:var(--cyan)">选词</span></div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      </div>
+      <div id="step-badge" class="step-badge s1">STEP 1</div>
+    </div>
+    <div class="ctx-card">
+      <div class="ctx-label">💡 语境提示 · 根据中文选词</div>
+      <div class="ctx-cn" id="ctx-cn">…</div>
+    </div>
+    <div class="sent-card">
+      <div class="sent-hint" id="sent-hint">STEP 1 · 选择最合适的词语填入空格</div>
+      <div class="sent-en" id="sent-en">Loading…</div>
+    </div>
+    <div class="hint-card" id="hint-card">
+      <div class="hint-title">💡 解题思路</div>
+      <div id="hint-steps"></div>
+      <div class="hint-gp" id="hint-gp"></div>
+      <button class="btn btn-cyan" style="width:100%;margin-top:12px;padding:13px;font-size:10px" id="hint-continue">▶ 继续</button>
+    </div>
+    <div class="opts" id="opts"></div>
+    <div class="spell-zone" id="spell-zone">
+      <div class="spell-prompt" id="spell-prompt">请拼写单词</div>
+      <input class="inp inp-spell" id="spell-inp" placeholder="输入单词…" autocomplete="off" autocorrect="off" spellcheck="false" onkeydown="if(event.key==='Enter')checkSpell()">
+      <button class="btn btn-purple" style="width:100%;padding:14px;font-size:10px" onclick="checkSpell()">▶ 确认拼写</button>
+      <div class="spell-fb" id="spell-fb"></div>
+    </div>
+  </div>
+</div>
+
+<!-- S-RESULT -->
+<div class="screen grid-bg" id="s-result" style="overflow-y:auto">
+  <div class="result-card" id="result-card"></div>
+</div>
+
+<!-- S-GAMEOVER -->
+<div class="screen" id="s-gameover">
+  <div class="go-icon">💀</div>
+  <div class="go-title">氧气耗尽！</div>
+  <div class="go-score" id="go-score"></div>
+  <div style="font-size:14px;color:var(--dim)">潜水员已浮出水面</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+    <button class="btn btn-red" onclick="retryStage()">↺ 重试本关</button>
+    <button class="btn btn-gray" onclick="backToMap()">🗺 关卡图</button>
+  </div>
+</div>
+
+<!-- S-TEACHER -->
+<div class="screen" id="s-teacher">
+  <div class="t-header">
+    <div class="t-header-title">📚 FILLBLANK · 教师管理</div>
+    <button class="btn btn-xs btn-gray" onclick="go('s-title')">← 返回</button>
+  </div>
+  <div class="t-tabs">
+    <button class="t-tab active" id="tt-packs" onclick="switchT('packs')">词包管理</button>
+    <button class="t-tab" id="tt-records" onclick="switchT('records')">学生记录</button>
+    <button class="t-tab" id="tt-push" onclick="switchT('push')">推题管理</button>
+  </div>
+  <div class="t-body" id="t-body"><div style="text-align:center;color:var(--dim);padding:30px">载入中…</div></div>
+</div>
+
+<!-- MODAL: AI生成 -->
+<div class="modal-bg" id="modal-gen">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:44px;animation:float 1.5s ease-in-out infinite">🤖</div>
+    <div style="font-family:var(--px);font-size:10px;color:var(--cyan);margin:14px 0 8px;letter-spacing:2px">AI 生成题目中</div>
+    <div style="font-size:14px;color:var(--dim)" id="gen-msg">分析词包…</div>
+    <div style="margin-top:16px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+      <div id="gen-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;transition:width .5s ease"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: 推题 -->
+<div class="modal-bg" id="modal-push">
+  <div class="modal"><div class="modal-title">🎯 推送专项练习</div><div id="push-body"></div></div>
+</div>
+
+<!-- MODAL: 错题 -->
+<div class="modal-bg" id="modal-study">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-title">📖 我的学习管理</div>
+    <div style="display:flex;gap:7px;margin-bottom:14px">
+      <button class="btn btn-xs btn-cyan" id="stab-err" onclick="showStudyTab('err')">❌ 错题</button>
+      <button class="btn btn-xs btn-gray" id="stab-stat" onclick="showStudyTab('stat')">📊 统计</button>
+    </div>
+    <div id="study-body" style="max-height:50vh;overflow-y:auto"></div>
+    <button class="btn btn-gray btn-sm" style="width:100%;margin-top:12px" onclick="closeModal('modal-study')">关闭</button>
+  </div>
+</div>
+
+<!-- MODAL: 退出确认 -->
+<div class="modal-bg" id="modal-quit">
+  <div class="modal" style="text-align:center">
+    <div class="modal-title">⚠ 确认退出本关？</div>
+    <div style="font-size:14px;color:var(--dim);margin-bottom:18px">当前进度不保存</div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-red" style="flex:1" onclick="quitGame()">确认退出</button>
+      <button class="btn btn-gray" style="flex:1" onclick="closeModal('modal-quit')">继续答题</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const S_URL='https://skvsssqfkzqudscrwiyt.supabase.co';
+const S_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
+const PROXY='https://skvsssqfkzqudscrwiyt.supabase.co/functions/v1/minimax-proxy';
+const db=window.supabase.createClient(S_URL,S_KEY);
+
+const CREATURES=['🐠','🐡','🦐','🦀','🐙','🦑','🦈','🐳','🦕','🐋','🦭','🐬','🌊','⚓','🏴‍☠️','🧜'];
+
+const G={
+  userId:'',name:'',classId:'',isTeacher:false,
+  activePet:'',activeTitle:'',feedCoins:{},
+  packId:'',packName:'',words:[],
+  totalStages:1,completedStages:[],availablePacks:[],
+  stageNum:1,questions:[],qIdx:0,gameStep:1,
+  score:0,combo:0,o2:100,correctCount:0,
+  stageErrors:[],newPet:null,lastGrammarTags:[],
+};
+
+const $=id=>document.getElementById(id);
+function toast(m,t='ok'){const el=document.createElement('div');el.className=`toast ${t}`;el.textContent=m;document.body.appendChild(el);setTimeout(()=>el.remove(),2900)}
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active')}
+function openModal(id){$(id).classList.add('open')}
+function closeModal(id){$(id).classList.remove('open')}
+function shuffle(a){return[...a].sort(()=>Math.random()-.5)}
+function escQ(s){return(s||'').replace(/'/g,"\\'")}
+
+async function callAI(sys,user,maxTok=2000){
+  const r=await fetch(PROXY,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${S_KEY}`},
+    body:JSON.stringify({messages:[{role:'system',content:sys},{role:'user',content:user}],max_tokens:maxTok})
+  });
+  if(!r.ok){const t=await r.text();throw new Error(`AI ${r.status}: ${t.slice(0,80)}`);}
+  const d=await r.json();
+  return d.choices?.[0]?.message?.content||'';
+}
+
+// ── AUTH ──
+async function initApp(){
+  const {data:{session}}=await db.auth.getSession();
+  if(session){
+    const {data:p}=await db.from('profiles').select('*,classes(name)').eq('id',session.user.id).maybeSingle();
+    if(p){
+      G.userId=session.user.id;G.name=p.full_name||session.user.email.split('@')[0];
+      G.classId=p.class_id||'';G.isTeacher=p.is_teacher||false;
+      const {data:a}=await db.from('student_achievements').select('*').eq('user_id',G.userId).maybeSingle();
+      if(a){G.activePet=a.active_pet||'';G.activeTitle=a.active_title||'';G.feedCoins=typeof a.feed_coins==='object'?a.feed_coins:{};}
+      showTitle();return;
+    }
+  }
+  showLogin();
+}
+
+function showLogin(){
+  $('pack-panel').style.display='none';$('login-panel').style.display='block';
+  renderLogin('login');
+}
+
+function renderLogin(mode){
+  const body=$('login-body'),title=$('login-title');
+  if(mode==='login'){
+    title.textContent='STUDENT LOGIN';
+    body.innerHTML=`
+      <div class="ig"><label>邮箱</label><input class="inp" id="l-em" type="email" placeholder="email@example.com"></div>
+      <div class="ig"><label>密码</label><input class="inp" id="l-pd" type="password" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="btn btn-cyan" style="flex:1;min-width:110px" onclick="doLogin()">▶ 登录</button>
+        <button class="btn btn-gray btn-sm" style="flex:1;min-width:110px" onclick="renderLogin('register')">新学员注册</button>
+      </div>
+      <button class="btn btn-purple btn-sm" style="width:100%;margin-bottom:10px" onclick="renderLogin('teacher')">📚 教师入口</button>
+      <div style="text-align:center"><a href="./dashboard.html" style="font-family:var(--px);font-size:7px;color:var(--dim);text-decoration:none;opacity:.6">← 返回 Dashboard</a></div>`;
+  }else if(mode==='register'){
+    title.textContent='STUDENT REGISTER';
+    body.innerHTML=`
+      <div class="ig"><label>真实姓名</label><input class="inp" id="r-nm" placeholder="你的名字"></div>
+      <div class="ig"><label>邮箱</label><input class="inp" id="r-em" type="email" placeholder="email@example.com"></div>
+      <div class="ig"><label>密码</label><input class="inp" id="r-pd" type="password" placeholder="至少6位"></div>
+      <div class="ig"><label style="color:var(--gold)">学生邀请码</label><input class="inp" id="r-inv" placeholder="输入邀请码" style="border-color:var(--gold)"></div>
+      <div class="ig"><label style="color:var(--gold)">选择班级</label><select class="inp" id="r-cl" style="border-color:var(--gold)"><option value="">加载中…</option></select></div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-gray" style="flex:1" onclick="renderLogin('login')">← 返回</button>
+        <button class="btn btn-cyan" style="flex:1" onclick="doRegister()">确认注册</button>
+      </div>`;
+    loadClassSel('r-cl');
+  }else if(mode==='teacher'){
+    title.textContent='TEACHER LOGIN';
+    body.innerHTML=`
+      <div class="ig"><label>教师邮箱</label><input class="inp" id="t-em" type="email" placeholder="email@example.com"></div>
+      <div class="ig"><label>密码</label><input class="inp" id="t-pd" type="password" placeholder="密码" onkeydown="if(event.key==='Enter')doTeacherLogin()"></div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-gray" style="flex:1" onclick="renderLogin('login')">← 返回</button>
+        <button class="btn btn-purple" style="flex:1" onclick="doTeacherLogin()">教师登录</button>
+      </div>`;
+  }
+}
+
+async function loadClassSel(id){
+  const {data}=await db.from('classes').select('id,name').order('name');
+  const s=$(id);
+  if(s&&data)s.innerHTML='<option value="">-- 请选择班级 --</option>'+data.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+async function doLogin(){
+  const em=$('l-em').value.trim(),pd=$('l-pd').value;
+  if(!em||!pd)return toast('请填写邮箱和密码','err');
+  toast('登录中…');
+  const {error}=await db.auth.signInWithPassword({email:em,password:pd});
+  if(error)return toast('邮箱或密码错误','err');
+  await initApp();
+}
+
+async function doRegister(){
+  const nm=$('r-nm').value.trim(),em=$('r-em').value.trim(),pd=$('r-pd').value,inv=$('r-inv').value.trim(),cl=$('r-cl').value;
+  if(!nm||!em||!pd||!inv||!cl)return toast('请填写所有字段','err');
+  const {data:vc}=await db.from('invite_codes').select('*').eq('code',inv).eq('is_active',true).eq('role','student').maybeSingle();
+  if(!vc)return toast('邀请码无效','err');
+  if((vc.used_count||0)>=50)return toast('邀请码已达上限','err');
+  toast('注册中…');
+  const {data:res,error}=await db.auth.signUp({email:em,password:pd,options:{data:{display_name:nm}}});
+  if(error)return toast(error.message,'err');
+  await db.from('profiles').upsert({id:res.user.id,full_name:nm,class_id:cl,is_teacher:false});
+  const nc=(vc.used_count||0)+1;
+  await db.from('invite_codes').update({used_count:nc,is_active:nc<50}).eq('code',inv);
+  toast('注册成功！请登录');renderLogin('login');
+}
+
+async function doTeacherLogin(){
+  const em=$('t-em').value.trim(),pd=$('t-pd').value;
+  if(!em||!pd)return toast('请填写邮箱和密码','err');
+  toast('登录中…');
+  const {data,error}=await db.auth.signInWithPassword({email:em,password:pd});
+  if(error)return toast('邮箱或密码错误','err');
+  const {data:profile}=await db.from('profiles').select('is_teacher,full_name').eq('id',data.user.id).maybeSingle();
+  if(!profile?.is_teacher){await db.auth.signOut();return toast('此账号不是教师账号','err');}
+  G.userId=data.user.id;G.name=profile.full_name||em.split('@')[0];G.isTeacher=true;
+  showTitle();go('s-teacher');switchT('packs');
+}
+
+function showTitle(){
+  $('login-panel').style.display='none';$('pack-panel').style.display='block';
+  const bar=$('user-bar');bar.style.display='block';
+  bar.textContent=`🤿 ${G.name}${G.activeTitle?' 「'+G.activeTitle+'」':''}${G.activePet?' '+G.activePet:''}`;
+  if(!G.isTeacher)$('study-btn').style.display='inline-block';
+  if(G.isTeacher)$('teacher-btn').style.display='inline-block';
+  loadPacks();
+}
+
+function normWords(raw){
+  return(raw||[]).map(w=>typeof w==='string'?{w,m:''}:{w:w.w||w.word||w.en||'',m:w.m||w.meaning||w.cn||''}).filter(w=>w.w&&w.w.trim());
+}
+
+// ── 词包（班级锁定）──
+async function loadPacks(){
+  const cont=$('pack-list');
+  cont.innerHTML='<div style="text-align:center;color:var(--dim);padding:16px">载入中…</div>';
+  let q=db.from('word_packs').select('id,name,words');
+  if(!G.isTeacher&&G.classId){
+    const {data:as}=await db.from('class_assignments').select('pack_id').eq('class_id',G.classId);
+    const ids=(as||[]).map(a=>a.pack_id);
+    if(ids.length){q=q.in('id',ids);}
+    else{cont.innerHTML='<div style="text-align:center;color:var(--dim);padding:16px">老师尚未分配词包，请联系老师</div>';return;}
+  }
+  const {data:packs}=await q.limit(60);
+  if(!packs?.length){cont.innerHTML='<div style="text-align:center;color:var(--dim);padding:16px">暂无词包</div>';return;}
+  const {data:gen}=await db.from('fillblank_questions').select('pack_id');
+  const genSet=new Set((gen||[]).map(r=>r.pack_id));
+  G.availablePacks=packs;
+  cont.innerHTML=packs.map((p,i)=>{
+    const words=normWords(p.words);
+    const cnt=words.length;
+    // 关键修复：5个词一关
+    const stages=Math.max(1,Math.ceil(cnt/5));
+    const saved=localStorage.getItem(`fb_${p.id}`);
+    const comp=saved?JSON.parse(saved):[];
+    const pct=stages>0?Math.round(comp.length/stages*100):0;
+    const pcol=pct===100?'var(--green)':pct>0?'var(--gold)':'var(--dim)';
+    return`<div class="pack-item ${i===0?'sel':''}" onclick="selPack('${p.id}','${escQ(p.name)}',${i})" id="pi-${p.id}">
+      <div style="flex:1">
+        <div class="pack-name">${p.name}</div>
+        <div class="pack-meta">${cnt}个词 · ${stages}关 · 每关5题×2步</div>
+        <div class="pack-progress" style="color:${pcol}">${pct>0?`已完成 ${comp.length}/${stages} 关 (${pct}%)`:'未开始'}</div>
+      </div>
+      <span class="pack-badge ${genSet.has(p.id)?'ready':'pending'}">${genSet.has(p.id)?'题库就绪':'需生成'}</span>
+    </div>`;
+  }).join('');
+  if(packs.length)selPack(packs[0].id,packs[0].name,0,true);
+}
+
+function selPack(id,name,idx,silent=false){
+  document.querySelectorAll('.pack-item').forEach(el=>el.classList.remove('sel'));
+  const el=$(`pi-${id}`);if(el)el.classList.add('sel');
+  G.packId=id;G.packName=name;
+  const pack=G.availablePacks.find(p=>p.id===id);
+  G.words=normWords(pack?.words||[]);
+  // 关键修复：5个词一关
+  G.totalStages=Math.max(1,Math.ceil(G.words.length/5));
+  const saved=localStorage.getItem(`fb_${id}`);
+  G.completedStages=saved?JSON.parse(saved):[];
+}
+
+// ── 关卡地图 ──
+function showMap(){
+  if(!G.packId){toast('请先选择词包','err');return;}
+  $('map-pack').textContent=G.packName;
+  renderMap();go('s-stage-map');
+}
+
+function renderMap(){
+  const grid=$('stage-grid');
+  const cells=[];
+  for(let i=1;i<=G.totalStages;i++){
+    const done=G.completedStages.includes(i);
+    const avail=done||i===1||G.completedStages.includes(i-1);
+    const locked=!avail;
+    const emoji=CREATURES[(i-1)%CREATURES.length];
+    const cls=done?'done':avail?'available':'locked';
+    const st=done?'✓ 完成':avail?'▶ 挑战':'🔒 锁定';
+    cells.push(`<div class="stage-card ${cls}" onclick="${avail?`startStage(${i})`:''}" title="关卡${i}">
+      <div class="stage-num">关卡 ${i}</div>
+      <span class="stage-creature">${emoji}</span>
+      <div class="stage-status">${st}</div>
+      <div class="stage-words">词${(i-1)*5+1}–${Math.min(i*5,G.words.length)}</div>
+    </div>`);
+  }
+  grid.innerHTML=cells.join('');
+}
+
+function backToMap(){renderMap();go('s-stage-map');}
+
+// ── 开始关卡 ──
+async function startStage(num){
+  G.stageNum=num;G.qIdx=0;G.gameStep=1;
+  G.score=0;G.combo=0;G.o2=100;G.correctCount=0;
+  G.stageErrors=[];G.newPet=null;
+  setO2(100);
+  $('score-el').textContent='SCORE 0';
+  $('combo-el').textContent='';
+  $('depth-fill').style.height='0%';
+  $('depth-val').textContent='0m';
+  $('diver-name').textContent=G.name||'DIVER';
+  const petEl=$('diver-pet');
+  if(G.activePet){petEl.textContent=G.activePet;petEl.style.display='block';}
+  else petEl.style.display='none';
+  renderCreatures();spawnBubbles();spawnBeams();
+  go('s-game');
+  await loadQ();
+}
+
+function renderCreatures(){
+  const row=$('creatures');
+  const s=G.stageNum-1;
+  const show=[s,s+1,s+2].filter(i=>i<G.totalStages);
+  row.innerHTML=show.map((i,j)=>`<div class="creature-item ${j===0?'cur':'locked'}">
+    <span class="creature-emoji">${CREATURES[i%CREATURES.length]}</span>
+    <div class="creature-lbl">关卡 ${i+1}</div>
+  </div>`).join('');
+}
+
+// ── 加载/生成题目（5个词一关）──
+async function loadQ(){
+  // 先查数据库
+  const {data:ex}=await db.from('fillblank_questions').select('*').eq('pack_id',G.packId).eq('stage_num',G.stageNum).limit(5);
+  if(ex&&ex.length>=3){G.questions=shuffle(ex).slice(0,5);renderQ();return;}
+
+  // AI生成（5个词一关，关键修复）
+  const start=(G.stageNum-1)*5;
+  const words=G.words.slice(start,start+5);
+  if(!words.length){toast('词包词汇不足，已到最后一关','err');backToMap();return;}
+
+  let diff=G.stageNum>20?3:G.stageNum>10?2:1;
+  const diffTxt=diff===1?'简单句（主谓宾）':diff===2?'复合句（含连接词）':'复杂句（含从句）';
+  openModal('modal-gen');setGenBar(0,'准备生成…');
+
+  try{
+    const wList=words.map(w=>`${w.w}（${w.m||'词组'}）`).join('、');
+    setGenBar(30,`生成第${G.stageNum}关题目…`);
+    const raw=await callAI(
+      '你是英语教学专家。只输出JSON数组，不要任何markdown或其他文字。',
+      `词汇：${wList}\n难度：${diffTxt}\n生成${words.length}道填空题，每题字段：word(英文单词),meaning(中文释义),sentence(含____的英文句子),translation(中文翻译，注意不要在翻译中直接写出答案的英文单词，用中文描述该位置的词义即可),answer(正确答案),options(4个选项数组，包含answer和3个同词性干扰项),steps(3步解题思路字符串数组),grammar_point(语法知识点简短说明),difficulty(${diff})\n只输出JSON数组，从[开始到]结束。`,
+      2500
+    );
+    setGenBar(80,'解析结果…');
+    const match=raw.match(/\[[\s\S]*\]/);
+    if(!match)throw new Error('AI返回格式无法解析，请重试');
+    const gen=JSON.parse(match[0]);
+    const toIns=gen.map(q=>({
+      pack_id:G.packId,word:q.word||'',meaning:q.meaning||'',
+      sentence:q.sentence||'',translation:q.translation||'',
+      answer:q.answer||'',options:shuffle(q.options||[q.answer]),
+      steps:q.steps||[],grammar_point:q.grammar_point||'',
+      difficulty:diff,stage_num:G.stageNum
+    }));
+    await db.from('fillblank_questions').insert(toIns);
+    G.questions=toIns.map((q,i)=>({...q,id:'local-'+i}));
+    setGenBar(100,'完成！');closeModal('modal-gen');renderQ();
+  }catch(e){
+    closeModal('modal-gen');console.error(e);
+    toast('AI生成失败：'+e.message,'err');backToMap();
+  }
+}
+
+function setGenBar(pct,msg){
+  $('gen-bar').style.width=pct+'%';
+  if(msg)$('gen-msg').textContent=msg;
+}
+
+// ── 渲染题目 ──
+function renderQ(){
+  if(G.qIdx>=G.questions.length){endStage();return;}
+  const q=G.questions[G.qIdx];
+  const totalSteps=G.questions.length*2;
+  const curStep=G.qIdx*2+(G.gameStep-1);
+
+  $('q-num').textContent=`${G.qIdx+1}/${G.questions.length}`;
+  $('prog-fill').style.width=(curStep/totalSteps*100)+'%';
+  $('stage-lbl').textContent=`关卡 ${G.stageNum}/${G.totalStages}`;
+  $('q-type').textContent=G.gameStep===1?'选词':'拼写';
+
+  const badge=$('step-badge');
+  if(G.gameStep===1){badge.className='step-badge s1';badge.textContent='STEP 1';}
+  else{badge.className='step-badge s2';badge.textContent='STEP 2';}
+
+  // 只给中文语境提示，不显示英文单词
+  $('ctx-cn').textContent=q.translation||'';
+  $('sent-en').innerHTML=(q.sentence||'').replace(/____/g,`<span class="blank">____</span>`);
+  $('hint-card').style.display='none';
+  $('opts').style.opacity='1';
+
+  const dpct=Math.min(100,G.qIdx/G.questions.length*100);
+  $('depth-fill').style.height=dpct+'%';
+  $('depth-val').textContent=Math.round(dpct*2)+'m';
+
+  if(G.gameStep===1){
+    $('sent-hint').textContent='STEP 1 · 根据中文语境，选择最合适的词语';
+    $('opts').style.display='grid';
+    $('spell-zone').style.display='none';
+    const raw=Array.isArray(q.options)?[...q.options]:[q.answer];
+    if(!raw.includes(q.answer))raw.unshift(q.answer);
+    const opts=shuffle(raw).slice(0,4);
+    while(opts.length<4)opts.push('—');
+    const grid=$('opts');
+    grid.innerHTML=['A','B','C','D'].map((k,i)=>`
+      <button class="opt" data-opt="${opts[i]}" data-ans="${q.answer}">
+        <span class="opt-key">${k}</span><span>${opts[i]}</span>
+      </button>`).join('');
+    grid.querySelectorAll('.opt').forEach(b=>{
+      b.addEventListener('click',function(){pickAnswer(this.dataset.opt,this.dataset.ans,this,q);});
+    });
+  }else{
+    $('sent-hint').textContent='STEP 2 · 听中文释义，拼写出对应的英文单词';
+    $('opts').style.display='none';
+    $('spell-zone').style.display='flex';
+    $('spell-fb').textContent='';
+    const inp=$('spell-inp');inp.value='';
+    $('spell-prompt').innerHTML=`"<em>${q.meaning||''}</em>" → 请拼写英文单词`;
+    setTimeout(()=>inp.focus(),120);
+  }
+  $('combo-el').textContent=G.combo>=2?`🔥 x${G.combo} COMBO`:'';
+}
+
+// ── 选词 (Step1) ──
+function pickAnswer(sel,ans,btnEl,q){
+  document.querySelectorAll('.opt').forEach(b=>b.disabled=true);
+  const ok=sel===ans;
+  document.querySelectorAll('.opt').forEach(b=>{
+    if(b.dataset.opt===ans)b.classList.add('ok');
+    if(b===btnEl&&!ok)b.classList.add('fail');
+  });
+  if(ok){
+    G.combo++;const xp=10*Math.min(G.combo,4);G.score+=xp;
+    $('score-el').textContent='SCORE '+G.score;
+    flash('ok');pts('#4eff91');diverDive();popXP(xp);
+    recAns(q,sel,true);
+    // 答对后进入Step2拼写
+    setTimeout(()=>{G.gameStep=2;renderQ();},650);
+  }else{
+    G.combo=0;
+    // 关键修复：答错扣O2
+    G.o2=Math.max(0,G.o2-20);setO2(G.o2);
+    flash('err');diverShake();
+    G.stageErrors.push({...q,selectedAnswer:sel,errorType:'choice'});
+    recAns(q,sel,false);
+    if(G.o2<=0)setTimeout(gameOver,750);
+    else showHint(q);
+  }
+}
+
+// ── 拼写 (Step2) ──
+function checkSpell(){
+  const q=G.questions[G.qIdx];
+  const inp=$('spell-inp');const fb=$('spell-fb');
+  const val=inp.value.trim().toLowerCase();
+  const ans=(q.answer||'').toLowerCase().trim();
+  if(!val){fb.textContent='请输入答案';fb.style.color='var(--dim)';return;}
+  const d=lev(val,ans);
+  if(d===0){
+    fb.textContent='✓ 拼写正确！';fb.style.color='var(--green)';
+    G.combo++;G.correctCount++;
+    const xp=10*Math.min(G.combo,4);G.score+=xp;
+    $('score-el').textContent='SCORE '+G.score;
+    flash('ok');diverDive();pts('#4eff91');
+    recAns(q,val,true);
+    setTimeout(()=>{G.gameStep=1;G.qIdx++;renderQ();},650);
+  }else if(d===1){
+    fb.textContent=`⚠ 接近！正确：${q.answer}（差1个字母）`;fb.style.color='var(--gold)';
+    setTimeout(()=>{fb.textContent='再试一次…';fb.style.color='var(--dim)';inp.value='';inp.focus();},2000);
+  }else{
+    fb.textContent=`✗ 正确答案：${q.answer}`;fb.style.color='var(--err)';
+    G.combo=0;G.o2=Math.max(0,G.o2-10);setO2(G.o2);
+    flash('err');diverShake();
+    G.stageErrors.push({...q,selectedAnswer:val,errorType:'spell'});
+    recAns(q,val,false);
+    setTimeout(()=>{G.gameStep=1;G.qIdx++;renderQ();},1400);
+  }
+}
+
+function lev(a,b){
+  const m=a.length,n=b.length;
+  const dp=Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i===0?j:j===0?i:0));
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function showHint(q){
+  const card=$('hint-card');card.style.display='block';
+  const steps=Array.isArray(q.steps)?q.steps:['分析句子语境','排除错误选项','确认正确答案'];
+  $('hint-steps').innerHTML=steps.map((s,i)=>`<div class="hint-step"><strong>Step ${i+1}：</strong>${s}</div>`).join('');
+  $('hint-gp').innerHTML=q.grammar_point?`📚 ${q.grammar_point}`:'';
+  $('opts').style.opacity='.35';
+  const btn=$('hint-continue');
+  const nb=btn.cloneNode(true);btn.parentNode.replaceChild(nb,btn);
+  nb.addEventListener('click',()=>{
+    if(G.o2<=0){gameOver();return;}
+    $('hint-card').style.display='none';
+    $('opts').style.opacity='1';
+    G.gameStep=1;G.qIdx++;renderQ();
+  });
+}
+
+// ── O₂压迫感 ──
+function setO2(pct){
+  const bar=$('o2-bar'),pctEl=$('o2-pct'),warn=$('o2-warn'),ocean=$('ocean');
+  bar.style.width=pct+'%';pctEl.textContent=pct+'%';
+  if(pct>50){bar.className='o2-bar';pctEl.style.color='var(--cyan)';warn.style.display='none';ocean.style.boxShadow='none';}
+  else if(pct>25){bar.className='o2-bar warn';pctEl.style.color='var(--orange)';warn.style.display='block';ocean.style.boxShadow='inset 0 0 40px rgba(255,140,0,.15)';}
+  else{bar.className='o2-bar danger';pctEl.style.color='var(--err)';warn.style.display='block';ocean.style.boxShadow='inset 0 0 60px rgba(255,68,68,.28)';}
+}
+
+// ── 特效 ──
+function flash(t){const f=$('fx');const el=document.createElement('div');el.className=t==='ok'?'flash-ok':'flash-err';f.appendChild(el);setTimeout(()=>el.remove(),400);}
+function pts(col){
+  const f=$('fx'),d=$('diver-el');
+  const r=d.getBoundingClientRect();const pr=$('ocean').getBoundingClientRect();
+  const cx=r.left-pr.left+r.width/2,cy=r.top-pr.top+r.height/2;
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div');const a=Math.random()*360;const dist=Math.random()*50+20;
+    p.className='particle';
+    p.style.cssText=`width:6px;height:6px;background:${col};left:${cx}px;top:${cy}px;--tx:${Math.cos(a*Math.PI/180)*dist}px;--ty:${Math.sin(a*Math.PI/180)*dist}px;animation-duration:${Math.random()*.4+.5}s`;
+    f.appendChild(p);setTimeout(()=>p.remove(),1000);
+  }
+}
+function popXP(val){
+  const f=$('fx'),d=$('diver-el');
+  const r=d.getBoundingClientRect();const pr=$('ocean').getBoundingClientRect();
+  const el=document.createElement('div');el.className='score-pop';el.textContent='+'+val;
+  el.style.left=(r.left-pr.left+r.width/2-20)+'px';el.style.top=(r.top-pr.top)+'px';
+  f.appendChild(el);setTimeout(()=>el.remove(),1000);
+}
+function diverDive(){
+  const el=$('diver-el');el.style.animation='none';el.style.transition='transform .35s ease';el.style.transform='translateY(18px) scale(.88)';
+  setTimeout(()=>{el.style.transform='';el.style.transition='';el.style.animation='diverFloat 2.2s ease-in-out infinite';},500);
+}
+function diverShake(){
+  const el=$('diver-el');el.style.animation='none';
+  [0,70,140,210].forEach((t,i)=>setTimeout(()=>{el.style.transform=i%2?'translateX(8px)':'translateX(-8px)';},t));
+  setTimeout(()=>{el.style.transform='';el.style.animation='diverFloat 2.2s ease-in-out infinite';},280);
+}
+function spawnBubbles(){
+  const p=$('ocean');
+  for(let i=0;i<14;i++){
+    const b=document.createElement('div');const sz=Math.random()*8+3;
+    b.className='bubble';
+    b.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*90}%;bottom:-10px;animation-duration:${Math.random()*9+7}s;animation-delay:${Math.random()*9}s`;
+    p.appendChild(b);
+  }
+}
+function spawnBeams(){
+  const p=$('ocean');
+  ['18%','52%','78%'].forEach((l,i)=>{
+    const b=document.createElement('div');b.className='beam';
+    b.style.cssText=`left:${l};height:${Math.random()*40+20}%;top:0;animation-delay:${i*2}s`;
+    p.appendChild(b);
+  });
+}
+
+async function recAns(q,sel,ok){
+  if(!G.userId)return;
+  try{await db.from('fillblank_records').insert({user_id:G.userId,question_id:q.id||null,pack_id:G.packId,stage_num:G.stageNum,selected_answer:sel,is_correct:ok,created_at:new Date().toISOString()});}
+  catch(e){console.warn('记录失败',e);}
+}
+
+function gameOver(){$('go-score').textContent=`本关得分：${G.score} · 答对 ${G.correctCount} 题`;go('s-gameover');}
+function confirmQuit(){openModal('modal-quit');}
+function quitGame(){closeModal('modal-quit');backToMap();}
+function retryStage(){startStage(G.stageNum);}
+
+// ── 关卡结算 ──
+async function endStage(){
+  const acc=G.questions.length>0?Math.round(G.correctCount/G.questions.length*100):0;
+  const bonus=acc===100?50:0;
+  const totalXp=G.score+bonus;
+
+  // 保存进度到localStorage
+  const key=`fb_${G.packId}`;
+  const comp=JSON.parse(localStorage.getItem(key)||'[]');
+  if(!comp.includes(G.stageNum))comp.push(G.stageNum);
+  localStorage.setItem(key,JSON.stringify(comp));
+  G.completedStages=comp;
+
+  let aiSum='',aiSug='';G.lastGrammarTags=[];
+  if(G.stageErrors.length>0){
+    try{
+      const desc=G.stageErrors.map(e=>`${e.word}(${e.grammar_point||'—'})`).join('、');
+      const raw=await callAI('你是英语教学助手，输出精简JSON，不要任何markdown。',`学生错误词汇：${desc}。输出JSON：{"summary":"一句话总结","suggestion":"复习建议1-2句","tags":["语法点1","语法点2"]}`);
+      const m=raw.match(/\{[\s\S]*\}/);
+      if(m){const j=JSON.parse(m[0]);aiSum=j.summary||'';aiSug=j.suggestion||'';G.lastGrammarTags=j.tags||[];}
+    }catch(e){console.warn('AI总结失败',e);}
+  }
+
+  if(G.userId){
+    try{await db.from('fillblank_stage_results').insert({user_id:G.userId,pack_id:G.packId,stage_num:G.stageNum,correct_count:G.correctCount,total_count:G.questions.length,xp_earned:totalXp,ai_summary:aiSum,ai_suggestions:aiSug});}
+    catch(e){console.warn('保存失败',e);}
+    G.newPet=null;
+    const petChance=acc===100?0.10:acc>=80?0.05:0;
+    if(Math.random()<petChance){
+      const pool=[{emoji:'🐠',name:'小彩鱼'},{emoji:'🐡',name:'河豚仔'},{emoji:'🦐',name:'小虾米'},{emoji:'🦀',name:'小螃蟹'},{emoji:'🐚',name:'贝壳精'},{emoji:'🐬',name:'海豚宝'}];
+      G.newPet={...pool[Math.floor(Math.random()*pool.length)],tool:'fillblank',level:1,xp:0};
+      try{
+        const {data:a}=await db.from('student_achievements').select('*').eq('user_id',G.userId).maybeSingle();
+        const pets=(a?.pets)||[];const coins=typeof a?.feed_coins==='object'?{...(a.feed_coins||{})}:{};
+        if(!pets.some(p=>p.emoji===G.newPet.emoji))pets.push(G.newPet);
+        coins['fillblank']=(coins['fillblank']||0)+G.correctCount*2;
+        await db.from('student_achievements').upsert({user_id:G.userId,pets,feed_coins:coins,updated_at:new Date().toISOString()},{onConflict:'user_id'});
+      }catch(e){console.warn('宠物保存失败',e);}
+    }
+  }
+
+  const rc=acc>=80?'var(--green)':acc>=60?'var(--gold)':'var(--err)';
+  const hasNext=G.stageNum<G.totalStages;
+  let errHtml='';
+  if(G.stageErrors.length){
+    errHtml=`<div style="font-family:var(--px);font-size:8px;color:var(--cyan);letter-spacing:2px;margin:14px 0 9px">❌ 错题回顾</div>`
+      +G.stageErrors.map(e=>`<div class="err-item"><span class="err-word">${e.word}</span> ${e.meaning||''}${e.grammar_point?`<span class="gtag">${e.grammar_point}</span>`:''}<div style="font-size:12px;color:var(--dim);margin-top:5px">${e.sentence||''}</div><div style="margin-top:3px;font-size:12px">你选：<span style="color:var(--err)">${e.selectedAnswer||'—'}</span>&nbsp;正确：<span style="color:var(--green)">${e.answer||'—'}</span></div></div>`).join('');
+  }
+  let tagHtml='';
+  if(G.lastGrammarTags.length)tagHtml=`<div style="margin:10px 0">${G.lastGrammarTags.map(t=>`<span class="gtag">${t}</span>`).join('')}</div>`;
+
+  $('result-card').innerHTML=`
+    <div class="result-title">关卡 ${G.stageNum} · 结算</div>
+    <div class="result-stats">
+      <div class="stat-box"><span class="stat-num" style="color:${rc}">${acc}%</span><div class="stat-lbl">正确率</div></div>
+      <div class="stat-box"><span class="stat-num" style="color:var(--gold)">+${totalXp}</span><div class="stat-lbl">获得XP</div></div>
+      <div class="stat-box"><span class="stat-num" style="color:var(--purple)">🍬${G.correctCount*2}</span><div class="stat-lbl">喂养币</div></div>
+    </div>
+    ${bonus?`<div style="text-align:center;font-family:var(--px);font-size:8px;color:var(--gold);margin-bottom:10px">🌟 满分奖励 +${bonus} XP！</div>`:''}
+    ${G.newPet?`<div style="text-align:center;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.25);border-radius:5px;padding:12px;margin-bottom:12px"><div style="font-size:32px;margin-bottom:5px">${G.newPet.emoji}</div><div style="font-family:var(--px);font-size:7px;color:var(--gold);letter-spacing:2px">✨ 获得新宠物！${G.newPet.name}</div></div>`:''}
+    ${aiSum?`<div class="ai-box" style="margin-bottom:10px">${aiSum}</div>`:''}
+    ${errHtml}${tagHtml}
+    ${aiSug?`<div style="font-family:var(--px);font-size:8px;color:var(--cyan);letter-spacing:2px;margin:12px 0 7px">💡 复习建议</div><div class="ai-box">${aiSug}</div>`:''}
+    <div class="result-btns">
+      ${hasNext?`<button class="btn btn-cyan" onclick="startStage(${G.stageNum+1})">▶ 下一关</button>`:''}
+      ${G.stageErrors.length?`<button class="btn btn-orange" style="color:var(--orange);border-color:var(--orange)" onclick="startPractice()">🎯 专项练习</button>`:''}
+      <button class="btn btn-gray" onclick="retryStage()">↺ 重试</button>
+      <button class="btn btn-gray btn-sm" onclick="backToMap()">🗺 关卡图</button>
+    </div>`;
+  go('s-result');
+}
+
+async function startPractice(){
+  if(!G.stageErrors.length){toast('没有错题','err');return;}
+  const desc=G.stageErrors.map(e=>`${e.word}(${e.meaning||''},${e.grammar_point||''})`).join('、');
+  toast('AI生成专项题目…');
+  try{
+    const raw=await callAI('你是英语教学助手，只输出JSON数组，不要任何markdown。',`学生错题：${desc}。生成5道针对性填空练习题。JSON数组，每项：word,meaning,sentence（含____）,translation,answer,options（4个）,steps（3步）,grammar_point。只输出JSON数组。`);
+    const m=raw.match(/\[[\s\S]*\]/);if(!m)throw new Error('格式错误');
+    const qs=JSON.parse(m[0]);
+    G.questions=qs;G.qIdx=0;G.gameStep=1;G.o2=100;setO2(100);G.stageErrors=[];G.correctCount=0;
+    renderQ();go('s-game');
+  }catch(e){toast('生成失败：'+e.message,'err');}
+}
+
+// ── 学生错题管理 ──
+async function openStudy(){openModal('modal-study');await showStudyTab('err');}
+async function showStudyTab(tab){
+  ['err','stat'].forEach(t=>{const el=$(`stab-${t}`);if(el)el.className='btn btn-xs '+(t===tab?'btn-cyan':'btn-gray');});
+  const body=$('study-body');
+  body.innerHTML='<div style="text-align:center;color:var(--dim);padding:16px">载入中…</div>';
+  if(tab==='err'){
+    const {data:recs}=await db.from('fillblank_records').select('*').eq('user_id',G.userId).eq('is_correct',false).order('created_at',{ascending:false}).limit(60);
+    if(!recs?.length){body.innerHTML='<div style="text-align:center;color:var(--green);padding:16px">✓ 暂无错题！</div>';return;}
+    const qIds=[...new Set(recs.map(r=>r.question_id).filter(Boolean))];
+    let qm={};
+    if(qIds.length){const {data:qs}=await db.from('fillblank_questions').select('*').in('id',qIds);(qs||[]).forEach(q=>{qm[q.id]=q;});}
+    body.innerHTML=recs.map(r=>{const q=qm[r.question_id]||{};return`<div style="background:rgba(255,68,68,.04);border:1px solid rgba(255,68,68,.15);border-radius:4px;padding:10px;margin-bottom:7px;font-size:13px"><span style="color:var(--red);font-weight:700">${q.word||'—'}</span><span style="color:var(--dim);margin-left:7px;font-size:12px">${q.meaning||''}</span>${q.grammar_point?`<span class="gtag">${q.grammar_point}</span>`:''}<div style="margin-top:5px;color:var(--dim);font-size:12px">${q.sentence||''}</div><div style="margin-top:3px;font-size:12px">你选：<span style="color:var(--err)">${r.selected_answer||'—'}</span> 正确：<span style="color:var(--green)">${q.answer||'—'}</span></div></div>`;}).join('');
+  }else{
+    const {data:recs}=await db.from('fillblank_records').select('is_correct').eq('user_id',G.userId).limit(300);
+    const tot=(recs||[]).length;const ok=(recs||[]).filter(r=>r.is_correct).length;const acc=tot>0?Math.round(ok/tot*100):0;
+    body.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${[['总正确率',acc+'%',acc>=80?'var(--green)':'var(--gold)'],['总答题',tot,'var(--cyan)'],['总错题',tot-ok,'var(--err)']].map(([l,v,c])=>`<div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:10px;text-align:center"><div style="font-family:var(--px);font-size:13px;color:${c}">${v}</div><div style="font-size:11px;color:var(--dim);margin-top:3px">${l}</div></div>`).join('')}</div>`;
+  }
+}
+
+// ── 教师管理 ──
+async function switchT(tab){
+  ['packs','records','push'].forEach(t=>{const el=$(`tt-${t}`);if(el)el.className='t-tab'+(t===tab?' active':'');});
+  const body=$('t-body');body.innerHTML='<div style="text-align:center;color:var(--dim);padding:30px">载入中…</div>';
+  if(tab==='packs')await renderTPacks(body);
+  if(tab==='records')await renderTRecords(body);
+  if(tab==='push')await renderTPush(body);
+}
+
+async function renderTPacks(body){
+  const {data:packs}=await db.from('word_packs').select('id,name,words');
+  if(!packs?.length){body.innerHTML='<div style="color:var(--dim);padding:20px;text-align:center">暂无词包</div>';return;}
+  const {data:gen}=await db.from('fillblank_questions').select('pack_id');
+  const gm={};(gen||[]).forEach(r=>{gm[r.pack_id]=(gm[r.pack_id]||0)+1;});
+  body.innerHTML=`<div class="t-sec">词包管理 · AI生成题库</div>`+packs.map(p=>{
+    const words=normWords(p.words||[]);const cnt=words.length;const stages=Math.ceil(cnt/5);const qCnt=gm[p.id]||0;
+    return`<div class="t-card"><div class="t-card-head"><div><div class="t-card-name">${p.name}</div><div class="t-card-meta">${cnt}词 · ${stages}关 · 已生成${qCnt}题</div></div><div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap"><span class="pack-badge ${qCnt>0?'ready':'pending'}">${qCnt>0?'就绪':'未生成'}</span><button class="btn btn-sm btn-cyan" onclick="genAll('${p.id}','${escQ(p.name)}',${JSON.stringify(words).replace(/"/g,'&quot;')})">${qCnt>0?'↺ 重新生成':'🤖 AI生成题库'}</button></div></div></div>`;
+  }).join('');
+}
+
+async function genAll(packId,packName,wordsRaw){
+  let words;try{words=typeof wordsRaw==='string'?JSON.parse(wordsRaw):wordsRaw;}catch(e){words=[];}
+  if(!confirm(`为「${packName}」生成全部题库？共${words.length}词，约${Math.ceil(words.length/5)}次请求。`))return;
+  openModal('modal-gen');setGenBar(0,'清除旧题目…');
+  await db.from('fillblank_questions').delete().eq('pack_id',packId);
+  const stages=Math.ceil(words.length/5);let done=0;
+  for(let s=1;s<=stages;s++){
+    setGenBar(Math.round(s/stages*95),`生成第${s}/${stages}关…`);
+    const sw=words.slice((s-1)*5,s*5);if(!sw.length)break;
+    let diff=s>20?3:s>10?2:1;
+    try{
+      const raw=await callAI(
+        '你是英语教学专家。只输出JSON数组，不要任何markdown。',
+        `词汇：${sw.map(w=>`${w.w}（${w.m||'词组'}）`).join('、')}\n难度：${diff===1?'简单句':diff===2?'复合句':'复杂句'}\n生成${sw.length}道填空题，字段：word,meaning,sentence（含____）,translation（不暴露答案英文），answer,options（4个）,steps（3步）,grammar_point,difficulty（${diff}）。只输出JSON数组。`,
+        2500
+      );
+      const m=raw.match(/\[[\s\S]*\]/);
+      if(m){const gen=JSON.parse(m[0]);await db.from('fillblank_questions').insert(gen.map(q=>({pack_id:packId,word:q.word||'',meaning:q.meaning||'',sentence:q.sentence||'',translation:q.translation||'',answer:q.answer||'',options:shuffle(q.options||[q.answer]),steps:q.steps||[],grammar_point:q.grammar_point||'',difficulty:diff,stage_num:s})));done+=gen.length;}
+    }catch(e){console.error(`第${s}关失败`,e);}
+    await new Promise(r=>setTimeout(r,400));
+  }
+  setGenBar(100,'完成！');closeModal('modal-gen');
+  toast(`题库生成完成！共${done}道题`);switchT('packs');
+}
+
+async function renderTRecords(body){
+  const {data:recs}=await db.from('fillblank_records').select('*').eq('is_correct',false).order('created_at',{ascending:false}).limit(150);
+  const {data:profiles}=await db.from('profiles').select('id,full_name,classes(name)').eq('is_teacher',false);
+  const pm={};(profiles||[]).forEach(p=>{pm[p.id]={name:p.full_name||'未知',cls:p.classes?.name||'—'};});
+  const qIds=[...new Set((recs||[]).map(r=>r.question_id).filter(Boolean))];
+  let qm={};if(qIds.length){const {data:qs}=await db.from('fillblank_questions').select('*').in('id',qIds);(qs||[]).forEach(q=>{qm[q.id]=q;});}
+  const stuMap={};
+  (recs||[]).forEach(r=>{
+    if(!stuMap[r.user_id])stuMap[r.user_id]={uid:r.user_id,...(pm[r.user_id]||{name:'未知',cls:'—'}),errs:[]};
+    const q=qm[r.question_id]||{};
+    stuMap[r.user_id].errs.push({word:q.word||'—',meaning:q.meaning||'',gp:q.grammar_point||'',answer:q.answer||'—',sel:r.selected_answer||'—',sent:q.sentence||''});
+  });
+  if(!Object.keys(stuMap).length){body.innerHTML='<div style="color:var(--green);text-align:center;padding:20px">暂无错题记录</div>';return;}
+  body.innerHTML=`<div class="t-sec">学生错题记录</div>`+Object.values(stuMap).map(s=>`
+    <div class="t-card" style="margin-bottom:10px">
+      <div class="t-card-head" style="margin-bottom:10px">
+        <div><div class="t-card-name">👤 ${s.name}</div><div class="t-card-meta">${s.cls} · ${s.errs.length}道错题</div></div>
+        <button class="btn btn-sm btn-orange" onclick="openPush('${s.uid}','${escQ(s.name)}',${JSON.stringify(s.errs).replace(/"/g,'&quot;')})">🎯 推题</button>
+      </div>
+      <div style="max-height:180px;overflow-y:auto">
+        ${s.errs.slice(0,5).map(e=>`<div style="font-size:12px;color:var(--dim);padding:6px 8px;background:rgba(255,68,68,.03);border-radius:3px;margin-bottom:4px;border-left:2px solid rgba(255,68,68,.3)"><span style="color:var(--red);font-weight:700">${e.word}</span> ${e.meaning}${e.gp?`<span class="gtag" style="font-size:10px">${e.gp}</span>`:''}<span style="margin-left:6px">选：<span style="color:var(--err)">${e.sel}</span> 正确：<span style="color:var(--green)">${e.answer}</span></span></div>`).join('')}
+        ${s.errs.length>5?`<div style="font-size:11px;color:var(--dim);padding:4px 8px">还有 ${s.errs.length-5} 道…</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+async function renderTPush(body){
+  const {data:pushes}=await db.from('fillblank_assigned_practice').select('*').order('created_at',{ascending:false}).limit(20);
+  const {data:profiles}=await db.from('profiles').select('id,full_name').eq('is_teacher',false);
+  const pm={};(profiles||[]).forEach(p=>{pm[p.id]=p.full_name;});
+  body.innerHTML=`<div class="t-sec">推题管理</div><button class="btn btn-sm btn-cyan" onclick="openPush(null,'全班',[])" style="margin-bottom:14px">+ 手动向全班推题</button>
+    ${pushes?.length?pushes.map(p=>`<div class="t-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px"><div><div class="t-card-name">${p.student_id?(pm[p.student_id]||'指定学生'):'📢 全班'}</div><div class="t-card-meta">${(p.questions||[]).length}道题 · ${new Date(p.created_at).toLocaleDateString()}</div></div><span style="font-family:var(--px);font-size:6px;padding:3px 8px;border:1px solid;border-radius:2px;${p.is_read?'color:var(--green);border-color:var(--green)':'color:var(--gold);border-color:var(--gold)'}">${p.is_read?'已读':'未读'}</span></div></div>`).join(''):'<div style="color:var(--dim);text-align:center;padding:16px">暂无推题记录</div>'}`;
+}
+
+function openPush(uid,name,errsRaw){
+  let errs;try{errs=typeof errsRaw==='string'?JSON.parse(errsRaw):errsRaw||[];}catch(e){errs=[];}
+  const gpts=[...new Set((errs||[]).map(e=>e.gp||e.grammar_point||'').filter(Boolean))].join('、');
+  $('push-body').innerHTML=`
+    <div class="ig"><label>推题对象：<b style="color:var(--cyan)">${name}</b></label>${errs.length?`<div style="font-size:12px;color:var(--dim);margin-top:4px">错题${errs.length}道，语法点：${gpts||'词汇理解'}</div>`:''}</div>
+    <div class="ig"><label>语法点/主题</label><input class="inp" id="push-gp" placeholder="如：形容词用法…" value="${gpts}"></div>
+    <div class="ig"><label>题目数量</label><select class="inp" id="push-cnt"><option value="5">5题</option><option value="10">10题</option></select></div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-cyan" style="flex:1" onclick="doPush('${uid||''}','${escQ(name)}',${JSON.stringify(errs||[]).replace(/"/g,'&quot;')})">🤖 生成并推送</button>
+      <button class="btn btn-gray" style="flex:1" onclick="closeModal('modal-push')">取消</button>
+    </div>
+    <div id="push-status" style="margin-top:10px;font-family:var(--px);font-size:8px;text-align:center;color:var(--dim);min-height:16px"></div>`;
+  openModal('modal-push');
+}
+
+async function doPush(uid,name,errsRaw){
+  let errs;try{errs=typeof errsRaw==='string'?JSON.parse(errsRaw):errsRaw||[];}catch(e){errs=[];}
+  const gp=$('push-gp').value.trim();
+  const cnt=$('push-cnt').value||'5';
+  const st=$('push-status');
+  st.textContent='🤖 AI生成中…';st.style.color='var(--cyan)';
+  const errDesc=errs.map(e=>`${e.word||e.w||''}(${e.gp||e.grammar_point||'—'})`).join('、');
+  try{
+    const raw=await callAI(
+      '你是英语教学助手，只输出JSON数组，不要任何markdown。',
+      `${errDesc?'学生错题：'+errDesc+'\n':''}语法点：${gp||'综合练习'}\n生成${cnt}道填空题。JSON数组：word,meaning,sentence（含____）,translation,answer,options（4个）,steps（3步）,grammar_point。只输出JSON数组。`
+    );
+    const m=raw.match(/\[[\s\S]*\]/);if(!m)throw new Error('格式错误');
+    const qs=JSON.parse(m[0]);
+    await db.from('fillblank_assigned_practice').insert({teacher_id:G.userId,student_id:uid||null,questions:qs,is_read:false});
+    st.textContent='✅ 推送成功！';st.style.color='var(--green)';
+    setTimeout(()=>{closeModal('modal-push');switchT('push');},1200);
+    toast(`已推送${qs.length}道题给 ${name}`);
+  }catch(e){st.textContent='❌ '+e.message;st.style.color='var(--err)';}
+}
+
+window.onload=async()=>{spawnBubbles();await initApp();};
+</script>
+</body>
+</html>
