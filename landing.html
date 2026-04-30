@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marc's Teaching Toolkit · 教师智能工具平台</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a18;
+            --panel: #141428;
+            --border: #2a2a50;
+            --primary: #e94560;
+            --cyan: #00d4ff;
+            --gold: #ffd700;
+            --green: #4eff91;
+            --purple: #b57bee;
+            --text: #ffffff;
+            --dim: #707090;
+            --px: 'Press Start 2P', monospace;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed; inset: 0;
+            background:
+                radial-gradient(ellipse at 15% 40%, rgba(233,69,96,.07) 0%, transparent 55%),
+                radial-gradient(ellipse at 85% 15%, rgba(0,212,255,.07) 0%, transparent 55%);
+            pointer-events: none; z-index: 0;
+        }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            padding: 14px clamp(20px,5vw,48px);
+            display: flex; align-items: center; justify-content: space-between;
+            background: rgba(10,10,24,.92);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-logo {
+            font-family: var(--px);
+            font-size: clamp(7px,1.2vw,9px);
+            color: var(--cyan);
+            text-shadow: 0 0 8px var(--cyan);
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+        .nav-links {
+            display: flex; gap: clamp(14px,2.5vw,28px);
+            align-items: center; list-style: none;
+        }
+        .nav-links a {
+            font-size: 13px; color: var(--dim);
+            text-decoration: none; transition: color .15s;
+            letter-spacing: .5px; cursor: pointer;
+        }
+        .nav-links a:hover { color: var(--text); }
+        .nav-cta {
+            font-family: var(--px);
+            font-size: clamp(7px,1.1vw,9px);
+            letter-spacing: 1px;
+            padding: 10px 20px;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            text-decoration: none;
+            transition: all .15s;
+            text-shadow: 0 0 8px rgba(255,215,0,.3);
+            box-shadow: 0 0 14px rgba(255,215,0,.1);
+        }
+        .nav-cta:hover {
+            background: var(--gold);
+            color: #000;
+            box-shadow: 0 0 24px rgba(255,215,0,.4);
+        }
+        @media (max-width: 600px) {
+            .nav-links li:not(:last-child) { display: none; }
+        }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; padding: 100px 24px 60px;
+            position: relative; z-index: 1; gap: 22px;
+        }
+        .hero-badge {
+            font-family: var(--px);
+            font-size: clamp(6px,1vw,8px);
+            color: var(--cyan); letter-spacing: 4px;
+            border: 1px solid rgba(0,212,255,.3);
+            padding: 8px 18px;
+            text-shadow: 0 0 10px var(--cyan);
+            animation: fadeUp .8s ease both;
+        }
+        .hero-icons {
+            display: flex; gap: 16px; justify-content: center;
+            font-size: clamp(40px,8vw,64px);
+            animation: fadeUp .6s ease both;
+            filter: drop-shadow(0 0 20px rgba(233,69,96,.5));
+        }
+        .hero-icons span { animation: float 3s ease-in-out infinite; }
+        .hero-icons span:nth-child(2) { animation-delay: .4s; }
+        .hero-icons span:nth-child(3) { animation-delay: .8s; }
+        .hero-icons span:nth-child(4) { animation-delay: 1.2s; }
+        @keyframes float {
+            0%,100% { transform: translateY(0); }
+            50%      { transform: translateY(-12px); }
+        }
+        .hero-title {
+            font-family: var(--px);
+            font-size: clamp(14px,3vw,26px);
+            color: var(--primary);
+            text-shadow: 0 0 30px var(--primary);
+            letter-spacing: clamp(2px,.8vw,6px);
+            line-height: 1.8;
+            animation: fadeUp .8s .1s ease both;
+        }
+        .hero-sub {
+            font-family: var(--px);
+            font-size: clamp(6px,1vw,8px);
+            color: var(--cyan); letter-spacing: 4px;
+            text-shadow: 0 0 10px var(--cyan);
+            animation: fadeUp .8s .15s ease both;
+        }
+        .hero-desc {
+            color: var(--dim);
+            font-size: clamp(14px,1.8vw,16px);
+            line-height: 1.9; max-width: 560px;
+            animation: fadeUp .8s .2s ease both;
+        }
+        .hero-desc em { color: var(--text); font-style: normal; }
+        .cta-btn {
+            font-family: var(--px);
+            font-size: clamp(9px,1.6vw,12px);
+            letter-spacing: 2px;
+            padding: clamp(14px,2.5vw,20px) clamp(28px,5vw,48px);
+            background: transparent;
+            border: 2px solid var(--gold);
+            color: var(--gold);
+            cursor: pointer; position: relative; overflow: hidden;
+            text-decoration: none; display: inline-block;
+            box-shadow: 0 0 28px rgba(255,215,0,.2);
+            transition: all .2s;
+            animation: fadeUp .8s .3s ease both, pulse-gold 2.5s 1.5s ease-in-out infinite;
+        }
+        .cta-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: var(--gold);
+            transform: scaleX(0); transform-origin: left;
+            transition: .25s; z-index: -1;
+        }
+        .cta-btn:hover { color: #000; box-shadow: 0 0 50px rgba(255,215,0,.5); }
+        .cta-btn:hover::before { transform: scaleX(1); }
+        .cta-btn:active { transform: scale(.96); }
+        @keyframes pulse-gold {
+            0%,100% { box-shadow: 0 0 28px rgba(255,215,0,.2); }
+            50%      { box-shadow: 0 0 55px rgba(255,215,0,.5); }
+        }
+        .scroll-hint {
+            position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            animation: fadeUp 1s 1s ease both;
+        }
+        .scroll-hint span { font-family: var(--px); font-size: 7px; color: var(--dim); letter-spacing: 2px; }
+        .scroll-arrow {
+            width: 18px; height: 18px;
+            border-right: 2px solid var(--dim); border-bottom: 2px solid var(--dim);
+            transform: rotate(45deg);
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+        @keyframes bounce {
+            0%,100% { transform: rotate(45deg) translateY(0); }
+            50%      { transform: rotate(45deg) translateY(5px); }
+        }
+
+        /* ── SECTIONS ── */
+        .section {
+            position: relative; z-index: 1;
+            padding: clamp(60px,8vw,100px) clamp(20px,5vw,60px);
+            max-width: 1100px; margin: 0 auto;
+        }
+        .section-label {
+            font-family: var(--px);
+            font-size: clamp(6px,1vw,8px);
+            color: var(--cyan); letter-spacing: 4px;
+            text-shadow: 0 0 10px var(--cyan);
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: clamp(20px,3.5vw,32px);
+            font-weight: 700; margin-bottom: 40px; line-height: 1.4;
+        }
+        .section-title em { color: var(--primary); font-style: normal; }
+        .divider {
+            position: relative; z-index: 1; height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 0 clamp(20px,5vw,60px);
+        }
+
+        /* ── TOOLS GRID ── */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
+            gap: 20px;
+        }
+        .tool-card {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 28px 24px;
+            transition: all .2s; position: relative; overflow: hidden;
+        }
+        .tool-card:hover { transform: translateY(-5px); }
+        .tool-card.c-red:hover   { border-color: var(--primary); box-shadow: 0 10px 30px rgba(233,69,96,.15); }
+        .tool-card.c-cyan:hover  { border-color: var(--cyan);    box-shadow: 0 10px 30px rgba(0,212,255,.12); }
+        .tool-card.c-gold:hover  { border-color: var(--gold);    box-shadow: 0 10px 30px rgba(255,215,0,.12); }
+        .tool-card.c-purple:hover{ border-color: var(--purple);  box-shadow: 0 10px 30px rgba(181,123,238,.12); }
+        .tool-status {
+            position: absolute; top: 16px; right: 16px;
+            font-family: var(--px); font-size: 7px; letter-spacing: 1px;
+            padding: 4px 8px; border-radius: 2px;
+        }
+        .tool-status.live   { color: var(--green);  border: 1px solid var(--green);  background: rgba(78,255,145,.08); }
+        .tool-status.soon   { color: var(--dim);    border: 1px solid var(--border); }
+        .tool-icon { font-size: 40px; margin-bottom: 16px; }
+        .tool-name {
+            font-family: var(--px);
+            font-size: clamp(8px,1.2vw,10px);
+            margin-bottom: 10px; letter-spacing: 1px;
+        }
+        .tool-card.c-red   .tool-name { color: var(--primary); text-shadow: 0 0 8px var(--primary); }
+        .tool-card.c-cyan  .tool-name { color: var(--cyan);    text-shadow: 0 0 8px var(--cyan); }
+        .tool-card.c-gold  .tool-name { color: var(--gold);    text-shadow: 0 0 8px var(--gold); }
+        .tool-card.c-purple.tool-name { color: var(--purple);  text-shadow: 0 0 8px var(--purple); }
+        .tool-desc { color: var(--dim); font-size: clamp(13px,1.6vw,14px); line-height: 1.75; }
+        .tool-tags {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px;
+        }
+        .tag {
+            font-size: 11px; padding: 3px 8px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid var(--border);
+            border-radius: 2px; color: var(--dim);
+        }
+
+        /* ── HOW ── */
+        .steps-wrap {
+            display: flex; flex-direction: column;
+            position: relative; max-width: 640px;
+        }
+        .steps-wrap::before {
+            content: ''; position: absolute;
+            left: 22px; top: 0; bottom: 0; width: 2px;
+            background: linear-gradient(to bottom, var(--primary), var(--cyan), var(--gold));
+            opacity: .25;
+        }
+        .step { display: flex; gap: 24px; align-items: flex-start; padding: 22px 0; }
+        .step-num {
+            font-family: var(--px); font-size: 9px;
+            width: 46px; height: 46px; border-radius: 50%;
+            border: 2px solid var(--primary);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--primary); flex-shrink: 0;
+            background: var(--bg);
+            box-shadow: 0 0 14px rgba(233,69,96,.25);
+            position: relative; z-index: 1;
+        }
+        .step-body { padding-top: 8px; }
+        .step-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+        .step-desc  { color: var(--dim); font-size: 14px; line-height: 1.75; }
+
+        /* ── CONTACT ── */
+        .contact-wrap {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: clamp(28px,5vw,48px);
+            max-width: 640px;
+        }
+        .contact-intro { color: var(--dim); font-size: 15px; line-height: 1.8; margin-bottom: 28px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%; background: #080816;
+            border: 1px solid var(--border); color: var(--text);
+            padding: 12px 15px; font-size: 15px; font-family: inherit;
+            border-radius: 4px; outline: none;
+            transition: border-color .2s, box-shadow .2s; resize: vertical;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: var(--cyan);
+            box-shadow: 0 0 12px rgba(0,212,255,.1);
+        }
+        .form-row { display: flex; gap: 14px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; min-width: 180px; }
+        .send-btn {
+            font-family: var(--px); font-size: 10px; letter-spacing: 2px;
+            padding: 15px 28px; background: transparent;
+            border: 2px solid var(--cyan); color: var(--cyan);
+            cursor: pointer; transition: all .2s; width: 100%;
+            box-shadow: 0 0 16px rgba(0,212,255,.12);
+            position: relative; overflow: hidden;
+        }
+        .send-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: var(--cyan);
+            transform: scaleX(0); transform-origin: left;
+            transition: .25s; z-index: -1;
+        }
+        .send-btn:hover { color: #000; }
+        .send-btn:hover::before { transform: scaleX(1); }
+        .send-btn:active { transform: scale(.97); }
+        .form-msg {
+            margin-top: 12px; font-family: var(--px); font-size: 8px;
+            letter-spacing: 1px; text-align: center; min-height: 18px;
+        }
+        .form-msg.ok  { color: var(--green); }
+        .form-msg.err { color: var(--primary); }
+
+        /* ── FOOTER ── */
+        footer {
+            position: relative; z-index: 1;
+            border-top: 1px solid var(--border);
+            padding: 28px clamp(20px,5vw,60px);
+            display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 12px;
+            margin-top: 40px;
+        }
+        .footer-brand {
+            font-family: var(--px); font-size: 8px;
+            color: var(--primary); text-shadow: 0 0 8px var(--primary); letter-spacing: 2px;
+        }
+        .footer-copy { font-size: 12px; color: var(--dim); }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── 顶部导航 ── -->
+<nav>
+    <a class="nav-logo" href="#">⚔ MARC'S TOOLKIT</a>
+    <ul class="nav-links">
+        <li><a href="#tools">工具介绍</a></li>
+        <li><a href="#how">使用方式</a></li>
+        <li><a href="#contact">联系我</a></li>
+        <li><a class="nav-cta" href="./dashboard.html">▶ 进入 Dashboard</a></li>
+    </ul>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+    <div class="hero-badge">MARC'S TEACHING TOOLKIT · 学习智能工具平台</div>
+    <div class="hero-icons">
+        <span>⚔️</span><span>📝</span><span>🗺️</span><span>⚗️</span>
+    </div>
+    <h1 class="hero-title">学习智能工具平台</h1>
+    <p class="hero-sub">MARC'S TEACHING TOOLKIT · CAMPUS EDITION</p>
+    <p class="hero-desc">
+        把重复练习变成<em>游戏闯关</em>。<br>
+        词汇、填空、历史、化学——一个平台，统一管理，<br>
+        学生一次登录，所有工具随时可用。
+    </p>
+
+    <a class="cta-btn" href="./dashboard.html">▶ 进入 Dashboard</a>
+
+    <div class="scroll-hint">
+        <span>了解所有工具</span>
+        <div class="scroll-arrow"></div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── 工具介绍 ── -->
+<section class="section" id="tools">
+    <p class="section-label">// TOOLS</p>
+    <h2 class="section-title">四大<em>学习工具</em>，一个平台</h2>
+    <div class="tools-grid">
+
+        <div class="tool-card c-red">
+            <div class="tool-status live">● 已上线</div>
+            <div class="tool-icon">⚔️</div>
+            <div class="tool-name">词汇闯关 · VOCAQUEST</div>
+            <p class="tool-desc">像素风 RPG 单词学习游戏。上传词包，击败词汇怪兽，积累 XP 冲上排行榜。支持 Excel、PDF、Word 等多种格式导入。</p>
+            <div class="tool-tags">
+                <span class="tag">英语词汇</span>
+                <span class="tag">RPG闯关</span>
+                <span class="tag">班级排行</span>
+                <span class="tag">教师管理</span>
+            </div>
+        </div>
+
+        <div class="tool-card c-cyan">
+            <div class="tool-status soon">○ 即将上线</div>
+            <div class="tool-icon">📝</div>
+            <div class="tool-name">句子填空 · FILLBLANK</div>
+            <p class="tool-desc">AI 自动根据词包生成填空练习题。学生在真实语境中运用学过的单词，巩固记忆效果，老师一键生成，立即分配。</p>
+            <div class="tool-tags">
+                <span class="tag">AI生成题目</span>
+                <span class="tag">语境练习</span>
+                <span class="tag">词包联动</span>
+            </div>
+        </div>
+
+        <div class="tool-card c-gold">
+            <div class="tool-status soon">○ 即将上线</div>
+            <div class="tool-icon">🗺️</div>
+            <div class="tool-name">地理历史记忆 · GEOHISTORY</div>
+            <p class="tool-desc">时间轴闯关模式。老师上传历史事件、地理知识点，系统生成记忆练习。年份、事件、地点，反复强化，轻松记牢。</p>
+            <div class="tool-tags">
+                <span class="tag">历史事件</span>
+                <span class="tag">时间轴</span>
+                <span class="tag">地理知识</span>
+            </div>
+        </div>
+
+        <div class="tool-card c-purple">
+            <div class="tool-status soon">○ 即将上线</div>
+            <div class="tool-icon">⚗️</div>
+            <div class="tool-name">化学元素记忆 · CHEMQUEST</div>
+            <p class="tool-desc">元素符号、中英文名称、原子序数——闯关模式强化记忆。内置元素周期表题库，老师可自定义补充考点。</p>
+            <div class="tool-tags">
+                <span class="tag">元素周期表</span>
+                <span class="tag">符号记忆</span>
+                <span class="tag">自定义题库</span>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── 平台特色 ── -->
+<section class="section" id="features">
+    <p class="section-label">// PLATFORM FEATURES</p>
+    <h2 class="section-title">平台<em>核心特色</em></h2>
+    <div class="tools-grid">
+        <div class="tool-card c-cyan">
+            <div class="tool-icon">🔐</div>
+            <div class="tool-name" style="color:var(--cyan);text-shadow:0 0 8px var(--cyan);">一次登录，全平台通用</div>
+            <p class="tool-desc">学生注册一个账号，即可使用平台上所有工具。积分、排名、进度统一管理，无需重复登录。</p>
+        </div>
+        <div class="tool-card c-red">
+            <div class="tool-icon">🤖</div>
+            <div class="tool-name" style="color:var(--primary);text-shadow:0 0 8px var(--primary);">AI 智能内容生成</div>
+            <p class="tool-desc">老师上传词本或题目，AI 自动生成练习内容。MiniMax M2.7 驱动，生成质量高，速度快，大幅减少备课时间。</p>
+        </div>
+        <div class="tool-card c-gold">
+            <div class="tool-icon">🏆</div>
+            <div class="tool-name" style="color:var(--gold);text-shadow:0 0 8px var(--gold);">总排行 + 分工具排行</div>
+            <p class="tool-desc">Dashboard 显示全平台总积分排行，同时每个工具有独立排行榜，让学生在每个科目都有竞争动力。</p>
+        </div>
+        <div class="tool-card c-purple">
+            <div class="tool-icon">📊</div>
+            <div class="tool-name" style="color:var(--purple);text-shadow:0 0 8px var(--purple);">教师全局管理</div>
+            <p class="tool-desc">所有工具的内容只能由老师上传和管理，班级分配精准到每个工具。学生进度一目了然，随时查看监控面板。</p>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── 使用方式 ── -->
+<section class="section" id="how">
+    <p class="section-label">// HOW IT WORKS</p>
+    <h2 class="section-title">3 步开始<em>学习</em></h2>
+    <div class="steps-wrap">
+        <div class="step">
+            <div class="step-num">01</div>
+            <div class="step-body">
+                <div class="step-title">获取邀请码</div>
+                <p class="step-desc">联系你的老师，获取专属学生邀请码。邀请码由教师统一发放，确保班级安全。</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">02</div>
+            <div class="step-body">
+                <div class="step-title">注册账号，进入 Dashboard</div>
+                <p class="step-desc">输入姓名、邮箱、密码与邀请码，选择班级完成注册。登录后即可看到所有工具入口和你的积分排名。</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num">03</div>
+            <div class="step-body">
+                <div class="step-title">选择工具，开始练习！</div>
+                <p class="step-desc">点击任意工具卡片进入练习。老师已分配任务的工具会优先显示，完成任务积累 XP，冲上总排行榜。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ── 联系我 ── -->
+<section class="section" id="contact">
+    <p class="section-label">// CONTACT</p>
+    <h2 class="section-title">联系<em>我</em></h2>
+    <div class="contact-wrap">
+        <p class="contact-intro">
+            如果你是教师，想申请使用权限或邀请码；或者对工具有建议、遇到问题，欢迎发邮件联系我。通常在 24 小时内回复。
+        </p>
+        <div class="form-row">
+            <div class="form-group">
+                <label>你的姓名</label>
+                <input type="text" id="c-name" placeholder="张老师">
+            </div>
+            <div class="form-group">
+                <label>你的邮箱</label>
+                <input type="email" id="c-email" placeholder="teacher@school.com">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>咨询类型</label>
+            <select id="c-type">
+                <option value="">-- 请选择 --</option>
+                <option value="invite">申请教师／学生邀请码</option>
+                <option value="tool">咨询工具使用</option>
+                <option value="bug">报告问题 Bug</option>
+                <option value="feature">功能建议</option>
+                <option value="other">其他</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>消息内容</label>
+            <textarea id="c-msg" rows="5" placeholder="请描述你的需求或问题……"></textarea>
+        </div>
+        <button class="send-btn" onclick="sendContact()">▶ 发 送 邮 件</button>
+        <div class="form-msg" id="form-msg"></div>
+    </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+    <div class="footer-brand">⚔ MARC'S TEACHING TOOLKIT</div>
+    <div class="footer-copy">© 2025 Designed by 赵月杨 Marc · 为教育而生</div>
+</footer>
+
+<script>
+    function sendContact() {
+        const name  = document.getElementById('c-name').value.trim();
+        const email = document.getElementById('c-email').value.trim();
+        const type  = document.getElementById('c-type').value;
+        const msg   = document.getElementById('c-msg').value.trim();
+        const msgEl = document.getElementById('form-msg');
+
+        if (!name || !email || !type || !msg) {
+            msgEl.textContent = '⚠ 请填写所有字段'; msgEl.className = 'form-msg err'; return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            msgEl.textContent = '⚠ 邮箱格式不正确'; msgEl.className = 'form-msg err'; return;
+        }
+        const typeMap = { invite:'申请邀请码', tool:'工具咨询', bug:'报告问题', feature:'功能建议', other:'其他' };
+        const subject = encodeURIComponent(`[Marc Toolkit] ${typeMap[type]||type} - 来自 ${name}`);
+        const body    = encodeURIComponent(`姓名：${name}\n回复邮箱：${email}\n类型：${typeMap[type]||type}\n\n内容：\n${msg}`);
+        window.open(`mailto:kinsgimth@hotmail.com?subject=${subject}&body=${body}`, '_blank');
+        msgEl.textContent = '✅ 已打开邮件客户端，请发送！'; msgEl.className = 'form-msg ok';
+    }
+</script>
+</body>
+</html>
