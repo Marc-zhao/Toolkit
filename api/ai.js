@@ -1,6 +1,6 @@
-// /api/ai.js - Vercel Serverless Function
+// /api/ai.js - Vercel Serverless Function (CommonJS格式)
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -10,30 +10,15 @@ export default async function handler(req, res) {
   try {
     const { messages, max_tokens = 2000 } = req.body;
 
-    // MiniMax 的 prompt 工程：
-    // 1. 把所有消息合并成一条 user 消息（避免 system 角色触发过滤）
-    // 2. 完全用英文（中文内容触发 output_sensitive）
-    // 3. 把中文内容放在数据里而不是 prompt 指令里
-    
-    // 提取 system 和 user 内容
+    // 把所有消息合并成单条英文prompt（避免MiniMax内容过滤）
     let systemMsg = '';
     let userMsg = '';
-    for (const m of messages) {
+    for (const m of (messages || [])) {
       if (m.role === 'system') systemMsg = m.content;
       else if (m.role === 'user') userMsg = m.content;
     }
 
-    // 构建单条英文 prompt
-    // 把中文数据原样保留（数据本身不触发过滤），只把指令改成英文
-    const combinedPrompt = buildEnglishPrompt(systemMsg, userMsg);
-
-    const body = {
-      model: 'MiniMax-Text-01',
-      messages: [{ role: 'user', content: combinedPrompt }],
-      max_tokens,
-      temperature: 0.7,
-      stream: false,
-    };
+    const prompt = buildPrompt(systemMsg, userMsg);
 
     const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
       method: 'POST',
@@ -41,107 +26,109 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer sk-cp-4HqqfXmiPJ4VkN2K645mENVnjLVE96EM-qQN-soNwi2lR-Bl3BMEf7AKd-yIgSuSzSJ3z2vspKLW08qo-Lt8Tr3-4huwexpQ0NV-PkVZykf5oBWzrrF3XCY',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        model: 'MiniMax-Text-01',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: max_tokens,
+        temperature: 0.7,
+        stream: false,
+      }),
     });
 
     const data = await response.json();
 
-    // 日志
-    const finishReason = data.choices?.[0]?.finish_reason;
-    const content = data.choices?.[0]?.message?.content || '';
-    console.log('finish_reason:', finishReason);
-    console.log('output_sensitive:', data.output_sensitive);
-    console.log('base_resp:', JSON.stringify(data.base_resp));
-    console.log('content length:', content.length);
+    const finishReason = data.choices && data.choices[0] ? data.choices[0].finish_reason : '';
+    const content = data.choices && data.choices[0] && data.choices[0].message
+      ? data.choices[0].message.content : '';
 
-    // 如果内容被过滤，返回详细错误给前端
-    if (!content || data.output_sensitive) {
-      return res.status(200).json({
-        error: 'content_filtered',
-        output_sensitive: data.output_sensitive,
-        finish_reason: finishReason,
-        base_resp: data.base_resp,
-        // 返回一个假 choices 结构让前端能识别错误
-        choices: [{ message: { content: '' }, finish_reason: finishReason || 'sensitive' }]
+    console.log('finish_reason:', finishReason, '| output_sensitive:', data.output_sensitive, '| content_len:', content.length);
+
+    // 内容被过滤时重试（去掉所有中文）
+    if (!content || data.output_sensitive === true) {
+      console.log('Retrying with simpler prompt...');
+      const simplePrompt = `Generate English vocabulary exercises as a JSON array. Data: ${userMsg.replace(/[\u4e00-\u9fa5]/g, '')}. Return ONLY a JSON array starting with [.`;
+      const retry = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer sk-cp-4HqqfXmiPJ4VkN2K645mENVnjLVE96EM-qQN-soNwi2lR-Bl3BMEf7AKd-yIgSuSzSJ3z2vspKLW08qo-Lt8Tr3-4huwexpQ0NV-PkVZykf5oBWzrrF3XCY',
+        },
+        body: JSON.stringify({
+          model: 'MiniMax-Text-01',
+          messages: [{ role: 'user', content: simplePrompt }],
+          max_tokens: max_tokens,
+          temperature: 0.5,
+          stream: false,
+        }),
       });
+      const retryData = await retry.json();
+      return res.status(200).json(retryData);
     }
 
     return res.status(200).json(data);
 
   } catch (err) {
-    console.error('api/ai error:', err);
+    console.error('api/ai error:', err.message);
     return res.status(500).json({ error: err.message });
   }
-}
+};
 
-function buildEnglishPrompt(systemMsg, userMsg) {
-  // 把中文的 system/user prompt 转成不触发过滤的形式
-  // 关键：指令用英文，数据（单词、中文释义）保留原样放在数据区
-  
-  // 检测任务类型
-  if (userMsg.includes('填空题') || userMsg.includes('fill') || userMsg.includes('sentence')) {
-    // 句子填空题生成
-    // 提取词汇数据（保留中文，放在数据区不触发过滤）
-    const wordData = userMsg.match(/词汇[:：]([^\n]+)/)?.[1] || 
-                     userMsg.match(/单词[:：]([^\n]+)/)?.[1] ||
-                     userMsg.match(/words?[:：]([^\n]+)/i)?.[1] || '';
-    const count = userMsg.match(/生成(\d+)道/)?.[1] || 
-                  userMsg.match(/(\d+)\s*道/)?.[1] || '5';
-    
-    return `Generate ${count} English fill-in-the-blank exercises. Return ONLY a JSON array, no other text.
+function buildPrompt(systemMsg, userMsg) {
+  // 检测任务类型，构建不触发MiniMax内容过滤的英文prompt
+  const combined = (systemMsg + ' ' + userMsg);
 
-Vocabulary data: ${wordData || userMsg}
+  if (combined.includes('fill') || combined.includes('填空') || combined.includes('sentence')) {
+    // 提取词汇列表
+    const wordMatch = userMsg.match(/(?:词汇|单词|words?)[：:]\s*([^\n]+)/i);
+    const wordData = wordMatch ? wordMatch[1] : userMsg;
+    const countMatch = userMsg.match(/(\d+)\s*道/);
+    const count = countMatch ? countMatch[1] : '5';
+    const diffMatch = userMsg.match(/(\d)\s*[)）]/);
+    const diff = diffMatch ? diffMatch[1] : '1';
 
-Each array item must have these exact fields:
-- "word": the English word
-- "meaning": Chinese meaning  
-- "sentence": English sentence with ____ as blank
-- "translation": Chinese translation (replace the blank word with its Chinese meaning, do not write the English word)
-- "answer": the correct word for the blank
-- "options": array of 4 English words (include the answer)
-- "steps": array of 3 hint strings in Chinese
-- "grammar_point": brief grammar note in Chinese
-- "difficulty": number 1-3
+    return `Generate ${count} English fill-in-the-blank exercises. Return ONLY a JSON array.
 
-Output format: [{"word":"...","meaning":"...","sentence":"...","translation":"...","answer":"...","options":["...","...","...","..."],"steps":["...","...","..."],"grammar_point":"...","difficulty":1},...]
+Words: ${wordData}
 
-Start your response with [ and end with ]`;
-  }
-  
-  if (userMsg.includes('错题') || userMsg.includes('review') || userMsg.includes('练习')) {
-    // Boss/推题生成
-    const wordData = userMsg.match(/词汇[:：]([^\n]+)/)?.[1] ||
-                     userMsg.match(/错题[:：]([^\n]+)/)?.[1] ||
-                     userMsg.match(/words?[:：]([^\n]+)/i)?.[1] || userMsg;
-    const count = userMsg.match(/生成(\d+)道/)?.[1] ||
-                  userMsg.match(/(\d+)\s*道/)?.[1] || '10';
+Each JSON object needs these fields:
+- word: the English vocabulary word
+- meaning: Chinese meaning of the word
+- sentence: English sentence using ____ as the blank
+- translation: Chinese translation of the sentence (write the Chinese meaning at the blank position, NOT the English word)
+- answer: the correct English word for the blank
+- options: array of exactly 4 English word choices (must include the answer)
+- steps: array of 3 Chinese hint strings
+- grammar_point: brief Chinese grammar explanation
+- difficulty: integer ${diff}
 
-    return `Create ${count} English vocabulary review exercises as a JSON array. Return ONLY the JSON array.
-
-Word list: ${wordData}
-
-Each item needs:
-- "word": English word
-- "meaning": Chinese translation
-- "sentence": English sentence with ____ blank  
-- "translation": Chinese sentence (use Chinese meaning instead of the English word)
-- "answer": correct word
-- "options": 4 English choices array
-- "steps": 3 Chinese hint strings
-- "grammar_point": Chinese grammar note
-
-Return ONLY: [{"word":"...","meaning":"...","sentence":"...","translation":"...","answer":"...","options":[...],"steps":[...],"grammar_point":"..."},...]`;
+Respond with ONLY the JSON array. Example format:
+[{"word":"run","meaning":"跑步","sentence":"I ____ every morning.","translation":"我每天早上跑步。","answer":"run","options":["run","walk","swim","fly"],"steps":["看句子结构","分析时态","选择动词"],"grammar_point":"一般现在时","difficulty":${diff}}]`;
   }
 
-  if (userMsg.includes('summary') || userMsg.includes('总结') || userMsg.includes('suggestion')) {
-    // AI总结错题
-    return `Analyze these English vocabulary errors and return a JSON object. Return ONLY the JSON.
+  if (combined.includes('review') || combined.includes('错题') || combined.includes('practice')) {
+    const wordMatch = userMsg.match(/(?:Word list|词汇|错题)[：:]\s*([^\n]+)/i);
+    const wordData = wordMatch ? wordMatch[1] : userMsg;
+    const countMatch = userMsg.match(/(\d+)\s*(?:道|exercises?)/i);
+    const count = countMatch ? countMatch[1] : '10';
 
-Data: ${userMsg}
+    return `Create ${count} English vocabulary review fill-in-the-blank questions. Return ONLY a JSON array.
 
-Return format: {"summary":"one sentence summary in Chinese","suggestion":"1-2 sentences study advice in Chinese","tags":["grammar point 1","grammar point 2"]}`;
+Vocabulary to review: ${wordData}
+
+Each object: {"word":"...","meaning":"Chinese meaning","sentence":"English with ____","translation":"Chinese translation","answer":"correct word","options":["word1","word2","word3","word4"],"steps":["hint1","hint2","hint3"],"grammar_point":"Chinese note"}
+
+ONLY output the JSON array, nothing else.`;
   }
 
-  // 默认：直接传递但把中文指令部分替换为英文
-  return `Complete this English education task and return ONLY JSON output, no markdown, no explanation:\n\n${userMsg}`;
+  if (combined.includes('summary') || combined.includes('总结') || combined.includes('tags')) {
+    const errMatch = userMsg.match(/(?:错题|errors?)[：:]\s*([^\n]+)/i);
+    const errData = errMatch ? errMatch[1] : userMsg;
+
+    return `Analyze these English vocabulary errors and return a JSON object.
+Errors: ${errData}
+Return ONLY: {"summary":"one sentence in Chinese","suggestion":"study advice in Chinese","tags":["grammar point 1","grammar point 2"]}`;
+  }
+
+  // 默认
+  return `Complete this task and return ONLY valid JSON, no markdown:\n${userMsg}`;
 }
