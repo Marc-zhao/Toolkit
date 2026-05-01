@@ -1,8 +1,13 @@
 {
   "redirects": [
+    { "source": "/", "destination": "/landing.html" }
+  ],
+  "headers": [
     {
-      "source": "/",
-      "destination": "/landing.html"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
     }
   ]
 }
