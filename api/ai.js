@@ -31,7 +31,21 @@ module.exports = async function handler(req, res) {
     const content = data.choices?.[0]?.message?.content || '';
     const finishReason = data.choices?.[0]?.finish_reason || '';
 
-    console.log('finish_reason:', finishReason, '| content_len:', content.length);
+    console.log('finish_reason:', finishReason, '| output_sensitive:', data.output_sensitive, '| content_len:', content.length);
+
+    // 内容被过滤时（output_sensitive=true），用超简单prompt重试
+    if (data.output_sensitive === true || (data.input_sensitive === true)) {
+      console.log('Sensitive detected, retrying with minimal prompt...');
+      const minimalPrompt = `List 10 English vocabulary words with example sentences. Format: JSON array with word, sentence, answer fields.`;
+      const retry = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer sk-cp-4HqqfXmiPJ4VkN2K645mENVnjLVE96EM-qQN-soNwi2lR-Bl3BMEf7AKd-yIgSuSzSJ3z2vspKLW08qo-Lt8Tr3-4huwexpQ0NV-PkVZykf5oBWzrrF3XCY' },
+        body: JSON.stringify({ model: 'MiniMax-M2.5', messages: [{ role: 'user', content: minimalPrompt }], max_tokens: 2000 })
+      });
+      const retryData = await retry.json();
+      console.log('retry content_len:', (retryData.choices?.[0]?.message?.content||'').length);
+      return res.status(200).json(retryData);
+    }
 
     // JSON被截断时（finish_reason=length），尝试修复
     if (finishReason === 'length' && content.includes('[')) {
