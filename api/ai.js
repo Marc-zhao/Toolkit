@@ -58,6 +58,23 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // 强制处理：如果content不是以[开头，尝试提取JSON部分
+    if (content && !content.trim().startsWith('[') && !content.trim().startsWith('{')) {
+      console.log('Content not JSON, attempting extraction...');
+      const jsonStart = content.indexOf('[');
+      const jsonEnd = content.lastIndexOf(']');
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        const extracted = content.substring(jsonStart, jsonEnd + 1);
+        try {
+          JSON.parse(extracted); // 验证
+          data.choices[0].message.content = extracted;
+          console.log('JSON extracted successfully');
+        } catch(e) {
+          console.log('Extraction failed, keeping original');
+        }
+      }
+    }
+
     return res.status(200).json(data);
   } catch (err) {
     console.error('Error:', err.message);
