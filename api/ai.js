@@ -1,118 +1,149 @@
+const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY;
+const ZHIPU_CHAT_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://skvsssqfkzqudscrwiyt.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!ZHIPU_API_KEY) return res.status(503).json({ error: 'AI service is not configured' });
 
   try {
-    const { messages, max_tokens = 2000 } = req.body;
-
-    let userContent = '';
-    for (const m of (messages || [])) {
-      if (m.role === 'user') userContent = m.content;
+    const { messages, max_tokens = 2000, temperature = 0.7 } = req.body || {};
+    const safeMessages = normalizeMessages(messages);
+    if (!safeMessages.length) return res.status(400).json({ error: 'Missing messages' });
+    if (safeMessages.length > 12 || safeMessages.reduce((n, m) => n + m.content.length, 0) > 24000) {
+      return res.status(413).json({ error: 'Request is too large' });
     }
 
-    const response = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer sk-cp-4HqqfXmiPJ4VkN2K645mENVnjLVE96EM-qQN-soNwi2lR-Bl3BMEf7AKd-yIgSuSzSJ3z2vspKLW08qo-Lt8Tr3-4huwexpQ0NV-PkVZykf5oBWzrrF3XCY',
-      },
-      body: JSON.stringify({
-        model: 'MiniMax-M2.5',
-        messages: [{ role: 'user', content: userContent }],
-        max_tokens: Math.max(max_tokens, 4000), // 确保足够长度
-        temperature: 0.7,
-      }),
-    });
+    const quota = await consumeQuota(req, 40);
+    if (!quota.ok) return res.status(quota.status).json({ error: quota.error });
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    const finishReason = data.choices?.[0]?.finish_reason || '';
-
-    console.log('finish_reason:', finishReason, '| output_sensitive:', data.output_sensitive, '| content_len:', content.length);
-
-    // 内容被过滤时（output_sensitive=true），用超简单prompt重试
-    if (data.output_sensitive === true || (data.input_sensitive === true)) {
-      console.log('Sensitive detected, retrying with minimal prompt...');
-      const minimalPrompt = `List 10 English vocabulary words with example sentences. Format: JSON array with word, sentence, answer fields.`;
-      const retry = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7800);
+    let data;
+    try {
+      const response = await fetch(ZHIPU_CHAT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer sk-cp-4HqqfXmiPJ4VkN2K645mENVnjLVE96EM-qQN-soNwi2lR-Bl3BMEf7AKd-yIgSuSzSJ3z2vspKLW08qo-Lt8Tr3-4huwexpQ0NV-PkVZykf5oBWzrrF3XCY' },
-        body: JSON.stringify({ model: 'MiniMax-M2.5', messages: [{ role: 'user', content: minimalPrompt }], max_tokens: 2000 })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + ZHIPU_API_KEY,
+        },
+        body: JSON.stringify({
+          model: 'glm-4-air',
+          messages: safeMessages,
+          max_tokens: Math.min(Math.max(Number(max_tokens) || 2000, 1200), 4000),
+          temperature,
+          stream: false,
+        }),
+        signal: controller.signal,
       });
-      const retryData = await retry.json();
-      console.log('retry content_len:', (retryData.choices?.[0]?.message?.content||'').length);
-      return res.status(200).json(retryData);
+
+      const text = await response.text();
+      if (!response.ok) {
+        console.error('[zhipu-ai] HTTP', response.status, text.slice(0, 300));
+        return res.status(response.status).json({ error: text.slice(0, 200) });
+      }
+      data = JSON.parse(text);
+    } finally {
+      clearTimeout(timer);
     }
 
-    // JSON被截断时（finish_reason=length），尝试修复
-    if (finishReason === 'length' && content.includes('[')) {
-      console.log('JSON truncated, attempting repair...');
-      const repaired = repairJSON(content);
-      if (repaired) {
-        // 返回修复后的内容
-        data.choices[0].message.content = repaired;
-        return res.status(200).json(data);
-      }
-    }
-
-    // 强制处理：如果content不是以[开头，尝试提取JSON部分
-    if (content && !content.trim().startsWith('[') && !content.trim().startsWith('{')) {
-      console.log('Content not JSON, attempting extraction...');
-      const jsonStart = content.indexOf('[');
-      const jsonEnd = content.lastIndexOf(']');
-      if (jsonStart !== -1 && jsonEnd > jsonStart) {
-        const extracted = content.substring(jsonStart, jsonEnd + 1);
-        try {
-          JSON.parse(extracted); // 验证
-          data.choices[0].message.content = extracted;
-          console.log('JSON extracted successfully');
-        } catch(e) {
-          console.log('Extraction failed, keeping original');
-        }
-      }
-    }
+    const content = data.choices?.[0]?.message?.content || '';
+    const cleaned = cleanJsonContent(content);
+    if (cleaned !== content) data.choices[0].message.content = cleaned;
 
     return res.status(200).json(data);
   } catch (err) {
-    console.error('Error:', err.message);
-    return res.status(500).json({ error: err.message });
+    const message = err.name === 'AbortError' ? 'AI request timed out' : err.message;
+    console.error('[zhipu-ai] Error:', message);
+    return res.status(500).json({ error: message });
   }
 };
 
-// 修复被截断的JSON数组
-function repairJSON(raw) {
+function normalizeMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter(m => m && typeof m.content === 'string' && m.content.trim())
+    .map(m => ({
+      role: m.role === 'system' ? 'system' : (m.role === 'assistant' ? 'assistant' : 'user'),
+      content: m.content.trim(),
+    }));
+}
+
+async function consumeQuota(req, limit) {
+  const authorization = req.headers.authorization || '';
+  if (!/^Bearer\s+\S+$/i.test(authorization)) {
+    return { ok: false, status: 401, error: 'Please sign in before using AI' };
+  }
   try {
-    // 先尝试直接解析
-    const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-    JSON.parse(cleaned);
-    return cleaned; // 本来就是完整的
-  } catch(e) {
-    // 尝试找到最后一个完整的对象
-    try {
-      const start = raw.indexOf('[');
-      if (start === -1) return null;
-      let depth = 0;
-      let lastComplete = start;
-      for (let i = start; i < raw.length; i++) {
-        if (raw[i] === '{') depth++;
-        if (raw[i] === '}') {
-          depth--;
-          if (depth === 0) lastComplete = i + 1;
-        }
-      }
-      // 截取到最后一个完整对象，加上结尾]
-      const partial = raw.substring(start, lastComplete);
-      // 去掉末尾的逗号
-      const fixed = partial.replace(/,\s*$/, '') + ']';
-      JSON.parse(fixed); // 验证
-      console.log('JSON repaired successfully');
-      return fixed;
-    } catch(e2) {
-      console.log('JSON repair failed:', e2.message);
-      return null;
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_ai_quota`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': authorization,
+      },
+      body: JSON.stringify({ p_limit: limit }),
+    });
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, status: 401, error: 'Your session has expired. Please sign in again.' };
+    }
+    if (!response.ok) {
+      console.error('[ai-quota] HTTP', response.status, (await response.text()).slice(0, 200));
+      return { ok: false, status: 503, error: 'AI quota service is temporarily unavailable' };
+    }
+    const allowed = await response.json();
+    return allowed === true
+      ? { ok: true }
+      : { ok: false, status: 429, error: 'AI usage limit reached. Please try again next hour.' };
+  } catch (error) {
+    console.error('[ai-quota] Error:', error.message);
+    return { ok: false, status: 503, error: 'AI quota service is temporarily unavailable' };
+  }
+}
+
+function cleanJsonContent(raw) {
+  if (!raw) return raw;
+  const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  if (isJson(cleaned)) return cleaned;
+
+  const jsonStart = cleaned.indexOf('[');
+  const jsonEnd = cleaned.lastIndexOf(']');
+  if (jsonStart !== -1 && jsonEnd > jsonStart) {
+    const extracted = cleaned.substring(jsonStart, jsonEnd + 1);
+    if (isJson(extracted)) return extracted;
+  }
+
+  const repaired = repairJsonArray(cleaned);
+  return repaired || cleaned;
+}
+
+function isJson(value) {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function repairJsonArray(raw) {
+  const start = raw.indexOf('[');
+  if (start === -1) return null;
+  let depth = 0;
+  let lastComplete = -1;
+  for (let i = start; i < raw.length; i++) {
+    if (raw[i] === '{') depth++;
+    if (raw[i] === '}') {
+      depth--;
+      if (depth === 0) lastComplete = i + 1;
     }
   }
+  if (lastComplete === -1) return null;
+  const fixed = raw.substring(start, lastComplete).replace(/,\s*$/, '') + ']';
+  return isJson(fixed) ? fixed : null;
 }

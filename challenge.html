@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>班级挑战 · Marc's Teaching Toolkit</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,7 +11,7 @@
   --bg:#0a0a18;--panel:#141428;--border:#2a2a50;
   --primary:#e94560;--cyan:#00d4ff;--gold:#ffd700;
   --green:#4eff91;--red:#ff4444;--purple:#b57bee;--orange:#ff8c42;
-  --text:#ffffff;--dim:#707090;--px:'Press Start 2P',monospace;
+  --text:#ffffff;--dim:#a0a0ba;--px:'Press Start 2P',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;overflow-x:hidden}
@@ -179,6 +179,8 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
   .compete-scene{flex:0 0 40vh;border-left:none;border-bottom:2px solid var(--border)}
   .opts-c{grid-template-columns:1fr}
 }
+:focus-visible{outline:3px solid var(--purple);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -410,6 +412,14 @@ const TOOL_NAMES={vocaquest:'词汇闯关',fillblank:'句子填空',geohistory:'
 const TOOL_REWARDS={vocaquest:'本周词汇霸主',fillblank:'句型大师',geohistory:'历史学者',chemistry:'元素达人'};
 
 function toast(m,t='ok'){const el=document.createElement('div');el.className=`toast ${t}`;el.textContent=m;document.body.appendChild(el);setTimeout(()=>el.remove(),2700)}
+function escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderBlankSentence(el,text,blankClass){
+  el.textContent='';
+  String(text||'').split('____').forEach((part,i,parts)=>{
+    el.appendChild(document.createTextNode(part));
+    if(i<parts.length-1){const span=document.createElement('span');span.className=blankClass;span.textContent='____';el.appendChild(span);}
+  });
+}
 // 游戏音效
 const _CAC=typeof AudioContext!=='undefined'?new AudioContext():typeof webkitAudioContext!=='undefined'?new webkitAudioContext():null;
 function playSfx(type){
@@ -699,7 +709,7 @@ function renderCompeteQ(){
   // 不显示答案单词，只显示中文释义作为提示
   document.getElementById('c-word-en').textContent='';
   document.getElementById('c-word-cn').textContent=q.meaning||q.translation||'';
-  document.getElementById('c-sent-en').innerHTML=(q.sentence||'').replace(/____/g,`<span class="blank-c">____</span>`);
+  renderBlankSentence(document.getElementById('c-sent-en'),q.sentence,'blank-c');
   document.getElementById('c-sent-cn').textContent=q.translation||'';
   document.getElementById('hint-c').style.display='none';
   const pct=G.qIdx/G.questions.length*100;
@@ -707,10 +717,14 @@ function renderCompeteQ(){
 
   const keys=['A','B','C','D'];
   const opts=shuffleArr([...(q.options||[q.answer,'B','C','D'])]);
-  document.getElementById('opts-c').innerHTML=opts.map((o,i)=>`
-    <button class="opt-c" onclick="selectCompeteAnswer('${o}','${q.answer}',this)" data-opt="${o}">
-      <span class="opt-key-c">${keys[i]}</span><span>${o}</span>
-    </button>`).join('');
+  const grid=document.getElementById('opts-c');
+  grid.textContent='';
+  opts.forEach((option,i)=>{
+    const btn=document.createElement('button');btn.className='opt-c';btn.dataset.opt=String(option);
+    const key=document.createElement('span');key.className='opt-key-c';key.textContent=keys[i]||'';
+    const label=document.createElement('span');label.textContent=String(option);
+    btn.append(key,label);btn.addEventListener('click',()=>selectCompeteAnswer(option,q.answer,btn));grid.appendChild(btn);
+  });
 }
 
 function selectCompeteAnswer(selected,answer,btnEl){
@@ -756,7 +770,7 @@ function showCompeteHint(q){
   const card=document.getElementById('hint-c');
   card.style.display='block';
   const steps=q.steps||['分析语境','排除选项','确认答案'];
-  document.getElementById('hint-steps-c').innerHTML=steps.map((s,i)=>`<div style="font-size:13px;line-height:1.7;margin-bottom:5px"><strong style="color:var(--cyan)">Step ${i+1}：</strong>${s}</div>`).join('');
+  document.getElementById('hint-steps-c').innerHTML=steps.map((s,i)=>`<div style="font-size:13px;line-height:1.7;margin-bottom:5px"><strong style="color:var(--cyan)">Step ${i+1}：</strong>${escH(s)}</div>`).join('');
   document.getElementById('hint-gp-c').textContent=q.grammar_point?`📚 ${q.grammar_point}`:'';
   document.getElementById('opts-c').style.opacity='.4';
 }

@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Weekly Boss · Marc's Teaching Toolkit</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -11,7 +11,7 @@
   --bg:#0a0a18;--panel:#141428;--border:#2a2a50;
   --primary:#e94560;--cyan:#00d4ff;--gold:#ffd700;
   --green:#4eff91;--red:#ff4444;--purple:#b57bee;--orange:#ff8c42;
-  --text:#ffffff;--dim:#707090;--px:'Press Start 2P',monospace;
+  --text:#ffffff;--dim:#a0a0ba;--px:'Press Start 2P',monospace;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{background:var(--bg);color:var(--text);font-family:'PingFang SC','Microsoft YaHei',sans-serif;min-height:100vh;overflow-x:hidden}
@@ -192,6 +192,8 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 .modal-title{font-family:var(--px);font-size:clamp(8px,1.4vw,10px);color:var(--gold);text-shadow:0 0 8px var(--gold);margin-bottom:16px;letter-spacing:2px}
 
 @media(max-width:500px){.opts-grid{grid-template-columns:1fr}}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -345,8 +347,14 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 <script>
 const S_URL='https://skvsssqfkzqudscrwiyt.supabase.co';
 const S_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
-const PROXY='https://skvsssqfkzqudscrwiyt.supabase.co/functions/v1/minimax-proxy';
+const PROXY='/api/ai';
 const db=window.supabase.createClient(S_URL,S_KEY);
+
+async function aiHeaders(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token) throw new Error('登录已过期，请重新登录');
+  return {'Content-Type':'application/json','Authorization':'Bearer '+session.access_token};
+}
 
 const G={
   userId:'',name:'',classId:'',isTeacher:false,
@@ -357,6 +365,14 @@ const G={
 };
 
 function toast(m,t='ok'){const el=document.createElement('div');el.className=`toast ${t}`;el.textContent=m;document.body.appendChild(el);setTimeout(()=>el.remove(),2700)}
+function escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderBlankSentence(el,text,blankClass){
+  el.textContent='';
+  String(text||'').split('____').forEach((part,i,parts)=>{
+    el.appendChild(document.createTextNode(part));
+    if(i<parts.length-1){const span=document.createElement('span');span.className=blankClass;span.textContent='____';el.appendChild(span);}
+  });
+}
 // Boss游戏音效
 const _BAC=typeof AudioContext!=='undefined'?new AudioContext():typeof webkitAudioContext!=='undefined'?new webkitAudioContext():null;
 function bossPlaySfx(type){
@@ -599,7 +615,7 @@ async function generateBossQuestions(toolId){
     }
 
     const targetWords=errorWords.slice(0,10);
-    // 只传英文词（中文释义会触发MiniMax内容过滤）
+      // 只传英文词，降低生成题目时的格式漂移概率
     const wordList=targetWords.map(w=>w.word).join(', ');
 
     // 优先从fillblank_questions取已有题目（不依赖AI）
@@ -616,7 +632,7 @@ async function generateBossQuestions(toolId){
       const {data:bossRow2}=await db.from('weekly_bosses').select('id')
         .eq('week_start',ws2).eq('tool_name',toolId).eq('is_active',true).maybeSingle();
       if(bossRow2){
-        await db.from('weekly_bosses').update({questions:picked}).eq('id',bossRow2.id);
+        await db.rpc('set_weekly_boss_questions',{p_boss_id:bossRow2.id,p_questions:picked});
         G.activeBoss={...G.activeBoss,questions:picked};
       }
       toast('✅ Boss题目已生成！');
@@ -627,7 +643,7 @@ async function generateBossQuestions(toolId){
     toast('AI正在生成Boss复习题…');
     const resp=await fetch('/api/ai',{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
+      headers:await aiHeaders(),
       body:JSON.stringify({
         messages:[
           {role:'user',content:(()=>{
@@ -684,7 +700,7 @@ Start with [:`;
     const {data:bossRow}=await db.from('weekly_bosses').select('id')
       .eq('week_start',ws).eq('tool_name',toolId).eq('is_active',true).maybeSingle();
     if(bossRow){
-      await db.from('weekly_bosses').update({questions}).eq('id',bossRow.id);
+      await db.rpc('set_weekly_boss_questions',{p_boss_id:bossRow.id,p_questions:questions});
       G.activeBoss={...G.activeBoss,questions};
     }
     toast('✅ Boss复习题生成完毕！');
@@ -735,7 +751,11 @@ function updateBossHP(){
 
 function updatePlayerHP(){
   const row=document.getElementById('player-hp-row');
-  row.innerHTML=`<span class="player-name-badge">${G.name}</span>`;
+  row.textContent='';
+  const nameBadge=document.createElement('span');
+  nameBadge.className='player-name-badge';
+  nameBadge.textContent=G.name;
+  row.appendChild(nameBadge);
   for(let i=0;i<3;i++){const h=document.createElement('span');h.className='heart'+(i>=G.hp?' lost':'');h.textContent='❤️';row.appendChild(h)}
 }
 
@@ -760,17 +780,21 @@ function renderBossQ(){
   // 不显示答案单词，显示中文释义作为提示
   document.getElementById('b-word-en').textContent='';
   document.getElementById('b-word-cn').textContent=q.meaning||q.translation||'';
-  document.getElementById('b-sent-en').innerHTML=(q.sentence||'').replace(/____/g,`<span class="blank-b">____</span>`);
+  renderBlankSentence(document.getElementById('b-sent-en'),q.sentence,'blank-b');
   document.getElementById('b-sent-cn').textContent=q.translation||'';
   document.getElementById('hint-card-b').style.display='none';
   updateBossHP();
 
   const keys=['A','B','C','D'];
   const opts=shuffleArr([...(q.options||[q.answer,'option2','option3','option4'])]);
-  document.getElementById('opts-grid-b').innerHTML=opts.map((o,i)=>`
-    <button class="opt-b" onclick="selectBossAnswer('${o}','${q.answer}',this)" data-opt="${o}">
-      <span class="opt-key">${keys[i]}</span><span>${o}</span>
-    </button>`).join('');
+  const grid=document.getElementById('opts-grid-b');
+  grid.textContent='';
+  opts.forEach((option,i)=>{
+    const btn=document.createElement('button');btn.className='opt-b';btn.dataset.opt=String(option);
+    const key=document.createElement('span');key.className='opt-key';key.textContent=keys[i]||'';
+    const label=document.createElement('span');label.textContent=String(option);
+    btn.append(key,label);btn.addEventListener('click',()=>selectBossAnswer(option,q.answer,btn));grid.appendChild(btn);
+  });
 }
 
 function selectBossAnswer(selected,answer,btnEl){
@@ -834,7 +858,7 @@ function showBossHint(q){
   const card=document.getElementById('hint-card-b');
   card.style.display='block';
   const steps=q.steps||['分析句子语境','排除错误选项','确认正确答案'];
-  document.getElementById('hint-steps-b').innerHTML=steps.map((s,i)=>`<div class="hint-step"><strong>Step ${i+1}：</strong>${s}</div>`).join('');
+  document.getElementById('hint-steps-b').innerHTML=steps.map((s,i)=>`<div class="hint-step"><strong>Step ${i+1}：</strong>${escH(s)}</div>`).join('');
   document.getElementById('hint-gp-b').textContent=q.grammar_point?`📚 ${q.grammar_point}`:'';
   document.getElementById('opts-grid-b').style.opacity='.4';
 }
@@ -855,10 +879,9 @@ async function endBattle(allDone,reason=''){
   if(G.userId&&G.activeBoss){
     await db.from('boss_records').insert({
       user_id:G.userId,boss_id:G.activeBoss.id,
-      tool_name:G.currentTool,
       week_start:getMonday().toISOString().split('T')[0],
-      score:G.score,correct_count:G.correct,
-      total_count:G.questions.length,accuracy,victory,
+      score:G.score,correct:G.correct,
+      total:G.questions.length,victory,
     });
   }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Marc's Teaching Toolkit · 教师智能工具平台</title>
+    <title>VocaQuest · 游戏化词汇学习平台</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -16,7 +16,7 @@
             --green: #4eff91;
             --purple: #b57bee;
             --text: #ffffff;
-            --dim: #707090;
+            --dim: #a0a0ba;
             --px: 'Press Start 2P', monospace;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -227,6 +227,7 @@
             border-radius: 8px;
             padding: 28px 24px;
             transition: all .2s; position: relative; overflow: hidden;
+            text-decoration: none; color: inherit; display: block;
         }
         .tool-card:hover { transform: translateY(-5px); }
         .tool-card.c-red:hover   { border-color: var(--primary); box-shadow: 0 10px 30px rgba(233,69,96,.15); }
@@ -358,13 +359,17 @@
             from { opacity: 0; transform: translateY(18px); }
             to   { opacity: 1; transform: translateY(0); }
         }
+        :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+        @media (prefers-reduced-motion: reduce) {
+            *,*::before,*::after { animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important; }
+        }
     </style>
 </head>
 <body>
 
 <!-- ── 顶部导航 ── -->
 <nav>
-    <a class="nav-logo" href="#">⚔ MARC'S TOOLKIT</a>
+    <a class="nav-logo" href="#">⚔ VOCAQUEST</a>
     <ul class="nav-links">
         <li><a href="#tools">工具介绍</a></li>
         <li><a href="#how">使用方式</a></li>
@@ -375,16 +380,16 @@
 
 <!-- ── HERO ── -->
 <section class="hero">
-    <div class="hero-badge">MARC'S TEACHING TOOLKIT · 学习智能工具平台</div>
+    <div class="hero-badge">VOCAQUEST · CAMPUS LEARNING HUB</div>
     <div class="hero-icons">
-        <span>⚔️</span><span>📝</span><span>🗺️</span><span>⚗️</span>
+        <span>⚔️</span><span>📝</span><span>🦈</span><span>🏆</span>
     </div>
-    <h1 class="hero-title">学习智能工具平台</h1>
-    <p class="hero-sub">MARC'S TEACHING TOOLKIT · CAMPUS EDITION</p>
+    <h1 class="hero-title">词汇学习，也可以像游戏</h1>
+    <p class="hero-sub">VOCAQUEST · WORDS IN ACTION</p>
     <p class="hero-desc">
         把重复练习变成<em>游戏闯关</em>。<br>
-        词汇、填空、历史、化学——一个平台，统一管理，<br>
-        学生一次登录，所有工具随时可用。
+        从单词记忆到语境填空，再到每周 Boss 和班级对战。<br>
+        一个账号，连续记录每一次学习进步。
     </p>
 
     <a class="cta-btn" href="./dashboard.html">▶ 进入 Dashboard</a>
@@ -400,10 +405,10 @@
 <!-- ── 工具介绍 ── -->
 <section class="section" id="tools">
     <p class="section-label">// TOOLS</p>
-    <h2 class="section-title">四大<em>学习工具</em>，一个平台</h2>
+    <h2 class="section-title">四种<em>学习玩法</em>，一个平台</h2>
     <div class="tools-grid">
 
-        <div class="tool-card c-red">
+        <a class="tool-card c-red" href="./index.html">
             <div class="tool-status live">● 已上线</div>
             <div class="tool-icon">⚔️</div>
             <div class="tool-name">词汇闯关 · VOCAQUEST</div>
@@ -414,10 +419,10 @@
                 <span class="tag">班级排行</span>
                 <span class="tag">教师管理</span>
             </div>
-        </div>
+        </a>
 
-        <div class="tool-card c-cyan">
-            <div class="tool-status soon">○ 即将上线</div>
+        <a class="tool-card c-cyan" href="./fillblank.html">
+            <div class="tool-status live">● 已上线</div>
             <div class="tool-icon">📝</div>
             <div class="tool-name">句子填空 · FILLBLANK</div>
             <p class="tool-desc">AI 自动根据词包生成填空练习题。学生在真实语境中运用学过的单词，巩固记忆效果，老师一键生成，立即分配。</p>
@@ -426,31 +431,31 @@
                 <span class="tag">语境练习</span>
                 <span class="tag">词包联动</span>
             </div>
-        </div>
+        </a>
 
-        <div class="tool-card c-gold">
-            <div class="tool-status soon">○ 即将上线</div>
-            <div class="tool-icon">🗺️</div>
-            <div class="tool-name">地理历史记忆 · GEOHISTORY</div>
-            <p class="tool-desc">时间轴闯关模式。老师上传历史事件、地理知识点，系统生成记忆练习。年份、事件、地点，反复强化，轻松记牢。</p>
+        <a class="tool-card c-gold" href="./boss.html">
+            <div class="tool-status live">● 每周开放</div>
+            <div class="tool-icon">🦈</div>
+            <div class="tool-name">每周首领战 · WEEKLY BOSS</div>
+            <p class="tool-desc">把本周错题变成限时 Boss 战。达到目标正确率即可获得专属宠物、称号和 XP 奖励。</p>
             <div class="tool-tags">
-                <span class="tag">历史事件</span>
-                <span class="tag">时间轴</span>
-                <span class="tag">地理知识</span>
+                <span class="tag">错题复习</span>
+                <span class="tag">限时挑战</span>
+                <span class="tag">成长奖励</span>
             </div>
-        </div>
+        </a>
 
-        <div class="tool-card c-purple">
-            <div class="tool-status soon">○ 即将上线</div>
-            <div class="tool-icon">⚗️</div>
-            <div class="tool-name">化学元素记忆 · CHEMQUEST</div>
-            <p class="tool-desc">元素符号、中英文名称、原子序数——闯关模式强化记忆。内置元素周期表题库，老师可自定义补充考点。</p>
+        <a class="tool-card c-purple" href="./challenge.html">
+            <div class="tool-status live">● 周末开放</div>
+            <div class="tool-icon">🏆</div>
+            <div class="tool-name">班级对战 · CLASS CHALLENGE</div>
+            <p class="tool-desc">班级之间共同挑战同一套词汇题，用全班成绩争夺周榜冠军和专属荣誉。</p>
             <div class="tool-tags">
-                <span class="tag">元素周期表</span>
-                <span class="tag">符号记忆</span>
-                <span class="tag">自定义题库</span>
+                <span class="tag">班级协作</span>
+                <span class="tag">周榜竞技</span>
+                <span class="tag">团队荣誉</span>
             </div>
-        </div>
+        </a>
 
     </div>
 </section>
@@ -470,7 +475,7 @@
         <div class="tool-card c-red">
             <div class="tool-icon">🤖</div>
             <div class="tool-name" style="color:var(--primary);text-shadow:0 0 8px var(--primary);">AI 智能内容生成</div>
-            <p class="tool-desc">老师上传词本或题目，AI 自动生成练习内容。MiniMax M2.7 驱动，生成质量高，速度快，大幅减少备课时间。</p>
+            <p class="tool-desc">老师上传词本或题目，AI 自动生成练习内容。智谱 GLM 驱动，生成质量高，速度快，大幅减少备课时间。</p>
         </div>
         <div class="tool-card c-gold">
             <div class="tool-icon">🏆</div>
@@ -558,7 +563,7 @@
 
 <!-- ── FOOTER ── -->
 <footer>
-    <div class="footer-brand">⚔ MARC'S TEACHING TOOLKIT</div>
+    <div class="footer-brand">⚔ VOCAQUEST · BY MARC</div>
     <div class="footer-copy">© 2025 Designed by 赵月杨 Marc · 为教育而生</div>
 </footer>
 
