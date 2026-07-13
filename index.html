@@ -1575,6 +1575,14 @@
         // ════ 页面路由控制 (无感刷新) ════
         async function go(id) {
             initAudio();
+            if (id === 's-lb') {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (!session) {
+                    sessionStorage.removeItem('last_screen');
+                    toast('请先登录，再查看校园排行榜', 'err');
+                    id = 's-enter';
+                }
+            }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             sessionStorage.setItem('last_screen', id);
@@ -1589,7 +1597,14 @@
         // ════ 学生登录与班级锁定逻辑 ════
         async function renderLogin(mode = 'login') {
             const c = document.getElementById('login-section'), task = document.getElementById('task-section');
-            const title = document.getElementById('entry-title'), uid = localStorage.getItem('vq_uid');
+            const title = document.getElementById('entry-title');
+            const { data: { session } } = await vqClient.auth.getSession();
+            const uid = session?.user?.id || '';
+            if (!uid) {
+                localStorage.removeItem('vq_uid');
+                localStorage.removeItem('vq_unm');
+                G.userId = ''; G.name = ''; G.classId = '';
+            }
 
             c.innerHTML = '<div style="text-align:center; color:var(--cyan); padding:20px;">📡 连接云端中...</div>';
             task.style.display = 'none';
@@ -1603,7 +1618,7 @@
 
                 let classHtml = '';
                 if (G.classId) {
-                    classHtml = `<div style="font-size:12px; color:var(--gold); margin-top:10px; padding:8px; background:rgba(255,215,0,0.1); border-radius:4px; border:1px dashed var(--gold); text-align:center;">所属班级: <b>${profile?.classes?.name}</b> (已锁定)</div>`;
+                    classHtml = `<div style="font-size:12px; color:var(--gold); margin-top:10px; padding:8px; background:rgba(255,215,0,0.1); border-radius:4px; border:1px dashed var(--gold); text-align:center;">所属班级: <b>${escH(profile?.classes?.name)}</b> (已锁定)</div>`;
                     task.style.display = 'block'; renderPackSelCloud();
                 } else {
                     classHtml = `
@@ -2633,6 +2648,10 @@
                         G.name = profile.full_name || localStorage.getItem('vq_unm');
                         G.classId = profile.class_id || '';
                     }
+                } else {
+                    localStorage.removeItem('vq_uid');
+                    localStorage.removeItem('vq_unm');
+                    G.userId = ''; G.name = ''; G.classId = '';
                 }
             } catch(e) { console.warn('Session sync:', e); }
             const lastScreen = sessionStorage.getItem('last_screen') || 's-title';
