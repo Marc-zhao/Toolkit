@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <link rel="stylesheet" href="./theme.css">
+    <script src="./theme.js"></script>
     <style>
         /* ══════════════ 100% 继承 index-claude原版.html CSS ══════════════ */
         * {
@@ -341,6 +343,134 @@
             justify-content: flex-start;
             padding-top: clamp(70px, 12vw, 100px);
             gap: var(--gap-md);
+        }
+
+        .journey-panel {
+            width: 100%;
+            max-width: 760px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: clamp(14px, 2.5vw, 20px);
+        }
+
+        .journey-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .journey-kicker {
+            font-family: var(--px);
+            font-size: 7px;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            margin-bottom: 6px;
+        }
+
+        .journey-summary {
+            color: var(--dim);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .journey-percent {
+            font-family: var(--px);
+            font-size: clamp(12px, 2vw, 16px);
+            color: var(--gold);
+            white-space: nowrap;
+        }
+
+        .journey-track {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(88px, 1fr));
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 1px 10px;
+        }
+
+        .journey-node {
+            position: relative;
+            min-width: 88px;
+            padding: 10px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--dim);
+            text-align: center;
+            background: var(--bg);
+        }
+
+        .journey-node.done {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .journey-node.current {
+            border-color: var(--gold);
+            color: var(--gold);
+            box-shadow: 0 0 14px rgba(255, 215, 0, .12);
+        }
+
+        .journey-node-icon {
+            display: block;
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .journey-node-label {
+            font-family: var(--px);
+            font-size: 6px;
+            letter-spacing: .5px;
+            line-height: 1.6;
+        }
+
+        .journey-next {
+            margin-top: 4px;
+            padding: 12px;
+            border-left: 3px solid var(--purple);
+            background: rgba(181, 123, 238, .06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .journey-next-copy {
+            color: var(--dim);
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .journey-next-copy strong {
+            display: block;
+            color: var(--text);
+            margin-bottom: 2px;
+        }
+
+        @media (max-width: 560px) {
+            .journey-track {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                overflow-x: visible;
+            }
+
+            .journey-node {
+                min-width: 0;
+            }
+
+            .journey-node:last-child {
+                grid-column: 1 / -1;
+            }
+
+            .journey-next {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .journey-next .btn {
+                width: 100%;
+            }
         }
 
         .map-grid {
@@ -1277,6 +1407,23 @@
                 id="map-title">STAGE SELECT</div>
             <div style="font-size:13px;color:var(--dim);" id="map-sub"></div>
         </div>
+        <section class="journey-panel" aria-labelledby="journey-title">
+            <div class="journey-head">
+                <div>
+                    <div class="journey-kicker" id="journey-title">LEARNING PATH · 成长路线</div>
+                    <div class="journey-summary" id="journey-summary">正在分析当前词包进度…</div>
+                </div>
+                <div class="journey-percent" id="journey-percent">0%</div>
+            </div>
+            <div class="journey-track" id="journey-track"></div>
+            <div class="journey-next">
+                <div class="journey-next-copy">
+                    <strong id="journey-next-title">下一步</strong>
+                    <span id="journey-next-copy">完成当前关卡，逐步解锁后续路线。</span>
+                </div>
+                <button class="btn btn-sm btn-purple" id="journey-action" type="button">继续学习</button>
+            </div>
+        </section>
         <div class="map-grid" id="map-grid"></div>
         <div class="xpbar-wrap">
             <div class="xpbar-label" id="xp-label">XP: 0</div>
@@ -2215,6 +2362,7 @@
             document.getElementById('xp-label').textContent = `LV.${lvInfo.lv} ${tObj.title}  |  XP: ${lvInfo.cur}/${lvInfo.need}  |  通关: ${G.prog.cleared.length}/${G.levels.length}`;
             document.getElementById('xp-label').style.color = tObj.color;
             document.getElementById('xp-fill').style.width = (lvInfo.cur / lvInfo.need * 100).toFixed(1) + '%';
+            renderJourneyPanel();
 
             const grid = document.getElementById('map-grid'); grid.innerHTML = '';
             G.levels.forEach((lv, i) => {
@@ -2232,6 +2380,56 @@
                 if (!lk) d.onclick = () => cl ? openReviewModal(i) : startLevel(i);
                 grid.appendChild(d);
             });
+        }
+
+        function renderJourneyPanel() {
+            const clearedCount = G.prog.cleared?.length || 0;
+            const totalLevels = Math.max(G.levels.length, 1);
+            const progress = Math.min(100, Math.round(clearedCount / totalLevels * 100));
+            const reviewWords = [...(G.prog.wrongWords || []), ...(G.prog.unfamiliar || [])]
+                .filter((word, index, list) => list.findIndex(item => item.w === word.w) === index);
+            const nextLevel = Math.min(clearedCount, G.levels.length - 1);
+            const nodes = [
+                { at: 0, icon: '🏕️', label: '启程' },
+                { at: 25, icon: '🧠', label: '识义训练' },
+                { at: 50, icon: '🎧', label: '听辨强化' },
+                { at: 75, icon: '✍️', label: '拼写攻坚' },
+                { at: 100, icon: '🏰', label: '词包掌握' }
+            ];
+
+            document.getElementById('journey-percent').textContent = `${progress}%`;
+            document.getElementById('journey-summary').textContent =
+                `已通关 ${clearedCount}/${G.levels.length} 关 · ${reviewWords.length} 个词需要强化 · 每关包含识义、反向识别、听音和拼写`;
+            document.getElementById('journey-track').innerHTML = nodes.map((node, index) => {
+                const nextAt = nodes[index + 1]?.at ?? 101;
+                const state = progress >= node.at
+                    ? (progress < nextAt ? 'current' : 'done')
+                    : '';
+                return `<div class="journey-node ${state}">
+                    <span class="journey-node-icon">${node.icon}</span>
+                    <span class="journey-node-label">${node.label}</span>
+                </div>`;
+            }).join('');
+
+            const title = document.getElementById('journey-next-title');
+            const copy = document.getElementById('journey-next-copy');
+            const action = document.getElementById('journey-action');
+            if (reviewWords.length >= 2) {
+                title.textContent = `优先强化 ${reviewWords.length} 个薄弱词`;
+                copy.textContent = '先完成错题复习，再继续主线，避免薄弱词反复失分。';
+                action.textContent = '打开错题路线';
+                action.onclick = openLearningMgmt;
+            } else if (clearedCount >= G.levels.length) {
+                title.textContent = '词包主线已完成';
+                copy.textContent = '回顾最后一关巩固记忆，并准备参加 Weekly Boss。';
+                action.textContent = '回顾最后一关';
+                action.onclick = () => openReviewModal(Math.max(0, G.levels.length - 1));
+            } else {
+                title.textContent = `推荐继续 LEVEL ${nextLevel + 1}`;
+                copy.textContent = '完成本关四阶段训练，系统会自动保存 XP、错题和成长进度。';
+                action.textContent = `挑战 LEVEL ${nextLevel + 1}`;
+                action.onclick = () => startLevel(nextLevel);
+            }
         }
 
         function openReviewModal(li) {

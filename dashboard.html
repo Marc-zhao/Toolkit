@@ -6,6 +6,8 @@
 <title>VocaQuest · 学习中心</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="./theme.css">
+<script src="./theme.js"></script>
 <style>
 :root{
   --bg:#0a0a18;--panel:#141428;--border:#2a2a50;
@@ -128,6 +130,22 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 .lb-name{font-size:14px;font-weight:600}
 .lb-sub{font-size:11px;color:var(--dim);margin-top:2px}
 .lb-score{font-family:var(--px);font-size:11px;color:var(--gold);text-align:right}
+/* LEARNING ROUTE */
+.learning-route{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px}
+.learning-route-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.learning-route-title{font-family:var(--px);font-size:8px;color:var(--cyan);letter-spacing:2px;margin-bottom:6px}
+.learning-route-copy{font-size:13px;color:var(--dim);line-height:1.7}
+.learning-route-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.route-step{display:block;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:12px;text-decoration:none;color:var(--text);transition:all .2s;min-width:0}
+.route-step:hover{border-color:var(--cyan);transform:translateY(-2px)}
+.route-step.current{border-color:var(--gold);box-shadow:0 0 14px rgba(255,215,0,.1)}
+.route-step.done{border-color:var(--green)}
+.route-step-icon{font-size:22px;margin-bottom:8px}
+.route-step-name{font-family:var(--px);font-size:7px;line-height:1.6;color:var(--text)}
+.route-step-meta{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.5}
+.route-rec{margin-top:12px;padding:11px 12px;border-left:3px solid var(--purple);background:rgba(181,123,238,.06);font-size:13px;color:var(--dim);line-height:1.7}
+.route-rec strong{color:var(--text)}
+@media(max-width:700px){.learning-route-grid{grid-template-columns:1fr 1fr}}
 /* NOTIF PANEL */
 .notif-panel{position:fixed;top:58px;right:16px;width:min(360px,calc(100vw-32px));background:var(--panel);border:1px solid var(--border);border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.7);z-index:200;display:none;animation:slideDown .2s ease}
 .notif-panel.open{display:block}
@@ -226,6 +244,18 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
         <div id="wb-coins" style="font-family:var(--px);font-size:8px;color:var(--purple)"></div>
       </div>
     </div>
+
+    <!-- 个性化学习路线 -->
+    <section class="learning-route" id="learning-route" aria-labelledby="learning-route-title">
+      <div class="learning-route-head">
+        <div>
+          <div class="learning-route-title" id="learning-route-title">TODAY'S PATH · 今日学习路线</div>
+          <div class="learning-route-copy" id="learning-route-copy">正在根据你的进度生成下一步建议…</div>
+        </div>
+      </div>
+      <div class="learning-route-grid" id="learning-route-grid"></div>
+      <div class="route-rec" id="learning-route-rec"><strong>推荐：</strong>先完成一次词汇闯关。</div>
+    </section>
 
     <!-- 工具卡片 -->
     <div>
@@ -579,9 +609,11 @@ async function enterDashboard(profile){
   if(G.isTeacher){
     document.getElementById('teacher-zone').style.display='block';
     document.getElementById('student-study-zone').style.display='none';
+    document.getElementById('learning-route').style.display='none';
   } else {
     document.getElementById('teacher-zone').style.display='none';
     document.getElementById('student-study-zone').style.display='block';
+    document.getElementById('learning-route').style.display='block';
   }
   await Promise.all([loadXP(),loadAchievements(),loadNotifications(),checkBoss()]);
   if(G.isTeacher) switchDashTeacherTab('push');
@@ -597,6 +629,41 @@ async function loadXP(){
   const fbXp=(fb||[]).reduce((s,p)=>s+(p.xp_earned||0),0);
   document.getElementById('xp-fillblank').textContent=fbXp+' XP';
   document.getElementById('wb-xp').textContent='总 XP：'+(vqXp+fbXp);
+  renderLearningRoute(vq||[],vqXp,fbXp);
+}
+
+function renderLearningRoute(progressRows,vqXp,fbXp){
+  if(G.isTeacher) return;
+  const reviewWords=[];
+  progressRows.forEach(row=>{
+    reviewWords.push(...(row.prog_data?.wrongWords||[]),...(row.prog_data?.unfamiliar||[]));
+  });
+  const reviewCount=new Set(reviewWords.map(word=>word.w).filter(Boolean)).size;
+  const steps=[
+    {icon:'⚔️',name:'词义闯关',meta:vqXp?`${vqXp} XP 已积累`:'从词义识别开始',href:'./index.html',state:vqXp?'done':'current'},
+    {icon:'📝',name:'语境填空',meta:fbXp?`${fbXp} XP 已积累`:'在句子中运用单词',href:'./fillblank.html',state:fbXp?'done':(vqXp?'current':'')},
+    {icon:'🔁',name:'错题强化',meta:reviewCount?`${reviewCount} 个词待强化`:'暂无薄弱词',href:'./index.html',state:reviewCount?'current':(vqXp||fbXp?'done':'')},
+    {icon:'🦈',name:'Weekly Boss',meta:'周末综合复习',href:'./boss.html',state:(vqXp&&fbXp&&!reviewCount)?'current':''}
+  ];
+  document.getElementById('learning-route-grid').innerHTML=steps.map(step=>`
+    <a class="route-step ${step.state}" href="${step.href}">
+      <div class="route-step-icon">${step.icon}</div>
+      <div class="route-step-name">${step.name}</div>
+      <div class="route-step-meta">${step.meta}</div>
+    </a>`).join('');
+
+  const copy=document.getElementById('learning-route-copy');
+  const rec=document.getElementById('learning-route-rec');
+  copy.textContent=`词汇 ${vqXp} XP · 填空 ${fbXp} XP · ${reviewCount} 个薄弱词等待强化`;
+  if(reviewCount>=2){
+    rec.innerHTML=`<strong>推荐：</strong>先进入词汇闯关的学习管理，完成 ${reviewCount} 个薄弱词强化，再继续新关卡。`;
+  }else if(!vqXp){
+    rec.innerHTML='<strong>推荐：</strong>从词汇闯关开始，完成一关四阶段训练并建立第一条学习记录。';
+  }else if(!fbXp){
+    rec.innerHTML='<strong>推荐：</strong>你已经完成词义训练，下一步进入句子填空，在真实语境中运用单词。';
+  }else{
+    rec.innerHTML='<strong>推荐：</strong>基础路线状态良好，可以继续新词包，或进入 Weekly Boss 做综合复习。';
+  }
 }
 
 async function loadAchievements(){
