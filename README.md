@@ -21,7 +21,7 @@ Production vocabulary learning system deployed from this directory.
 
 ## Deploy
 
-1. Apply both SQL files in `supabase/migrations/` in filename order.
+1. Apply every SQL file in `supabase/migrations/` in filename order.
 2. Add `ZHIPU_API_KEY` to the Vercel project for all environments. Existing
    deployments using the `Zhipu` variable name are also supported.
 3. Deploy this directory. The root URL rewrites to `landing.html`.

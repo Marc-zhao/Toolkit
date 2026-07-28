@@ -391,8 +391,8 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
 </div>
 
 <script>
-const S_URL='https://skvsssqfkzqudscrwiyt.supabase.co';
-const S_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
+const S_URL='https://dosseusntiuzmldpwpow.supabase.co';
+const S_KEY='sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
 const PROXY='/api/ai';
 const db=window.supabase.createClient(S_URL,S_KEY);
 
@@ -594,13 +594,14 @@ async function doRegister(){
   const {data:validCode,error:inviteError}=await db.rpc('validate_vq_invite',{p_code:inv,p_role:'student'});
   if(inviteError||!validCode)return toast('邀请码无效、已停用或达到上限','err');
   toast('注册中…');
-  const {data:res,error}=await db.auth.signUp({email:em,password:pd,options:{data:{display_name:nm}}});
-  if(error)return toast(error.message,'err');
-  const {data:completed,error:completeError}=await db.rpc('complete_vq_registration',{
-    p_code:inv,p_role:'student',p_name:nm,p_class_id:cl
+  const {data:res,error}=await db.auth.signUp({
+    email:em,
+    password:pd,
+    options:{data:{display_name:nm,vq_role:'student',vq_invite:inv,vq_class_id:cl}}
   });
-  if(completeError||!completed){await db.auth.signOut();return toast('注册验证失败，请重试','err');}
-  toast('注册成功！请登录');renderLogin('login');
+  if(error)return toast(error.message,'err');
+  if(res.session)await db.auth.signOut();
+  toast(res.session?'注册成功！请登录':'注册成功！请检查邮箱后登录');renderLogin('login');
 }
 async function doTeacherLogin(){
   const em=$('t-em').value.trim(),pd=$('t-pd').value;

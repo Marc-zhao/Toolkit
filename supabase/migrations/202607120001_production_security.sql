@@ -161,6 +161,7 @@ begin
   if old.class_id is not null and new.class_id is distinct from old.class_id then
     raise exception 'Class cannot be changed';
   end if;
+  new.updated_at := now();
   return new;
 end;
 $$;

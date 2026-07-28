@@ -1625,9 +1625,8 @@
         // ══════════════════════════════════════════
         // SUPABASE INIT
         // ══════════════════════════════════════════
-        const S_URL = 'https://skvsssqfkzqudscrwiyt.supabase.co'; // ⚠️ 请在代码第 570 行填入您的 Supabase URL ！！！
-        const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
-        if (S_URL === '') alert('系统警告：请在代码第 570 行填入 Supabase URL！');
+        const S_URL = 'https://dosseusntiuzmldpwpow.supabase.co';
+        const S_KEY = 'sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
         const vqClient = window.supabase.createClient(S_URL, S_KEY);
 
         // ══════════════════════════════════════════
@@ -1843,7 +1842,14 @@
                 }
 
                 toast('验证中...', 'ok');
-                let res = (type === 'up') ? await vqClient.auth.signUp({ email: em, password: pd, options: { data: { display_name: nm } } }) : await vqClient.auth.signInWithPassword({ email: em, password: pd });
+                const inv = type === 'up' ? document.getElementById('s-inv')?.value?.trim() : '';
+                let res = (type === 'up')
+                    ? await vqClient.auth.signUp({
+                        email: em,
+                        password: pd,
+                        options: { data: { display_name: nm, vq_role: 'student', vq_invite: inv, vq_class_id: cl } }
+                    })
+                    : await vqClient.auth.signInWithPassword({ email: em, password: pd });
 
                 if (res.error) {
                     if (res.error.message.includes('Invalid login')) return toast('邮箱或密码错误', 'err');
@@ -1851,11 +1857,11 @@
                 }
 
                 if (type === 'up') {
-                    const inv = document.getElementById('s-inv')?.value?.trim();
-                    const {data:completed,error:completeError}=await vqClient.rpc('complete_vq_registration',{
-                        p_code:inv,p_role:'student',p_name:nm,p_class_id:cl
-                    });
-                    if(completeError||!completed){await vqClient.auth.signOut();return toast('注册验证失败，请确认邀请码后重试','err');}
+                    if (!res.data.session) {
+                        toast('注册成功！请检查邮箱后登录', 'ok');
+                        await renderLogin();
+                        return;
+                    }
                 }
 
                 localStorage.setItem('vq_uid', res.data.user.id);
@@ -1942,7 +1948,15 @@
                 }
 
                 toast('验证中...');
-                let res = (type === 'up') ? await vqClient.auth.signUp({ email: em, password: pd }) : await vqClient.auth.signInWithPassword({ email: em, password: pd });
+                const nm = type === 'up' ? document.getElementById('t-nm').value.trim() : '';
+                const inv = type === 'up' ? document.getElementById('t-inv').value.trim() : '';
+                let res = (type === 'up')
+                    ? await vqClient.auth.signUp({
+                        email: em,
+                        password: pd,
+                        options: { data: { display_name: nm, vq_role: 'teacher', vq_invite: inv, vq_class_id: '' } }
+                    })
+                    : await vqClient.auth.signInWithPassword({ email: em, password: pd });
 
                 if (res.error) {
                     if (res.error.message.includes('Invalid login')) return toast('邮箱或密码错误', 'err');
@@ -1960,13 +1974,12 @@
                 }
 
                 if (type === 'up') {
-                    const nm = document.getElementById('t-nm').value.trim();
-                    const inv = document.getElementById('t-inv').value.trim();
-                    const {data:completed,error:completeError}=await vqClient.rpc('complete_vq_registration',{
-                        p_code:inv,p_role:'teacher',p_name:nm||em.split('@')[0],p_class_id:null
-                    });
-                    if(completeError||!completed){await vqClient.auth.signOut();return toast('教师注册验证失败，请重试','err');}
                     localStorage.setItem('vq_unm', nm || em.split('@')[0]);
+                    if (!res.data.session) {
+                        closeModal('m-pw');
+                        toast('注册成功！请检查邮箱后登录', 'ok');
+                        return;
+                    }
                 }
 
                 localStorage.setItem('vq_uid', res.data.user.id);

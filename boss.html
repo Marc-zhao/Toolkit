@@ -347,8 +347,8 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 </div>
 
 <script>
-const S_URL='https://skvsssqfkzqudscrwiyt.supabase.co';
-const S_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
+const S_URL='https://dosseusntiuzmldpwpow.supabase.co';
+const S_KEY='sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
 const PROXY='/api/ai';
 const db=window.supabase.createClient(S_URL,S_KEY);
 
@@ -469,6 +469,8 @@ async function loadLobby(){
   // 获取本周Boss（不限日期，先获取再判断是否可挑战）
   const mon=getMonday(); const ws=mon.toISOString().split('T')[0];
   console.log('本周一:', ws, '今天day:', day);
+  const {error:bossInitError}=await db.rpc('ensure_weekly_bosses');
+  if(bossInitError) console.warn('Boss初始化失败:',bossInitError);
   const {data:bosses,error:bossErr}=await db.from('weekly_bosses').select('*').eq('week_start',ws).eq('is_active',true);
   console.log('bosses:', bosses, 'error:', bossErr);
 

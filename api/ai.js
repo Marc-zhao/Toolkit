@@ -1,7 +1,8 @@
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || process.env.Zhipu;
 const ZHIPU_CHAT_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://skvsssqfkzqudscrwiyt.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrdnNzc3Fma3pxdWRzY3J3aXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4OTY4MDgsImV4cCI6MjA5MTQ3MjgwOH0.lUi2lPlAOXSJRA3nuaIX6JpN_ecQNguI4bsQP3S62HM';
+// These are public Supabase client credentials. The Zhipu key remains server-only.
+const SUPABASE_URL = 'https://dosseusntiuzmldpwpow.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
