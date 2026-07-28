@@ -166,6 +166,31 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 /* TEACHER ZONE */
 .teacher-zone{background:var(--panel);border:1px solid rgba(181,123,238,.3);border-radius:6px;padding:16px}
 .teacher-zone-title{font-family:var(--px);font-size:8px;color:var(--purple);text-shadow:0 0 8px var(--purple);letter-spacing:2px;margin-bottom:12px}
+.teacher-zone-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.teacher-zone-copy{font-size:12px;color:var(--dim);line-height:1.7;margin-top:5px}
+.teacher-route-preview{border:1px solid var(--border);border-radius:5px;padding:14px;margin-bottom:14px;background:var(--bg)}
+.teacher-route-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.teacher-route-title{font-family:var(--px);font-size:7px;color:var(--gold);letter-spacing:2px}
+.teacher-route-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.teacher-route-step{min-width:0;border:1px solid var(--border);border-radius:4px;padding:10px 8px;background:var(--panel)}
+.teacher-route-step strong{display:block;font-family:var(--px);font-size:6px;line-height:1.6;color:var(--text);margin:6px 0 4px}
+.teacher-route-step span{display:block;font-size:10px;color:var(--dim);line-height:1.45}
+.class-create-row{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:8px;margin-bottom:14px}
+.teacher-class-list{display:grid;gap:10px}
+.teacher-class-card{border:1px solid var(--border);border-radius:5px;background:var(--bg);padding:14px}
+.teacher-class-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.teacher-class-name{font-size:16px;font-weight:700;color:var(--gold)}
+.teacher-class-meta{font-size:11px;color:var(--dim);margin-top:4px}
+.teacher-invite{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px dashed rgba(0,212,255,.35);border-radius:4px;margin-bottom:14px;background:rgba(0,212,255,.04)}
+.teacher-invite code{color:var(--cyan);font-size:12px;overflow-wrap:anywhere}
+.assignment-label{font-family:var(--px);font-size:6px;color:var(--dim);letter-spacing:1px;margin-bottom:8px}
+.assignment-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px}
+.assignment-item{display:flex;align-items:center;gap:8px;margin:0;padding:9px 10px;border:1px solid var(--border);border-radius:4px;background:var(--panel);cursor:pointer;color:var(--text)}
+.assignment-item:has(input:checked){border-color:var(--green);background:rgba(78,255,145,.05)}
+.assignment-item input{width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
+.assignment-item-copy{min-width:0}
+.assignment-item-name{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.assignment-item-meta{display:block;font-size:10px;color:var(--dim);margin-top:2px}
 /* DASH TABS */
 .dash-tab{font-family:var(--px);font-size:7px;letter-spacing:1px;padding:7px 12px;border:1px solid var(--border);background:transparent;color:var(--dim);cursor:pointer;transition:all .15s;white-space:nowrap;border-radius:2px}
 .dash-tab.active{color:var(--cyan);border-color:var(--cyan);background:rgba(0,212,255,.06)}
@@ -176,6 +201,8 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 .modal{background:var(--panel);border:2px solid var(--border);border-radius:8px;padding:clamp(20px,4vw,28px);width:100%;max-width:460px;max-height:85vh;overflow-y:auto}
 .modal-title{font-family:var(--px);font-size:clamp(8px,1.4vw,10px);color:var(--cyan);text-shadow:0 0 8px var(--cyan);margin-bottom:18px;letter-spacing:2px}
 @media(max-width:640px){.tools-grid{grid-template-columns:1fr 1fr}.pet-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr))}}
+@media(max-width:760px){.teacher-route-grid{grid-template-columns:1fr 1fr}.teacher-route-step:last-child{grid-column:1/-1}.class-create-row{grid-template-columns:1fr}.class-create-row .btn{width:100%}}
+@media(max-width:520px){.topnav{padding:10px 8px;gap:6px}.topnav-brand{font-size:6px;letter-spacing:1px}.topnav-right{gap:6px}.avatar-zone{padding:4px}.avatar-info{display:none}.topnav .btn-red{padding:8px 9px;font-size:6px}}
 @media(max-width:400px){.tools-grid{grid-template-columns:1fr}}
 :focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
@@ -244,6 +271,41 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
         <div id="wb-coins" style="font-family:var(--px);font-size:8px;color:var(--purple)"></div>
       </div>
     </div>
+
+    <!-- 教师专区：登录后首屏直接完成建班、分词包和查看学生路线 -->
+    <section class="teacher-zone" id="teacher-zone" style="display:none" aria-labelledby="teacher-zone-title">
+      <div class="teacher-zone-head">
+        <div>
+          <div class="teacher-zone-title" id="teacher-zone-title">📚 TEACHER ZONE · 教师工作台</div>
+          <div class="teacher-zone-copy">先创建班级并分配词包，学生注册选择班级后即可按路线学习。</div>
+        </div>
+        <a href="./index.html" class="btn btn-xs btn-purple" style="text-decoration:none">打开词汇闯关管理</a>
+      </div>
+
+      <div class="teacher-route-preview" id="teacher-route-preview">
+        <div class="teacher-route-head">
+          <div class="teacher-route-title">STUDENT PATH · 学生实际学习路线</div>
+          <a href="./index.html" class="btn btn-xs btn-gold" style="text-decoration:none">预览学生入口</a>
+        </div>
+        <div class="teacher-route-grid">
+          <div class="teacher-route-step"><div>📚</div><strong>1. 接收词包</strong><span>教师为班级勾选学习任务</span></div>
+          <div class="teacher-route-step"><div>🧠</div><strong>2. 识义训练</strong><span>中英双向理解单词</span></div>
+          <div class="teacher-route-step"><div>🎧</div><strong>3. 听辨强化</strong><span>听音识词并建立音形联系</span></div>
+          <div class="teacher-route-step"><div>✍️</div><strong>4. 拼写攻坚</strong><span>完成拼写与关卡通关</span></div>
+          <div class="teacher-route-step"><div>📝</div><strong>5. 语境迁移</strong><span>句子填空、错题强化与 Boss</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="dash-tab active" onclick="switchDashTeacherTab('classes')" id="dt-classes">🏫 班级与词包</button>
+        <button class="dash-tab" onclick="switchDashTeacherTab('push')" id="dt-push">🎯 推题管理</button>
+        <button class="dash-tab" onclick="switchDashTeacherTab('errors')" id="dt-errors">❌ 学生错题</button>
+        <button class="dash-tab" onclick="switchDashTeacherTab('tools')" id="dt-tools">🔧 工具管理</button>
+      </div>
+      <div id="dash-teacher-content">
+        <div style="text-align:center;color:var(--dim);padding:20px">载入中…</div>
+      </div>
+    </section>
 
     <!-- 个性化学习路线 -->
     <section class="learning-route" id="learning-route" aria-labelledby="learning-route-title">
@@ -354,19 +416,6 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
       </div>
       <div class="lb-box" id="lb-box">
         <div style="text-align:center;padding:28px;color:var(--dim)">载入中…</div>
-      </div>
-    </div>
-
-    <!-- 教师专区（含内嵌管理Tab） -->
-    <div class="teacher-zone" id="teacher-zone" style="display:none">
-      <div class="teacher-zone-title">📚 TEACHER ZONE · 教师管理</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-        <button class="dash-tab active" onclick="switchDashTeacherTab('push')" id="dt-push">🎯 推题管理</button>
-        <button class="dash-tab" onclick="switchDashTeacherTab('errors')" id="dt-errors">❌ 学生错题</button>
-        <button class="dash-tab" onclick="switchDashTeacherTab('tools')" id="dt-tools">🔧 工具管理</button>
-      </div>
-      <div id="dash-teacher-content">
-        <div style="text-align:center;color:var(--dim);padding:20px">载入中…</div>
       </div>
     </div>
 
@@ -603,11 +652,16 @@ async function enterDashboard(profile){
   G.classId=profile.class_id||''; G.className=profile.classes?.name||(profile.is_teacher?'教师':'未知班级');
   G.isTeacher=profile.is_teacher||false;
   go('s-main');
+  const themeButton=document.querySelector('.vq-theme-toggle');
+  const themeDock=document.querySelector('.topnav-right');
+  if(themeButton&&themeDock){
+    themeButton.classList.add('vq-theme-toggle-nav');
+    themeDock.prepend(themeButton);
+  }
   document.getElementById('nav-initials').textContent=G.name.slice(0,1).toUpperCase();
   document.getElementById('nav-name').textContent=G.name;
   document.getElementById('wb-name').textContent=G.name;
   document.getElementById('wb-meta').textContent=G.isTeacher?'教师账号 · 全平台管理权限':`班级：${G.className}`;
-  if(G.isTeacher) document.getElementById('teacher-zone').style.display='block';
   if(G.isTeacher){
     document.getElementById('teacher-zone').style.display='block';
     document.getElementById('student-study-zone').style.display='none';
@@ -618,7 +672,7 @@ async function enterDashboard(profile){
     document.getElementById('learning-route').style.display='block';
   }
   await Promise.all([loadXP(),loadAchievements(),loadNotifications(),checkBoss()]);
-  if(G.isTeacher) switchDashTeacherTab('push');
+  if(G.isTeacher) switchDashTeacherTab('classes');
   else switchStudentTab('errors');
   loadLeaderboard('total');
 }
@@ -1044,16 +1098,173 @@ async function loadStudySummary(){
 
 // ── 教师 Dashboard Tab ──
 async function switchDashTeacherTab(tab){
-  ['push','errors','tools'].forEach(t=>{
+  ['classes','push','errors','tools'].forEach(t=>{
     const el=document.getElementById('dt-'+t);
     if(el) el.className='dash-tab'+(t===tab?' active':'');
   });
   const cont=document.getElementById('dash-teacher-content');
   cont.innerHTML='<div style="text-align:center;color:var(--dim);padding:20px">载入中…</div>';
 
+  if(tab==='classes') await renderDashClasses(cont);
   if(tab==='push') await renderDashPush(cont);
   if(tab==='errors') await renderDashErrors(cont);
   if(tab==='tools') renderDashTools(cont);
+}
+
+async function renderDashClasses(cont){
+  const [{data:classes,error:classError},{data:packs,error:packError},{data:invites}]=await Promise.all([
+    db.from('classes').select('id,name,created_at').eq('teacher_id',G.userId).order('created_at',{ascending:false}),
+    db.from('word_packs').select('id,name,icon,words').order('created_at',{ascending:true}),
+    db.from('invite_codes').select('code').eq('role','student').eq('is_active',true).order('created_at',{ascending:false}).limit(1)
+  ]);
+  if(classError||packError){
+    cont.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">班级数据载入失败，请刷新后重试。</div>';
+    return;
+  }
+
+  const classIds=(classes||[]).map(item=>item.id);
+  let students=[];
+  let assignments=[];
+  if(classIds.length){
+    const [studentResult,assignmentResult]=await Promise.all([
+      db.from('profiles').select('id,class_id').eq('is_teacher',false).in('class_id',classIds),
+      db.from('class_assignments').select('class_id,pack_id').in('class_id',classIds)
+    ]);
+    students=studentResult.data||[];
+    assignments=assignmentResult.data||[];
+  }
+  const studentCounts={};
+  students.forEach(student=>{studentCounts[student.class_id]=(studentCounts[student.class_id]||0)+1});
+  const assignedByClass={};
+  assignments.forEach(item=>{
+    if(!assignedByClass[item.class_id]) assignedByClass[item.class_id]=new Set();
+    assignedByClass[item.class_id].add(item.pack_id);
+  });
+  const invite=invites?.[0]?.code||'暂无可用学生邀请码';
+  document.getElementById('wb-meta').textContent=`教师账号 · ${classes?.length||0} 个班级 · ${students.length} 名学生`;
+
+  cont.innerHTML=`
+    <div class="teacher-invite">
+      <div>
+        <div class="assignment-label" style="margin-bottom:5px">学生注册邀请码</div>
+        <code>${escH(invite)}</code>
+      </div>
+      ${invites?.length?`<button class="btn btn-xs btn-cyan" onclick="copyStudentInvite('${escH(escQ(invite))}')">复制</button>`:''}
+    </div>
+    <div class="class-create-row">
+      <input class="inp" id="dash-class-name" maxlength="60" placeholder="输入班级名称，如：2026 届 1 班" onkeydown="if(event.key==='Enter')createDashClass()">
+      <button class="btn btn-sm btn-cyan" id="dash-create-class" onclick="createDashClass()">+ 创建班级</button>
+    </div>
+    <div class="teacher-class-list">
+      ${classes?.length?classes.map(item=>{
+        const current=assignedByClass[item.id]||new Set();
+        return `<article class="teacher-class-card" data-class-id="${escH(item.id)}">
+          <div class="teacher-class-head">
+            <div>
+              <div class="teacher-class-name">🏫 ${escH(item.name)}</div>
+              <div class="teacher-class-meta">${studentCounts[item.id]||0} 名学生 · ${current.size} 个词包任务</div>
+            </div>
+            <button class="btn btn-xs btn-gray" onclick="viewDashClassProgress('${escH(escQ(item.id))}','${escH(escQ(item.name))}')">查看学生进度</button>
+          </div>
+          <div class="assignment-label">分配给这个班级的词包 · 勾选后立即生效</div>
+          <div class="assignment-list">
+            ${(packs||[]).map(pack=>`<label class="assignment-item">
+              <input type="checkbox" ${current.has(pack.id)?'checked':''} onchange="toggleDashAssignment('${escH(escQ(item.id))}','${escH(escQ(pack.id))}',this.checked,this)">
+              <span class="assignment-item-copy">
+                <span class="assignment-item-name">${escH(pack.icon||'📖')} ${escH(pack.name)}</span>
+                <span class="assignment-item-meta">${Array.isArray(pack.words)?pack.words.length:0} 个单词</span>
+              </span>
+            </label>`).join('')||'<div style="color:var(--dim);font-size:12px">暂无词包，请先在词汇闯关管理中上传。</div>'}
+          </div>
+        </article>`;
+      }).join(''):`<div class="teacher-class-card" style="text-align:center;padding:24px">
+        <div style="font-size:30px;margin-bottom:8px">🏫</div>
+        <div style="font-weight:700;margin-bottom:5px">还没有班级</div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.7">在上方输入班级名称即可创建。首个词包会自动分配，学生注册时就能选择这个班级。</div>
+      </div>`}
+    </div>`;
+}
+
+async function createDashClass(){
+  const input=document.getElementById('dash-class-name');
+  const button=document.getElementById('dash-create-class');
+  const name=input?.value.trim()||'';
+  if(name.length<2) return toast('班级名称至少需要 2 个字','err');
+  button.disabled=true;
+  button.textContent='创建中…';
+  const {data:created,error}=await db.from('classes')
+    .insert({name,teacher_id:G.userId}).select('id').single();
+  if(error){
+    button.disabled=false;
+    button.textContent='+ 创建班级';
+    return toast('创建失败：'+(error.message||'请稍后重试'),'err');
+  }
+  const {data:firstPack}=await db.from('word_packs').select('id').order('created_at',{ascending:true}).limit(1).maybeSingle();
+  if(firstPack?.id){
+    const {error:assignmentError}=await db.from('class_assignments').insert({class_id:created.id,pack_id:firstPack.id});
+    if(assignmentError) console.warn('Starter pack assignment failed',assignmentError);
+  }
+  toast(firstPack?.id?'班级已创建，并分配首个词包':'班级创建成功');
+  await renderDashClasses(document.getElementById('dash-teacher-content'));
+}
+
+async function toggleDashAssignment(classId,packId,checked,checkbox){
+  checkbox.disabled=true;
+  const query=checked
+    ?db.from('class_assignments').insert({class_id:classId,pack_id:packId})
+    :db.from('class_assignments').delete().eq('class_id',classId).eq('pack_id',packId);
+  const {error}=await query;
+  if(error){
+    checkbox.checked=!checked;
+    checkbox.disabled=false;
+    return toast('词包分配失败：'+(error.message||'请重试'),'err');
+  }
+  toast(checked?'词包已分配':'词包已取消');
+  await renderDashClasses(document.getElementById('dash-teacher-content'));
+}
+
+async function viewDashClassProgress(classId,className){
+  const cont=document.getElementById('dash-teacher-content');
+  cont.innerHTML='<div style="text-align:center;color:var(--cyan);padding:20px">正在读取学生学习进度…</div>';
+  const {data:students,error}=await db.from('profiles').select('id,full_name').eq('class_id',classId).eq('is_teacher',false);
+  if(error){
+    cont.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">学生进度载入失败。</div>';
+    return;
+  }
+  const ids=(students||[]).map(student=>student.id);
+  let progress=[];
+  let fillblank=[];
+  if(ids.length){
+    const [progressResult,fillblankResult]=await Promise.all([
+      db.from('student_progress').select('user_id,prog_data').in('user_id',ids),
+      db.from('fillblank_stage_results').select('user_id,xp_earned').in('user_id',ids)
+    ]);
+    progress=progressResult.data||[];
+    fillblank=fillblankResult.data||[];
+  }
+  const stats={};
+  (students||[]).forEach(student=>{stats[student.id]={name:student.full_name||'未命名学生',vq:0,fill:0}});
+  progress.forEach(row=>{if(stats[row.user_id]) stats[row.user_id].vq+=Number(row.prog_data?.xp)||0});
+  fillblank.forEach(row=>{if(stats[row.user_id]) stats[row.user_id].fill+=Number(row.xp_earned)||0});
+  cont.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div class="teacher-class-name">🏫 ${escH(className)}</div><div class="teacher-class-meta">${students?.length||0} 名学生</div></div>
+      <button class="btn btn-xs btn-gray" onclick="renderDashClasses(document.getElementById('dash-teacher-content'))">← 返回班级管理</button>
+    </div>
+    ${(students||[]).length?Object.values(stats).map(student=>`
+      <div class="teacher-class-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:700">${escH(student.name)}</div>
+        <div style="font-size:11px;color:var(--dim)">词汇 ${student.vq} XP · 填空 ${student.fill} XP · 总计 <b style="color:var(--gold)">${student.vq+student.fill} XP</b></div>
+      </div>`).join(''):'<div class="teacher-class-card" style="text-align:center;color:var(--dim);padding:24px">暂无学生。请让学生使用上方邀请码注册，并选择这个班级。</div>'}`;
+}
+
+async function copyStudentInvite(code){
+  try{
+    await navigator.clipboard.writeText(code);
+    toast('学生邀请码已复制');
+  }catch(error){
+    toast(`学生邀请码：${code}`);
+  }
 }
 
 async function renderDashPush(cont){
@@ -1368,6 +1579,11 @@ async function renderStudentReview(cont){
 async function logout(){
   await db.auth.signOut();
   Object.assign(G,{userId:'',name:'',classId:'',className:'',isTeacher:false,activePet:'',activeTitle:'',pets:[],titles:[],feedCoins:{},notifications:[],unreadCount:0});
+  const themeButton=document.querySelector('.vq-theme-toggle');
+  if(themeButton){
+    themeButton.classList.remove('vq-theme-toggle-nav');
+    document.body.appendChild(themeButton);
+  }
   go('s-login'); renderLogin('login'); toast('已登出');
 }
 

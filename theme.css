@@ -124,6 +124,27 @@ html[data-theme="light"] .tool-card.locked {
   color: var(--cyan);
 }
 
+.vq-theme-toggle.vq-theme-toggle-nav {
+  position: static;
+  min-width: 34px;
+  min-height: 34px;
+  width: 34px;
+  height: 34px;
+  padding: 5px;
+  border-radius: 4px;
+  box-shadow: none;
+  flex: 0 0 auto;
+}
+
+.vq-theme-toggle.vq-theme-toggle-nav .vq-theme-toggle-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .vq-theme-toggle:focus-visible {
   outline: 3px solid var(--cyan);
   outline-offset: 3px;
