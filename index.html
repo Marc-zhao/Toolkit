@@ -1922,6 +1922,7 @@
                         localStorage.setItem('vq_uid', session.user.id);
                         localStorage.setItem('vq_unm', profile.full_name || session.user.email.split('@')[0]);
                         go('s-teacher');
+                        await switchTeacherTab('class');
                         return;
                     }
                 }
@@ -1986,6 +1987,7 @@
                 closeModal('m-pw');
                 toast('登录成功！', 'ok');
                 go('s-teacher');
+                await switchTeacherTab('class');
             } catch (e) { console.error(e); toast('验证出错', 'err'); }
         }
 

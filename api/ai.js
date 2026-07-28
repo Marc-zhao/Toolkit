@@ -46,6 +46,9 @@ module.exports = async function handler(req, res) {
       const text = await response.text();
       if (!response.ok) {
         console.error('[zhipu-ai] HTTP', response.status, text.slice(0, 300));
+        if (response.status === 429 && (text.includes('1113') || text.includes('余额不足'))) {
+          return res.status(429).json({ error: '智谱 AI 账户额度不足，请联系管理员补充额度' });
+        }
         return res.status(response.status).json({ error: text.slice(0, 200) });
       }
       data = JSON.parse(text);

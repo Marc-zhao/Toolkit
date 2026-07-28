@@ -1221,7 +1221,10 @@ async function dashCallAI(sys,user){
       max_tokens:4000
     })
   });
-  if(!r.ok) throw new Error('AI调用失败 '+r.status);
+  if(!r.ok){
+    const d=await r.json().catch(()=>({}));
+    throw new Error(d.error||('AI调用失败 '+r.status));
+  }
   const d=await r.json();
   const raw=d.choices?.[0]?.message?.content||d.reply||'';
   if(!raw) throw new Error('AI返回内容为空');

@@ -507,8 +507,8 @@ async function callAI(sys,user,maxTok=2000){
     })
   });
   if(!r.ok){
-    const t=await r.text();
-    throw new Error('AI调用失败 '+r.status+': '+t.slice(0,100));
+    const d=await r.json().catch(()=>({}));
+    throw new Error(d.error||('AI调用失败 '+r.status));
   }
   const d=await r.json();
   const result=d.choices?.[0]?.message?.content||d.reply||'';
