@@ -414,6 +414,7 @@ const G={
   score:0,streak:0,maxStreak:0,
   hp:5,maxHp:5,mhp:0,mhpMax:0,
   correctCount:0,stageErrors:[],newPet:null,lastGrammarTags:[],
+  fromWordMap:new URLSearchParams(location.search).get('from')==='map',
 };
 
 const $=id=>document.getElementById(id);
@@ -670,7 +671,13 @@ async function loadPacks(){
       <span class="pack-badge ${genSet.has(p.id)?'ready':'pending'}">${genSet.has(p.id)?'题库就绪':'需生成'}</span>
     </div>`;
   }).join('');
-  if(packs.length)selPack(packs[0].id,packs[0].name,0,true);
+  if(packs.length){
+    const requestedId=new URLSearchParams(location.search).get('pack');
+    const requestedIndex=Math.max(0,packs.findIndex(p=>p.id===requestedId));
+    const selected=packs[requestedIndex]||packs[0];
+    selPack(selected.id,selected.name,requestedIndex,true);
+    if(G.fromWordMap)setTimeout(showMap,0);
+  }
 }
 function selPack(id,name,idx,silent=false){
   document.querySelectorAll('.pack-item').forEach(el=>el.classList.remove('sel'));
@@ -706,6 +713,9 @@ function renderMapGrid(){
   grid.innerHTML=cells.join('');
 }
 function backToMap(){renderMapGrid();go('s-map');}
+function returnToWordMap(){
+  location.href=`./index.html?resumePack=${encodeURIComponent(G.packId)}`;
+}
 
 async function showStageDetail(num){
   const words=G.words.slice((num-1)*5,num*5);
@@ -1161,7 +1171,7 @@ async function endBattle(){
     ${hasNext?`<button class="btn btn-red" onclick="startStage(${G.stageNum+1})">▶ 下一关</button>`:''}
     ${G.stageErrors.length?`<button class="btn btn-orange" onclick="startPractice()">🎯 专项练习</button>`:''}
     <button class="btn btn-gray" onclick="startStage(${G.stageNum})">↺ 重试</button>
-    <button class="btn btn-cyan btn-sm" onclick="backToMap()">🗺 地图</button>`;
+    <button class="btn btn-cyan btn-sm" onclick="${G.fromWordMap?'returnToWordMap()':'backToMap()'}">${G.fromWordMap?'🗺 返回完整地图':'🗺 地图'}</button>`;
   go('s-result');
 }
 
