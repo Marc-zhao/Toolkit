@@ -393,7 +393,6 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
 <script>
 const S_URL='https://dosseusntiuzmldpwpow.supabase.co';
 const S_KEY='sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
-const PROXY='/api/ai';
 const db=window.supabase.createClient(S_URL,S_KEY);
 
 const MONSTERS=[
@@ -495,7 +494,7 @@ async function aiHeaders(){
   if(!session?.access_token) throw new Error('登录已过期，请重新登录');
   return {'Content-Type':'application/json','Authorization':'Bearer '+session.access_token};
 }
-async function callAI(sys,user,maxTok=2000){
+async function callAI(sys,user,maxTok=2000,purpose='teacher_content'){
   const r=await fetch('/api/ai',{
     method:'POST',
     headers:await aiHeaders(),
@@ -504,7 +503,8 @@ async function callAI(sys,user,maxTok=2000){
         ...(sys?[{role:'system',content:sys}]:[]),
         {role:'user',content:user}
       ],
-      max_tokens:Math.max(maxTok,4000)
+      max_tokens:Math.min(Math.max(Number(maxTok)||2000,400),4000),
+      purpose
     })
   });
   if(!r.ok){
@@ -518,6 +518,49 @@ async function callAI(sys,user,maxTok=2000){
     throw new Error('AI返回内容为空');
   }
   return result;
+}
+
+function buildLocalQuestions(targetWords,difficulty=1,count){
+  const targets=normWords(targetWords);
+  if(!targets.length)return[];
+  const pool=[];
+  [...targets,...normWords(G.words)].forEach(item=>{
+    if(item.w&&!pool.some(existing=>existing.w.toLowerCase()===item.w.toLowerCase()))pool.push(item);
+  });
+  const requested=Math.max(1,Number(count)||targets.length);
+  return Array.from({length:requested},(_,index)=>{
+    const target=targets[index%targets.length];
+    const meaning=target.m||'目标词汇';
+    const distractors=shuffle(pool.filter(item=>item.w.toLowerCase()!==target.w.toLowerCase()))
+      .map(item=>item.w)
+      .slice(0,3);
+    const fallback=['study','learn','review','practice','remember'];
+    for(const word of fallback){
+      if(distractors.length>=3)break;
+      if(word.toLowerCase()!==target.w.toLowerCase()&&!distractors.some(item=>item.toLowerCase()===word))distractors.push(word);
+    }
+    return{
+      word:target.w,
+      meaning,
+      sentence:`The word ____ matches the meaning "${meaning}".`,
+      translation:`请选择与“${meaning}”对应的单词。`,
+      answer:target.w,
+      options:shuffle([target.w,...distractors.slice(0,3)]),
+      steps:[`中文意思：${meaning}`,`首字母：${target.w.charAt(0).toUpperCase()}`,`单词长度：${target.w.length}`],
+      grammar_point:'词义辨析与拼写',
+      difficulty
+    };
+  });
+}
+
+function buildLocalStageFeedback(errors){
+  const tags=[...new Set(errors.map(item=>item.grammar_point||'词义辨析与拼写').filter(Boolean))].slice(0,3);
+  const words=[...new Set(errors.map(item=>item.word).filter(Boolean))].slice(0,4);
+  return{
+    summary:`本关需要重点巩固 ${words.join('、')||'本关词汇'}，主要问题集中在${tags.join('、')||'词义辨析'}。`,
+    suggestion:`先查看中文释义和首字母提示，再不看答案完成一次专项练习；答对后朗读完整句子。`,
+    tags
+  };
 }
 
 // ── 登录 ──
@@ -758,7 +801,7 @@ async function startStage(num){
   go('s-battle');await loadQ();
 }
 
-// ── 加载/AI生成题目 ──
+// ── 加载题库；缺题时使用不消耗 API 的本地备用题 ──
 async function loadQ(){
   const {data:ex}=await db.from('fillblank_questions').select('*').eq('pack_id',G.packId).eq('stage_num',G.stageNum).limit(5);
   if(ex&&ex.length>=3){
@@ -772,47 +815,13 @@ async function loadQ(){
   const start=(G.stageNum-1)*5;
   const words=G.words.slice(start,start+5);
   if(!words.length){toast('词包词汇不足','err');backToMap();return;}
-  let diff=G.stageNum>20?3:G.stageNum>10?2:1;
-  const diffTxt=diff===1?'简单句':diff===2?'复合句':'复杂句';
-  openModal('modal-gen');setGenBar(0,'准备生成…');
-  try{
-    const wList=words.map(w=>`${w.w}（${w.m||'词组'}）`).join('、');
-    setGenBar(30,`AI生成第${G.stageNum}关题目…`);
-    // 检测词库语言（西班牙语特征：áéíóúüñ）
-    const spanishCommonWords=['alto','bajo','grande','pequeño','bueno','malo','nuevo','viejo','hola','adios','gracias','casa','agua','tiempo','amigo','trabajo','ciudad','mundo','vida','día','uno','dos','tres','cuatro','cinco'];
-    const wListLower=wList.toLowerCase();
-    const hasSpanishChars=/[áéíóúüñÁÉÍÓÚÜÑ]/.test(wList);
-    const hasSpanishCommon=spanishCommonWords.some(w=>wListLower.split(/[,\s]+/).includes(w));
-    const packNameLower=(G.packName||'').toLowerCase();
-    const hasSpanishPack=packNameLower.includes('spanish')||packNameLower.includes('español')||packNameLower.includes('西班牙')||packNameLower.includes('spa');
-    const isSpanish=hasSpanishChars||hasSpanishCommon||hasSpanishPack;
-    const sentLang=isSpanish?'Spanish':'English';
-    const raw=await callAI(
-      'Output ONLY a JSON array starting with [. No other text.',
-      `Generate ${words.length} English fill-in-the-blank exercises for: ${wList}. Difficulty: ${diff}. JSON array, each item: {"word":"...","meaning":"Chinese meaning","sentence":"English sentence with ____","translation":"Chinese translation","answer":"correct word","options":["4","English","word","choices"],"steps":["Chinese hint1","hint2","hint3"],"grammar_point":"Chinese note","difficulty":${diff}}. Start with [:`,
-      2500
-    );
-    setGenBar(80,'解析中…');
-    // 清理markdown代码块（模型有时会包裹```json...```）
-    const cleaned=raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-    const match=cleaned.match(/\[[\s\S]*\]/);
-    if(!match)throw new Error('AI返回格式错误：'+raw.slice(0,100));
-    let gen;
-    try{ gen=JSON.parse(match[0]); }
-    catch(pe){ throw new Error('JSON解析失败：'+pe.message); }
-    if(!Array.isArray(gen)||!gen.length)throw new Error('生成题目为空，请重试');
-    const toIns=gen.map(q=>({pack_id:G.packId,word:q.word||'',meaning:q.meaning||'',sentence:q.sentence||'',translation:q.translation||'',answer:q.answer||'',options:shuffle(q.options||[q.answer]),steps:q.steps||[],grammar_point:q.grammar_point||'',difficulty:diff,stage_num:G.stageNum}));
-    await db.from('fillblank_questions').insert(toIns);
-    G.allQuestions=toIns.map((q,i)=>({...q,id:'l'+i}));
-    G.mixQuestions=shuffle([...G.allQuestions]);
-    G.questions=G.allQuestions;
-    G.phase=1;
-    setGenBar(100,'完成！');closeModal('modal-gen');
-    initBattle();
-  }catch(e){
-    closeModal('modal-gen');console.error(e);
-    toast('AI生成失败：'+e.message,'err');backToMap();
-  }
+  const diff=G.stageNum>20?3:G.stageNum>10?2:1;
+  G.allQuestions=buildLocalQuestions(words,diff,words.length);
+  G.mixQuestions=shuffle([...G.allQuestions]);
+  G.questions=G.allQuestions;
+  G.phase=1;
+  toast('老师题库尚未生成，已载入备用练习');
+  initBattle();
 }
 function setGenBar(pct,msg){$('gen-bar').style.width=pct+'%';if(msg)$('gen-msg').textContent=msg;}
 
@@ -1098,16 +1107,11 @@ async function endBattle(){
   localStorage.setItem(key,JSON.stringify(comp));
   G.completedStages=comp;
 
-  // AI总结
+  // 本地总结：学生结算不调用付费 AI
   let aiSum='',aiSug='';G.lastGrammarTags=[];
   if(G.stageErrors.length>0){
-    try{
-      const desc=G.stageErrors.slice(0,5).map(e=>`${e.word}(${e.grammar_point||'—'})`).join('、');
-      const raw=await callAI('Analyze English vocabulary errors. Return ONLY a JSON object, no markdown.',
-        `学生错题：${desc}。输出：{"summary":"一句话总结学生问题","suggestion":"1-2句复习建议","tags":["语法点1","语法点2"]}`);
-      const m=raw.match(/\{[\s\S]*\}/);
-      if(m){const j=JSON.parse(m[0]);aiSum=j.summary||'';aiSug=j.suggestion||'';G.lastGrammarTags=j.tags||[];}
-    }catch(e){console.warn('AI总结失败',e);}
+    const feedback=buildLocalStageFeedback(G.stageErrors);
+    aiSum=feedback.summary;aiSug=feedback.suggestion;G.lastGrammarTags=feedback.tags;
   }
 
   // 保存数据库
@@ -1177,15 +1181,18 @@ async function endBattle(){
 
 async function startPractice(){
   if(!G.stageErrors.length)return;
-  const desc=G.stageErrors.map(e=>`${e.word}(${e.meaning||''},${e.grammar_point||''})`).join('、');
-  toast('AI生成专项题目…');
-  try{
-    const raw=await callAI('You are an English teacher. Output ONLY a JSON array, no markdown.',
-      `学生错题：${desc}。生成5道针对性填空题。JSON数组，每项：word,meaning,sentence（含____）,translation,answer,options（4个）,steps（3步）,grammar_point。只输出JSON数组。`);
-    const m=raw.match(/\[[\s\S]*\]/);if(!m)throw new Error('格式错误');
-    G.questions=JSON.parse(m[0]);G.qIdx=0;G.gameStep=1;G.hp=5;G.streak=0;G.correctCount=0;G.stageErrors=[];
-    initBattle();go('s-battle');
-  }catch(e){toast('生成失败：'+e.message,'err');}
+  const review=[];
+  G.stageErrors.forEach(item=>{
+    if(item.word&&!review.some(existing=>existing.w.toLowerCase()===item.word.toLowerCase())){
+      review.push({w:item.word,m:item.meaning||''});
+    }
+  });
+  const difficulty=G.stageNum>20?3:G.stageNum>10?2:1;
+  G.questions=buildLocalQuestions(review,difficulty,5);
+  G.allQuestions=[...G.questions];G.mixQuestions=shuffle([...G.questions]);
+  G.qIdx=0;G.gameStep=1;G.phase=1;G.hp=5;G.streak=0;G.correctCount=0;G.stageErrors=[];
+  toast('已载入错题专项练习');
+  initBattle();go('s-battle');
 }
 
 // ── 错题管理 ──
@@ -1198,7 +1205,7 @@ async function showStudyTab(tab){
     if(!recs?.length){body.innerHTML='<div style="text-align:center;color:var(--green);padding:16px">✓ 暂无错题！</div>';return;}
     const qIds=[...new Set(recs.map(r=>r.question_id).filter(Boolean))];let qm={};
     if(qIds.length){const {data:qs}=await db.from('fillblank_questions').select('*').in('id',qIds);(qs||[]).forEach(q=>{qm[q.id]=q;});}
-    body.innerHTML=recs.map(r=>{const q=qm[r.question_id]||{};return`<div class="err-item"><span class="err-word">${escH(q.word||'—')}</span><span style="color:var(--dim);margin-left:7px;font-size:12px">${escH(q.meaning||'')}</span>${q.grammar_point?`<span class="gtag">${escH(q.grammar_point)}</span>`:''}<div style="margin-top:4px;color:var(--dim);font-size:12px">${escH(q.sentence||'')}</div><div style="margin-top:3px;font-size:12px">你选：<span style="color:var(--err)">${escH(r.selected_answer||'—')}</span> 正确：<span style="color:var(--green)">${escH(q.answer||'—')}</span></div></div>`;}).join('');
+    body.innerHTML=recs.map(r=>{const q=qm[r.question_id]||r;return`<div class="err-item"><span class="err-word">${escH(q.word||'—')}</span><span style="color:var(--dim);margin-left:7px;font-size:12px">${escH(q.meaning||'')}</span>${q.grammar_point?`<span class="gtag">${escH(q.grammar_point)}</span>`:''}<div style="margin-top:4px;color:var(--dim);font-size:12px">${escH(q.sentence||'')}</div><div style="margin-top:3px;font-size:12px">你选：<span style="color:var(--err)">${escH(r.selected_answer||'—')}</span> 正确：<span style="color:var(--green)">${escH(q.answer||'—')}</span></div></div>`;}).join('');
   }else{
     const {data:recs}=await db.from('fillblank_records').select('is_correct').eq('user_id',G.userId).limit(300);
     const tot=(recs||[]).length;const ok=(recs||[]).filter(r=>r.is_correct).length;const acc=tot>0?Math.round(ok/tot*100):0;
@@ -1237,7 +1244,9 @@ async function genAll(packId,packName,wordsRaw){
     try{
       const raw=await callAI(
         'You are an English teacher. Output ONLY a JSON array, no markdown.',
-        `单词：${sw.map(w=>`${w.w}（${w.m||'词组'}）`).join('、')}\n难度：${diff===1?'简单句':diff===2?'复合句':'复杂句'}\n生成${sw.length}道填空题，字段：word,meaning,sentence（含____）,translation（不暴露答案英文），answer,options（4个）,steps（3步），grammar_point,difficulty（${diff}）。只输出JSON数组。`,2500);
+        `单词：${sw.map(w=>`${w.w}（${w.m||'词组'}）`).join('、')}\n难度：${diff===1?'简单句':diff===2?'复合句':'复杂句'}\n生成${sw.length}道填空题，字段：word,meaning,sentence（含____）,translation（不暴露答案英文），answer,options（4个）,steps（3步），grammar_point,difficulty（${diff}）。只输出JSON数组。`,
+        2500,
+        'teacher_question_bank');
       const m=raw.match(/\[[\s\S]*\]/);
       if(m){const gen=JSON.parse(m[0]);await db.from('fillblank_questions').insert(gen.map(q=>({pack_id:packId,word:q.word||'',meaning:q.meaning||'',sentence:q.sentence||'',translation:q.translation||'',answer:q.answer||'',options:shuffle(q.options||[q.answer]),steps:q.steps||[],grammar_point:q.grammar_point||'',difficulty:diff,stage_num:s})));done+=gen.length;}
     }catch(e){console.error(`第${s}关失败`,e);}
@@ -1299,7 +1308,9 @@ async function doPush(uid,name,errsRaw){
   const errDesc=errs.map(e=>`${e.word||e.w||''}(${e.gp||e.grammar_point||'—'})`).join('、');
   try{
     const raw=await callAI('You are an English teacher. Output ONLY a JSON array, no markdown.',
-      `${errDesc?'学生错题：'+errDesc+'\n':''}语法点：${gp||'综合练习'}\n生成${cnt}道填空题。JSON数组：word,meaning,sentence（含____）,translation,answer,options（4个）,steps（3步）,grammar_point。只输出JSON数组。`);
+      `${errDesc?'学生错题：'+errDesc+'\n':''}语法点：${gp||'综合练习'}\n生成${cnt}道填空题。JSON数组：word,meaning,sentence（含____）,translation,answer,options（4个）,steps（3步）,grammar_point。只输出JSON数组。`,
+      2200,
+      'teacher_assignment');
     const m=raw.match(/\[[\s\S]*\]/);if(!m)throw new Error('格式错误');
     const qs=JSON.parse(m[0]);
     await db.from('fillblank_assigned_practice').insert({teacher_id:G.userId,student_id:uid||null,questions:qs,is_read:false});

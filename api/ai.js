@@ -13,14 +13,17 @@ module.exports = async function handler(req, res) {
   if (!ZHIPU_API_KEY) return res.status(503).json({ error: 'AI service is not configured' });
 
   try {
-    const { messages, max_tokens = 2000, temperature = 0.7 } = req.body || {};
+    const { messages, max_tokens = 2000, temperature = 0.7, purpose = 'content_generation' } = req.body || {};
     const safeMessages = normalizeMessages(messages);
     if (!safeMessages.length) return res.status(400).json({ error: 'Missing messages' });
     if (safeMessages.length > 12 || safeMessages.reduce((n, m) => n + m.content.length, 0) > 24000) {
       return res.status(413).json({ error: 'Request is too large' });
     }
 
-    const quota = await consumeQuota(req, 40);
+    const outputLimit = Math.min(Math.max(Number(max_tokens) || 2000, 400), 4000);
+    const promptChars = safeMessages.reduce((n, message) => n + message.content.length, 0);
+    const estimatedTokens = Math.ceil(promptChars / 1.5) + outputLimit;
+    const quota = await reserveBudget(req, estimatedTokens, purpose);
     if (!quota.ok) return res.status(quota.status).json({ error: quota.error });
 
     const controller = new AbortController();
@@ -36,7 +39,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           model: 'glm-4-air',
           messages: safeMessages,
-          max_tokens: Math.min(Math.max(Number(max_tokens) || 2000, 1200), 4000),
+          max_tokens: outputLimit,
           temperature,
           stream: false,
         }),
@@ -78,20 +81,23 @@ function normalizeMessages(messages) {
     }));
 }
 
-async function consumeQuota(req, limit) {
+async function reserveBudget(req, estimatedTokens, purpose) {
   const authorization = req.headers.authorization || '';
   if (!/^Bearer\s+\S+$/i.test(authorization)) {
     return { ok: false, status: 401, error: 'Please sign in before using AI' };
   }
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/consume_ai_quota`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/reserve_ai_budget`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': authorization,
       },
-      body: JSON.stringify({ p_limit: limit }),
+      body: JSON.stringify({
+        p_estimated_tokens: estimatedTokens,
+        p_kind: normalizePurpose(purpose),
+      }),
     });
     if (response.status === 401 || response.status === 403) {
       return { ok: false, status: 401, error: 'Your session has expired. Please sign in again.' };
@@ -100,14 +106,25 @@ async function consumeQuota(req, limit) {
       console.error('[ai-quota] HTTP', response.status, (await response.text()).slice(0, 200));
       return { ok: false, status: 503, error: 'AI quota service is temporarily unavailable' };
     }
-    const allowed = await response.json();
-    return allowed === true
-      ? { ok: true }
-      : { ok: false, status: 429, error: 'AI usage limit reached. Please try again next hour.' };
+    const result = await response.json();
+    if (result?.allowed) return { ok: true, budget: result };
+    return { ok: false, status: 429, error: budgetError(result?.reason) };
   } catch (error) {
     console.error('[ai-quota] Error:', error.message);
     return { ok: false, status: 503, error: 'AI quota service is temporarily unavailable' };
   }
+}
+
+function normalizePurpose(value) {
+  const normalized = String(value || 'content_generation').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 32);
+  return normalized || 'content_generation';
+}
+
+function budgetError(reason) {
+  if (reason === 'hourly_limit') return '本小时 AI 生成次数已用完，请稍后再试';
+  if (reason === 'daily_limit') return '今日 AI 生成额度已用完，明天会自动恢复';
+  if (reason === 'global_budget') return '今日全站 AI 预算已达上限，普通学习功能仍可继续使用';
+  return 'AI 预算服务暂时不可用，请稍后再试';
 }
 
 function cleanJsonContent(raw) {

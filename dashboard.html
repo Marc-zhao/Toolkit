@@ -1429,7 +1429,8 @@ async function dashCallAI(sys,user){
         ...(sys?[{role:'system',content:sys}]:[]),
         {role:'user',content:user}
       ],
-      max_tokens:4000
+      max_tokens:3000,
+      purpose:'teacher_analysis'
     })
   });
   if(!r.ok){

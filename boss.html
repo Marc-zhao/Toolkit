@@ -349,14 +349,7 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 <script>
 const S_URL='https://dosseusntiuzmldpwpow.supabase.co';
 const S_KEY='sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
-const PROXY='/api/ai';
 const db=window.supabase.createClient(S_URL,S_KEY);
-
-async function aiHeaders(){
-  const {data:{session}}=await db.auth.getSession();
-  if(!session?.access_token) throw new Error('登录已过期，请重新登录');
-  return {'Content-Type':'application/json','Authorization':'Bearer '+session.access_token};
-}
 
 const G={
   userId:'',name:'',classId:'',isTeacher:false,
@@ -619,8 +612,6 @@ async function generateBossQuestions(toolId){
     }
 
     const targetWords=errorWords.slice(0,10);
-      // 只传英文词，降低生成题目时的格式漂移概率
-    const wordList=targetWords.map(w=>w.word).join(', ');
 
     // 优先从fillblank_questions取已有题目（不依赖AI）
     const {data:existingQs}=await db.from('fillblank_questions').select('*').limit(100);
@@ -643,61 +634,24 @@ async function generateBossQuestions(toolId){
       return true;
     }
 
-    // 没有现成题目才调AI
-    toast('AI正在生成Boss复习题…');
-    const resp=await fetch('/api/ai',{
-      method:'POST',
-      headers:await aiHeaders(),
-      body:JSON.stringify({
-        messages:[
-          {role:'user',content:(()=>{
-            // 用errorWords里记录的语言信息判断（从词包名取得）
-            return `Output ONLY a JSON array, starting with [, no other text.
-Generate 10 English fill-in-the-blank exercises for these words: ${wordList}.
-Each item: {"word":"...","meaning":"Chinese meaning","sentence":"English sentence with ____","answer":"correct word","options":["4","English","word","choices"],"translation":"Chinese translation"}
-Start with [:`;
-          })()}
-        ],
-        max_tokens:4000
-      })
+    // 老师题库尚未生成时，用学生错词即时组成本地备用题，不调用付费 AI。
+    const optionPool=[...new Set([
+      ...errorWords.map(item=>item.word),
+      'study','learn','review','practice','remember'
+    ].filter(Boolean))];
+    const questions=Array.from({length:10},(_,index)=>{
+      const target=targetWords[index%targetWords.length];
+      const distractors=shuffleArr(optionPool.filter(word=>word.toLowerCase()!==target.word.toLowerCase())).slice(0,3);
+      return{
+        word:target.word,
+        meaning:target.meaning||'目标词汇',
+        sentence:`The word ____ matches the meaning "${target.meaning||'目标词汇'}".`,
+        answer:target.word,
+        options:shuffleArr([target.word,...distractors]),
+        translation:`请选择与“${target.meaning||'目标词汇'}”对应的单词。`,
+        grammar_point:target.grammar||'词义辨析与拼写'
+      };
     });
-    if(!resp.ok) throw new Error('AI请求失败');
-    const aiData=await resp.json();
-    const content=aiData.choices?.[0]?.message?.content||aiData.reply||'';
-    if(!content) throw new Error('AI返回为空');
-
-    const cleaned=content.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
-    // 尝试多种方式提取JSON数组
-    let questions=null;
-    // 方法1：直接匹配
-    const jsonMatch=cleaned.match(/\[[\s\S]*\]/);
-    if(jsonMatch){
-      try{ questions=JSON.parse(jsonMatch[0]); }catch(e){}
-    }
-    // 方法2：找第一个[到最后一个}]
-    if(!questions?.length){
-      const start=cleaned.indexOf('[');
-      const end=cleaned.lastIndexOf(']');
-      if(start!==-1&&end>start){
-        try{ questions=JSON.parse(cleaned.substring(start,end+1)); }catch(e){}
-      }
-    }
-    // 方法3：修复截断的JSON
-    if(!questions?.length&&cleaned.includes('{')){
-      try{
-        const start=cleaned.indexOf('[');
-        if(start!==-1){
-          let depth=0,lastEnd=start;
-          for(let i=start;i<cleaned.length;i++){
-            if(cleaned[i]==='{')depth++;
-            if(cleaned[i]==='}'){depth--;if(depth===0)lastEnd=i+1;}
-          }
-          const fixed=cleaned.substring(start,lastEnd).replace(/,\s*$/,'')+']';
-          questions=JSON.parse(fixed);
-        }
-      }catch(e){}
-    }
-    if(!questions?.length) throw new Error('格式错误，AI返回: '+content.slice(0,100));
 
     // 存回weekly_bosses
     const mon=getMonday(); const ws=mon.toISOString().split('T')[0];
@@ -707,7 +661,7 @@ Start with [:`;
       await db.rpc('set_weekly_boss_questions',{p_boss_id:bossRow.id,p_questions:questions});
       G.activeBoss={...G.activeBoss,questions};
     }
-    toast('✅ Boss复习题生成完毕！');
+    toast('✅ 已载入Boss复习题！');
     return true;
   }catch(e){
     console.error('Boss题目生成失败:',e);
