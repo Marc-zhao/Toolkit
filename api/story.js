@@ -187,7 +187,7 @@ async function generateStory(pack, words, signature) {
 }
 每个 beat 格式：
 {"title":"","text":"","a":["支线标题","行动选择","通关结果"],"b":["支线标题","调查选择","通关结果"]}
-第一章也必须有 a、b；每个字段 18-80 个汉字，12 章应有连续因果、两条路线和真正不同的结局。
+第一章也必须有 a、b；title 和支线标题 4-14 个汉字，其余字段 12-45 个汉字。必须恰好输出 12 个 beat，保持连续因果、两条路线和真正不同的结局。
 heroes 固定 id 为 aria、noah、sora，每项格式：
 {"id":"aria","name":"中文名 · 职业","trait":"","detail":"","lineA":"","lineB":""}
 三名角色必须属于这个世界，外观、能力和叙事视角明显不同。
@@ -198,25 +198,47 @@ mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美
 代表词汇：${samples}
 请先判断这批词的主题、时代感和情绪，再生成与它高度相关、不可与其他词包互换的世界、人物和 12 章故事。`;
 
-  const response = await fetchWithTimeout(ZHIPU_CHAT_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'glm-4-air',
-      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      max_tokens: 8000,
-      temperature: 0.92,
-      stream: false,
-      response_format: { type: 'json_object' },
-    }),
-  }, 60000);
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Zhipu story HTTP ${response.status}: ${text.slice(0, 180)}`);
-  const content = JSON.parse(text).choices?.[0]?.message?.content || '';
-  return validateGeneratedStory(parseJsonObject(content), signature);
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const retryNote = attempt
+      ? '\n上一次输出未通过结构校验。本次务必压缩文字并恰好返回 12 个完整 beat，不得省略任何数组项。'
+      : '';
+    const response = await fetchWithTimeout(ZHIPU_CHAT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ZHIPU_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'glm-4-air',
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user + retryNote }],
+        max_tokens: 6500,
+        temperature: attempt ? 0.72 : 0.84,
+        stream: false,
+        response_format: { type: 'json_object' },
+      }),
+    }, 60000);
+    const text = await response.text();
+    if (!response.ok) {
+      lastError = new Error(`Zhipu story HTTP ${response.status}: ${text.slice(0, 180)}`);
+      if (attempt === 0 && response.status === 429) {
+        await delay(4500);
+        continue;
+      }
+      throw lastError;
+    }
+    try {
+      const content = JSON.parse(text).choices?.[0]?.message?.content || '';
+      return validateGeneratedStory(parseJsonObject(content), signature);
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) {
+        await delay(1500);
+        continue;
+      }
+    }
+  }
+  throw lastError || new Error('AI returned an invalid story');
 }
 
 function parseJsonObject(raw) {
