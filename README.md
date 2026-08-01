@@ -15,11 +15,16 @@ Production vocabulary learning system deployed from this directory.
 ## Learning Experience
 
 - All six user-facing pages share a persisted light/dark appearance selector.
-- Every word pack becomes a complete 4-12 chapter adventure based on its size.
-- Students choose one of three protagonists, see the entire branching map, and
-  decide the next plot route after each completed chapter.
-- The three built-in worlds provide distinct mysteries, turning points, finales,
-  and route-dependent endings without making a student AI request.
+- A newly uploaded word pack is analyzed once by Zhipu AI. Its dedicated world,
+  three protagonists, 12-chapter story, A/B branches, map image, and character
+  art are persisted in Supabase and shared by every student using that pack.
+- Reopening the same unchanged pack reads the cached story and does not make a
+  new AI request. A database claim function prevents duplicate concurrent
+  generation.
+- Students choose one of the pack-specific protagonists, see the entire
+  branching map, and decide the next plot route after each completed chapter.
+- Built-in worlds remain available as a resilient fallback while a teacher
+  generates or retries a pack's dedicated artwork.
 - Story choices also change the next chapter's practice mix between meaning,
   listening, spelling, and combined battles.
 - The dashboard combines vocabulary, sentence practice, weak-word review, and the
@@ -30,6 +35,7 @@ Production vocabulary learning system deployed from this directory.
 1. Apply every SQL file in `supabase/migrations/` in filename order.
 2. Add `ZHIPU_API_KEY` to the Vercel project for all environments. Existing
    deployments using the `Zhipu` variable name are also supported.
+   `ZHIPU_IMAGE_MODEL` is optional and defaults to `cogview-3-flash`.
 3. Deploy this directory. The root URL rewrites to `landing.html`.
 4. Verify student and teacher workflows, theme persistence, mobile layout, and
    the AI proxy before promoting the deployment.

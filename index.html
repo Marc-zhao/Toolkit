@@ -1407,6 +1407,38 @@
             margin-top: 2px;
         }
 
+        .pack-story-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 5px;
+            font-size: 11px;
+            color: var(--dim);
+        }
+
+        .pack-story-status.ready { color: var(--green); }
+        .pack-story-status.partial { color: var(--gold); }
+        .pack-story-status.generating { color: var(--cyan); }
+        .pack-story-status.failed { color: var(--red); }
+
+        .story-generation-steps {
+            display: grid;
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .story-generation-step {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--cyan);
+            background: var(--bg);
+            color: var(--dim);
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .story-generation-step strong { display: block; color: var(--text); }
+
         .pack-btns {
             display: flex;
             gap: 8px;
@@ -2522,15 +2554,22 @@
                 let h = '';
                 packs?.forEach((p, pi) => {
                     const oldWordsStr = encodeURIComponent(JSON.stringify(p.words));
+                    const storyStatus = packStoryStatus(p);
                     h += `
                     <div class="pack-item">
                         <div class="pack-hdr" onclick="this.nextElementSibling.classList.toggle('open')">
                             <div class="pack-hdr-l">
                                 <span style="font-size:24px;">${p.icon || '📖'}</span>
-                                <div><div class="pack-nm">${escH(p.name)}</div><div class="pack-meta">${p.words.length} WORDS</div></div>
+                                <div>
+                                    <div class="pack-nm">${escH(p.name)}</div>
+                                    <div class="pack-meta">${p.words.length} WORDS</div>
+                                    <div class="pack-story-status ${storyStatus.key}">${storyStatus.label}</div>
+                                </div>
                             </div>
                             <div class="pack-btns">
-                                <button class="btn btn-xs btn-cyan" onclick="event.stopPropagation();previewTeacherMap('${escQ(p.id)}')">预览地图</button>
+                                ${storyStatus.canPreview
+                                    ? `<button class="btn btn-xs btn-cyan" onclick="event.stopPropagation();previewTeacherMap('${escQ(p.id)}')">预览专属世界</button>`
+                                    : `<button class="btn btn-xs btn-gold" ${storyStatus.key === 'generating' ? 'disabled' : ''} onclick="event.stopPropagation();generatePackStory('${escQ(p.id)}')">${storyStatus.key === 'generating' ? '生成中' : '生成专属世界'}</button>`}
                                 <button class="btn btn-xs btn-gray" onclick="event.stopPropagation();deletePack('${p.id}')">删除</button>
                                 <span style="color:var(--dim);font-size:16px;padding:0 6px;">▼</span>
                             </div>
@@ -2554,6 +2593,65 @@
                     </div>`;
                 });
                 cont.innerHTML = `<button class="btn btn-sm btn-red" onclick="openModal('m-create')" style="width:100%;margin-bottom:20px;">+ 上传新词包至全校词库</button>` + (h || '<div style="color:var(--dim);text-align:center;">全校词库为空</div>');
+            }
+        }
+
+        function packStoryStatus(pack) {
+            const status = pack?.story_data?.status || 'pending';
+            if (status === 'ready') return { key: 'ready', label: '已生成专属故事、人物与地图', canPreview: true };
+            if (status === 'partial') return { key: 'partial', label: '故事已生成，图片需要重试', canPreview: true };
+            if (status === 'generating') return { key: 'generating', label: 'AI 正在构建专属世界', canPreview: false };
+            if (status === 'failed') return { key: 'failed', label: '上次生成失败，可以重试', canPreview: false };
+            return { key: 'pending', label: '尚未生成专属世界', canPreview: false };
+        }
+
+        function showStoryGeneration(pack) {
+            document.getElementById('teacher-map-preview-summary').innerHTML =
+                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 正在首次生成专属世界。生成完成后会保存到词包，所有学生共用，不会重复收费。`;
+            document.getElementById('teacher-map-preview-body').innerHTML = `
+                <div class="story-generation-steps">
+                    <div class="story-generation-step"><strong>1. 分析词包主题</strong>从 ${pack.words.length} 个词中识别主题、时代、场景与情绪。</div>
+                    <div class="story-generation-step"><strong>2. 编写完整冒险</strong>生成 12 章连续故事、三位主角、A/B 支线和两个结局。</div>
+                    <div class="story-generation-step"><strong>3. 绘制游戏素材</strong>生成这个词包独有的 2.5D 地图和人物立绘，并永久保存。</div>
+                </div>`;
+            openModal('m-map-preview');
+        }
+
+        async function generatePackStory(packId, retry = false) {
+            let pack = (window._teacherPacks || []).find(item => item.id === packId);
+            if (!pack) {
+                const { data } = await vqClient.from('word_packs').select('*').eq('id', packId).maybeSingle();
+                pack = data;
+            }
+            if (!pack) return toast('没有找到这个词包', 'err');
+            showStoryGeneration(pack);
+            try {
+                const { data: { session } } = await vqClient.auth.getSession();
+                if (!session?.access_token) throw new Error('登录已过期，请重新登录');
+                const response = await fetch('/api/story', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({ packId, retry })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || '专属世界生成失败');
+                pack.story_data = result.storyData;
+                const existingIndex = (window._teacherPacks || []).findIndex(item => item.id === packId);
+                if (existingIndex >= 0) window._teacherPacks[existingIndex] = { ...pack };
+                toast(result.cached ? '已读取这个词包现有的专属世界' : '专属世界生成完成', 'ok');
+                await switchTeacherTab('pack');
+                previewTeacherMap(packId);
+            } catch (error) {
+                console.error('Story generation:', error);
+                document.getElementById('teacher-map-preview-summary').innerHTML =
+                    `<strong style="color:var(--red);">生成没有完成</strong> · ${escH(error.message)}`;
+                document.getElementById('teacher-map-preview-body').innerHTML =
+                    `<button class="btn btn-gold" style="width:100%;" onclick="generatePackStory('${escQ(packId)}', true)">重新生成专属世界</button>`;
+                toast(error.message, 'err');
+                await switchTeacherTab('pack');
             }
         }
 
@@ -2756,16 +2854,56 @@
             toast('📡 正在上传至云端...', 'ok');
             try {
                 const oldWords = JSON.parse(decodeURIComponent(oldWordsStr));
-                const { error } = await vqClient.from('word_packs').update({ words: [...oldWords, ...news] }).eq('id', pid);
+                const byWord = new Map(oldWords.map(word => [String(word.w || '').toLowerCase(), word]));
+                news.forEach(word => byWord.set(String(word.w || '').toLowerCase(), word));
+                const mergedWords = [...byWord.values()];
+                if (mergedWords.length === oldWords.length) {
+                    return toast('没有发现新单词，原有专属世界保持不变', 'ok');
+                }
+                const { error } = await vqClient.from('word_packs').update({
+                    words: mergedWords,
+                    story_data: { status: 'pending', reason: 'words_changed' }
+                }).eq('id', pid);
                 if (error) throw error;
-                toast(`✅ 成功追加 ${news.length} 个单词！`);
-                switchTeacherTab('pack'); // 无感重绘刷新UI
+                toast(`成功追加 ${mergedWords.length - oldWords.length} 个单词，正在重建专属世界`);
+                await switchTeacherTab('pack');
+                await generatePackStory(pid);
             } catch (e) {
                 console.error(e); toast('追加失败，请重试', 'err');
             }
         }
 
-        async function createPack() { const name = document.getElementById('m-pack-name').value.trim(); const icon = document.getElementById('m-pack-icon').value.trim() || '📖'; if (!name) return toast('请输入词包名', 'err'); const raw = document.getElementById('m-batch').value.trim(); const words = raw ? raw.split('\n').filter(l => l.trim() && !l.startsWith('#')).map(l => { const parts = l.split(/,|，|\t/); if (parts.length < 2) return null; const w = parts[0].trim(), m = parts[1].trim(), pos = parts[2] ? parts[2].trim() : ''; return (w && m) ? { w, m, pos } : null; }).filter(Boolean) : []; if (words.length < 4) return toast('词汇量太少', 'err'); await vqClient.from('word_packs').insert([{ id: 'p' + Date.now(), name, words, icon }]); closeModal('m-create'); document.getElementById('m-pack-name').value = ''; document.getElementById('m-batch').value = ''; toast(`词汇包"${name}"上传成功！`); switchTeacherTab('pack'); }
+        async function createPack() {
+            const name = document.getElementById('m-pack-name').value.trim();
+            const icon = document.getElementById('m-pack-icon').value.trim() || '📖';
+            if (!name) return toast('请输入词包名', 'err');
+            const raw = document.getElementById('m-batch').value.trim();
+            const words = raw ? raw.split('\n').filter(line => line.trim() && !line.startsWith('#')).map(line => {
+                const parts = line.split(/,|，|\t/);
+                if (parts.length < 2) return null;
+                const w = parts[0].trim();
+                const m = parts[1].trim();
+                const pos = parts[2] ? parts[2].trim() : '';
+                return w && m ? { w, m, pos } : null;
+            }).filter(Boolean) : [];
+            if (words.length < 4) return toast('词汇量太少', 'err');
+
+            const pack = {
+                id: `p${Date.now()}`,
+                name,
+                words,
+                icon,
+                story_data: { status: 'pending' }
+            };
+            const { data, error } = await vqClient.from('word_packs').insert([pack]).select('*').single();
+            if (error) return toast(`词包上传失败：${error.message}`, 'err');
+            closeModal('m-create');
+            document.getElementById('m-pack-name').value = '';
+            document.getElementById('m-batch').value = '';
+            window._teacherPacks = [data, ...(window._teacherPacks || [])];
+            toast(`词汇包“${name}”上传成功，开始生成专属世界`);
+            await generatePackStory(data.id);
+        }
         async function deletePack(id) { if (confirm('彻底删除此词包？')) { await vqClient.from('word_packs').delete().eq('id', id); switchTeacherTab('pack'); } }
 
         // ════ 学习管理 & 错题复习 ════

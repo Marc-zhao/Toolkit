@@ -132,9 +132,83 @@ const VQ_STORY_ART = {
     }
 };
 
-function heroArt(hero, className = '') {
+function storyAssetUrl(value, fallback = '') {
+    const url = String(value || '');
+    if (/^\.\/assets\/story\/[a-z0-9-]+\.(?:jpg|png|webp)$/i.test(url)) return url;
+    if (/^https:\/\/dosseusntiuzmldpwpow\.supabase\.co\/storage\/v1\/object\/public\/story-assets\/[a-zA-Z0-9_./-]+$/.test(url)) return url;
+    return fallback;
+}
+
+function generatedStoryData(pack = G.pack) {
+    const data = pack?.story_data;
+    if (!['ready', 'partial'].includes(data?.status) || !data?.story || data.story.beats?.length !== 12) return null;
+    return data;
+}
+
+function heroCatalog(pack = G.pack) {
+    const custom = generatedStoryData(pack)?.heroes;
+    if (!Array.isArray(custom) || custom.length !== 3) return VQ_HEROES;
+    return Object.fromEntries(['aria', 'noah', 'sora'].map(id => {
+        const base = VQ_HEROES[id];
+        const source = custom.find(hero => hero?.id === id) || {};
+        return [id, {
+            ...base,
+            name: source.name || base.name,
+            trait: source.trait || base.trait,
+            detail: source.detail || base.detail,
+            lineA: source.lineA || base.lineA,
+            lineB: source.lineB || base.lineB,
+        }];
+    }));
+}
+
+function storyArt(story, pack = G.pack) {
+    const custom = generatedStoryData(pack);
+    const fallback = VQ_STORY_ART[story?.id]
+        || VQ_STORY_ART[Object.keys(VQ_STORY_ART)[vqHash(custom?.signature || story?.id || pack?.id) % 3]];
+    if (!custom || story?.id !== custom.story.id) return fallback;
+    const generatedRoutes = buildGeneratedRoutes(custom.signature);
+    return {
+        ...fallback,
+        image: storyAssetUrl(custom.art?.mapImage, fallback.image),
+        heroImage: storyAssetUrl(custom.art?.heroImage, './assets/story/heroes.jpg'),
+        routes: generatedRoutes,
+        routeNames: [
+            custom.art?.routeNames?.[0] || '行动路线',
+            custom.art?.routeNames?.[1] || '调查路线'
+        ]
+    };
+}
+
+function buildGeneratedRoutes(signature) {
+    const seed = vqHash(signature || 'story');
+    const jitter = (index, salt, range) => ((vqHash(`${seed}:${index}:${salt}`) % (range * 2 + 1)) - range);
+    const routeA = [];
+    const routeB = [];
+    for (let index = 0; index < 12; index++) {
+        const progress = index / 11;
+        const x = 205 + progress * 1270;
+        const sharedY = 755 - progress * 610;
+        const spread = Math.sin(progress * Math.PI) * 155;
+        routeA.push([
+            Math.round(x + jitter(index, 'ax', 28)),
+            Math.round(sharedY - spread + jitter(index, 'ay', 34))
+        ]);
+        routeB.push([
+            Math.round(x + jitter(index, 'bx', 28)),
+            Math.round(sharedY + spread + jitter(index, 'by', 34))
+        ]);
+    }
+    routeA[0] = routeB[0] = [210, 760];
+    routeA[11] = routeB[11] = [1480, 130];
+    return { a: routeA, b: routeB };
+}
+
+function heroArt(hero, className = '', story = storyForPack()) {
     if (!hero) return '';
-    return `<span class="hero-art ${hero.artClass} ${className}" aria-hidden="true"></span>`;
+    const image = storyArt(story).heroImage;
+    const style = image ? ` style="background-image:url('${image}')"` : '';
+    return `<span class="hero-art ${hero.artClass} ${className}"${style} aria-hidden="true"></span>`;
 }
 
 function vqHash(value) {
@@ -147,9 +221,17 @@ function vqHash(value) {
 }
 
 function storyForPack(pack = G.pack) {
+    const generated = generatedStoryData(pack);
+    if (generated) return generated.story;
     const customId = pack?.story_data?.templateId;
     return VQ_STORIES.find(story => story.id === customId)
         || VQ_STORIES[vqHash(`${pack?.id || ''}:${pack?.name || ''}`) % VQ_STORIES.length];
+}
+
+function storyById(storyId, pack = G.pack) {
+    const generated = generatedStoryData(pack);
+    if (generated?.story?.id === storyId) return generated.story;
+    return VQ_STORIES.find(story => story.id === storyId) || storyForPack(pack);
 }
 
 function storyChapterCount(wordCount) {
@@ -213,7 +295,8 @@ function selectedChapterNodeId(chapterIndex, state = ensureMapState()) {
 
 function mapVersionForPack() {
     const words = G.pack?.words || [];
-    return `story-map-v2:${G.pack?.id || 'pack'}:${words.length}:${words[0]?.w || ''}:${words[words.length - 1]?.w || ''}`;
+    const signature = G.pack?.story_data?.signature || 'template';
+    return `story-map-v3:${G.pack?.id || 'pack'}:${signature}:${words.length}:${words[0]?.w || ''}:${words[words.length - 1]?.w || ''}`;
 }
 
 function ensureMapState() {
@@ -235,7 +318,7 @@ function ensureMapState() {
         }
         G.prog.mapState = {
             version,
-            storyId: previous?.storyId || storyForPack().id,
+            storyId: storyForPack().id,
             hero: previous?.hero || '',
             choices,
             completed,
@@ -288,14 +371,14 @@ async function startGameCloud() {
 }
 
 function heroForState(state = ensureMapState()) {
-    return VQ_HEROES[state.hero] || null;
+    return heroCatalog()[state.hero] || null;
 }
 
 function openHeroPicker() {
     const state = ensureMapState();
     const locked = G.levels.some((_, index) => state.completed[selectedChapterNodeId(index, state)]);
     const grid = document.getElementById('hero-choice-grid');
-    grid.innerHTML = Object.values(VQ_HEROES).map(hero => `
+    grid.innerHTML = Object.values(heroCatalog()).map(hero => `
         <button class="hero-choice ${state.hero === hero.id ? 'selected' : ''}" type="button"
             onclick="chooseHero('${hero.id}')">
             ${heroArt(hero, 'hero-choice-avatar')}
@@ -325,14 +408,15 @@ async function chooseHero(heroId) {
     if (hasStarted && state.hero && state.hero !== heroId) {
         return toast('本次冒险已经开始，主角不能中途更换', 'err');
     }
-    if (!VQ_HEROES[heroId]) return;
+    const heroes = heroCatalog();
+    if (!heroes[heroId]) return;
     state.hero = heroId;
     state.history.push({ event: 'hero-selected', hero: heroId, at: new Date().toISOString() });
     state.history = state.history.slice(-60);
     await saveProgress();
     closeModal('m-hero');
     renderMap();
-    toast(`${VQ_HEROES[heroId].name} 已加入冒险`, 'ok');
+    toast(`${heroes[heroId].name} 已加入冒险`, 'ok');
 }
 
 function storyModeFor(branch, chapterIndex, heroId) {
@@ -358,8 +442,8 @@ function buildLearningMap() {
     const height = 900;
     const nodes = [];
     const links = [];
-    const story = VQ_STORIES.find(item => item.id === state.storyId) || storyForPack();
-    const art = VQ_STORY_ART[story.id] || VQ_STORY_ART['star-chart'];
+    const story = storyById(state.storyId);
+    const art = storyArt(story);
     const nodeState = (id, available) => completed[id] ? 'done' : (available ? 'available' : 'locked');
     const pointFor = (branch, index) => art.routes[branch][storyBeatIndex(index, chapterCount)];
 
@@ -458,7 +542,7 @@ function buildLearningMap() {
 }
 
 function storyScene(story, progress = 0, hero = null, caption = '') {
-    const art = VQ_STORY_ART[story.id] || VQ_STORY_ART['star-chart'];
+    const art = storyArt(story);
     const safeProgress = Math.max(0, Math.min(1, progress));
     const position = Math.round(8 + safeProgress * 84);
     const chapter = Math.max(1, Math.round(safeProgress * 12));
@@ -481,7 +565,7 @@ function currentStoryChapter(state) {
 
 function renderMap() {
     const state = ensureMapState();
-    const story = VQ_STORIES.find(item => item.id === state.storyId) || storyForPack();
+    const story = storyById(state.storyId);
     document.getElementById('map-packname').textContent = G.pack.name;
     document.getElementById('map-title').textContent = story.title;
     document.getElementById('map-sub').textContent = `${G.levels.length} 章完整冒险 · ${G.pack.words.length} 个单词 · 你的选择会改变路线`;
@@ -700,7 +784,7 @@ function renderStoryResult(win) {
     panel.classList.add('visible');
     const state = ensureMapState();
     const hero = heroForState(state);
-    const story = VQ_STORIES.find(item => item.id === state.storyId) || storyForPack();
+    const story = storyById(state.storyId);
     const beat = getStoryBeat(parsed.index, parsed.branch, story);
     const isFinal = parsed.index === G.levels.length - 1;
     const progress = (parsed.index + 1) / G.levels.length;
@@ -740,15 +824,28 @@ function renderStoryResult(win) {
 function previewTeacherMap(packId) {
     const pack = (window._teacherPacks || []).find(item => item.id === packId);
     if (!pack) return toast('没有找到这个词包', 'err');
+    if (!generatedStoryData(pack)) {
+        generatePackStory(packId);
+        return;
+    }
     const words = (pack.words || []).filter(word => word?.w && word?.m);
     const levels = buildStoryLevels(words);
     const story = storyForPack(pack);
+    const custom = generatedStoryData(pack);
+    const heroes = Object.values(heroCatalog(pack));
+    const artReady = Boolean(custom?.art?.mapImage && custom?.art?.heroImage);
     document.getElementById('teacher-map-preview-summary').innerHTML =
         `<strong style="color:var(--text);">${escH(pack.name)}</strong> 将进入
         <strong style="color:var(--gold);">《${escH(story.short)}》</strong>，并按 ${words.length} 个词生成
         <strong style="color:var(--gold);">${levels.length}</strong> 个故事章节。每章词量由故事长度自动均分，
-        学生先选择主角，再在每次通关后决定 A/B 剧情路线；整张地图从开始就可以看见。`;
-    document.getElementById('teacher-map-preview-body').innerHTML = levels.map((level, index) => {
+        学生先选择主角，再在每次通关后决定 A/B 剧情路线；这份内容由全体学生共用，不会重复生成。`;
+    document.getElementById('teacher-map-preview-body').innerHTML = `
+        <div style="padding:12px;border:1px solid var(--border);margin-bottom:12px;background:var(--bg);font-size:12px;line-height:1.8;">
+            <strong style="color:var(--gold);">专属主角</strong> · ${heroes.map(hero => escH(hero.name)).join('　')}
+            <br><strong style="color:${artReady ? 'var(--green)' : 'var(--gold)'};">美术资源</strong> ·
+            ${artReady ? '专属地图和人物立绘已永久保存' : '当前使用备用美术，点击下方按钮重试图片生成'}
+        </div>
+        ${levels.map((level, index) => {
         if (index === 0) {
             return `<div class="teacher-map-stage">
                 <div class="story-main">第 1 章<br><span style="color:var(--dim)">${level.words.length} 个词</span></div>
@@ -762,12 +859,15 @@ function previewTeacherMap(packId) {
             <div class="story-a">A · ${escH(routeA.routeTitle)}<br><span style="color:var(--dim)">${modeLabel(storyModeFor('a', index, 'aria'))}</span></div>
             <div class="story-b">B · ${escH(routeB.routeTitle)}<br><span style="color:var(--dim)">${modeLabel(storyModeFor('b', index, 'sora'))}</span></div>
         </div>`;
-    }).join('') + `
+    }).join('')}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
             <span class="btn btn-xs btn-purple" style="cursor:default;">▤ 遗迹译文室</span>
             <span class="btn btn-xs btn-gray" style="cursor:default;">↺ 记忆修复舱</span>
             <span class="btn btn-xs btn-gold" style="cursor:default;">♛ 命运守卫战</span>
-        </div>`;
+        </div>
+        ${custom && !artReady
+            ? `<button class="btn btn-gold" style="width:100%;margin-top:12px;" onclick="generatePackStory('${escQ(pack.id)}', true)">重新生成缺失的地图与人物图</button>`
+            : ''}`;
     openModal('m-map-preview');
 }
 
@@ -775,7 +875,7 @@ function summarizeStudentMap(prog, pack) {
     const words = Array.isArray(pack?.words) ? pack.words.filter(word => word?.w && word?.m) : [];
     const levels = buildStoryLevels(words);
     const state = prog?.mapState;
-    if (!state?.completed || !String(state.version || '').startsWith('story-map-v2:')) {
+    if (!state?.completed || !/^story-map-v[23]:/.test(String(state.version || ''))) {
         return { done: Math.min(levels.length, prog?.cleared?.length || 0), total: levels.length + 3, next: '选择主角，开启词包冒险' };
     }
     let chapterDone = 0;
