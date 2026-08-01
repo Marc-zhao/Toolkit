@@ -653,10 +653,15 @@ async function enterDashboard(profile){
   G.isTeacher=profile.is_teacher||false;
   go('s-main');
   const themeButton=document.querySelector('.vq-theme-toggle');
+  const fontButton=document.querySelector('.vq-font-toggle');
   const themeDock=document.querySelector('.topnav-right');
   if(themeButton&&themeDock){
     themeButton.classList.add('vq-theme-toggle-nav');
     themeDock.prepend(themeButton);
+  }
+  if(fontButton&&themeDock){
+    fontButton.classList.add('vq-font-toggle-nav');
+    themeDock.prepend(fontButton);
   }
   document.getElementById('nav-initials').textContent=G.name.slice(0,1).toUpperCase();
   document.getElementById('nav-name').textContent=G.name;
@@ -1581,9 +1586,14 @@ async function logout(){
   await db.auth.signOut();
   Object.assign(G,{userId:'',name:'',classId:'',className:'',isTeacher:false,activePet:'',activeTitle:'',pets:[],titles:[],feedCoins:{},notifications:[],unreadCount:0});
   const themeButton=document.querySelector('.vq-theme-toggle');
+  const fontButton=document.querySelector('.vq-font-toggle');
   if(themeButton){
     themeButton.classList.remove('vq-theme-toggle-nav');
     document.body.appendChild(themeButton);
+  }
+  if(fontButton){
+    fontButton.classList.remove('vq-font-toggle-nav');
+    document.body.appendChild(fontButton);
   }
   go('s-login'); renderLogin('login'); toast('已登出');
 }

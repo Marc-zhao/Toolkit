@@ -14,7 +14,7 @@ Production vocabulary learning system deployed from this directory.
 
 ## Learning Experience
 
-- All six user-facing pages share a persisted light/dark appearance selector.
+- All six user-facing pages share persisted light/dark and font-size selectors.
 - A newly uploaded word pack is analyzed once by Zhipu AI. Its dedicated world,
   three protagonists, 12-chapter story, A/B branches, map image, and character
   art are persisted in Supabase and shared by every student using that pack.
@@ -36,6 +36,9 @@ Production vocabulary learning system deployed from this directory.
 2. Add `ZHIPU_API_KEY` to the Vercel project for all environments. Existing
    deployments using the `Zhipu` variable name are also supported.
    `ZHIPU_IMAGE_MODEL` is optional and defaults to `cogview-3-flash`.
+   `ZHIPU_WATERMARK_ENABLED=false` may be used only after the Zhipu account has
+   permission to generate watermark-free images. The UI also uses a safe crop
+   so previously generated artwork does not expose provider marks.
 3. Deploy this directory. The root URL rewrites to `landing.html`.
 4. Verify student and teacher workflows, theme persistence, mobile layout, and
    the AI proxy before promoting the deployment.

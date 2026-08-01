@@ -170,6 +170,7 @@ function storyArt(story, pack = G.pack) {
     const generatedRoutes = buildGeneratedRoutes(custom.signature);
     return {
         ...fallback,
+        generated: true,
         image: storyAssetUrl(custom.art?.mapImage, fallback.image),
         heroImage: storyAssetUrl(custom.art?.heroImage, './assets/story/heroes.jpg'),
         routes: generatedRoutes,
@@ -206,9 +207,11 @@ function buildGeneratedRoutes(signature) {
 
 function heroArt(hero, className = '', story = storyForPack()) {
     if (!hero) return '';
-    const image = storyArt(story).heroImage;
+    const art = storyArt(story);
+    const image = art.heroImage;
     const style = image ? ` style="background-image:url('${image}')"` : '';
-    return `<span class="hero-art ${hero.artClass} ${className}"${style} aria-hidden="true"></span>`;
+    const generatedClass = art.generated ? 'vq-generated-hero-art' : '';
+    return `<span class="hero-art ${hero.artClass} ${className} ${generatedClass}"${style} aria-hidden="true"></span>`;
 }
 
 function vqHash(value) {
@@ -546,7 +549,7 @@ function storyScene(story, progress = 0, hero = null, caption = '') {
     const safeProgress = Math.max(0, Math.min(1, progress));
     const position = Math.round(8 + safeProgress * 84);
     const chapter = Math.max(1, Math.round(safeProgress * 12));
-    return `<div class="story-scene-art" style="background-image:url('${art.image}');background-position:${position}% center;">
+    return `<div class="story-scene-art ${art.generated ? 'vq-generated-map-art' : ''}" style="background-image:url('${art.image}');background-position:${position}% center;">
         <span class="story-scene-shade" aria-hidden="true"></span>
         <span class="story-scene-chapter">CHAPTER ${String(chapter).padStart(2, '0')}</span>
         ${heroArt(hero, 'story-scene-character')}
@@ -639,6 +642,7 @@ function renderJourneyPanel() {
         (node.state === 'locked' ? '🔒' : (node.state === 'missed' ? '×' : (node.recommended ? '★' : '')));
     const hero = heroForState(state);
     const world = document.getElementById('journey-track');
+    world.classList.toggle('vq-generated-map-art', Boolean(graph.art.generated));
     world.style.width = '100%';
     world.style.height = 'auto';
     world.style.aspectRatio = `${width} / ${height}`;
