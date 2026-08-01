@@ -775,7 +775,9 @@
             .world-map-viewport {
                 overflow-x: auto;
                 cursor: grab;
-                touch-action: pan-y;
+                touch-action: pan-y pinch-zoom;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
             }
             .world-map-viewport.dragging { cursor: grabbing; user-select: none; }
             .world-map { width: 880px !important; min-width: 880px; }
@@ -2107,6 +2109,22 @@
         </div>
     </div>
 
+    <div class="modal-bg" id="m-route-confirm">
+        <div class="panel" style="max-width:520px;">
+            <div class="panel-title" style="color:var(--purple);border-color:var(--purple);">确认剧情路线</div>
+            <div style="font-size:12px;color:var(--dim);line-height:1.7;margin-bottom:6px;">这一步只会在你确认后锁定。本次冒险中不能中途更换已选择的路线。</div>
+            <div style="padding:14px;border:1px solid var(--border);background:var(--bg);margin:14px 0;">
+                <div id="route-confirm-title" style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;"></div>
+                <div id="route-confirm-copy" style="font-size:13px;color:var(--dim);line-height:1.8;"></div>
+                <div id="route-confirm-meta" style="font-size:12px;color:var(--cyan);margin-top:10px;"></div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-purple" style="flex:1;min-width:190px;" type="button" onclick="confirmStoryBranch()">确认选择并进入</button>
+                <button class="btn btn-gray" style="flex:1;min-width:120px;" type="button" onclick="cancelStoryBranch()">再看看</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-bg" id="m-pw">
         <div class="panel" style="max-width:380px;">
             <div class="panel-title" id="t-auth-title">教师验证 TEACHER AUTH</div>
@@ -3410,36 +3428,74 @@
             viewport.dataset.dragBound = 'true';
             let pointerId = null;
             let startX = 0;
+            let startY = 0;
             let startScroll = 0;
             let dragged = false;
+            let suppressClickUntil = 0;
             viewport.addEventListener('pointerdown', event => {
                 if (event.pointerType === 'mouse' && event.button !== 0) return;
+                if (event.pointerType === 'touch') return;
                 pointerId = event.pointerId;
                 startX = event.clientX;
+                startY = event.clientY;
                 startScroll = viewport.scrollLeft;
                 dragged = false;
-                viewport.setPointerCapture(pointerId);
+                try { viewport.setPointerCapture(pointerId); } catch (error) {}
             });
             viewport.addEventListener('pointermove', event => {
                 if (event.pointerId !== pointerId) return;
-                const distance = event.clientX - startX;
-                if (Math.abs(distance) > 6) {
+                const distanceX = event.clientX - startX;
+                const distanceY = event.clientY - startY;
+                if (Math.abs(distanceX) > 6 && Math.abs(distanceX) > Math.abs(distanceY)) {
                     dragged = true;
                     viewport.classList.add('dragging');
-                    viewport.scrollLeft = startScroll - distance;
+                    viewport.scrollLeft = startScroll - distanceX;
                 }
             });
             const finish = event => {
                 if (event.pointerId !== pointerId) return;
                 viewport.classList.remove('dragging');
-                if (viewport.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
+                try {
+                    if (viewport.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
+                } catch (error) {}
                 pointerId = null;
+                if (dragged) suppressClickUntil = Date.now() + 350;
                 setTimeout(() => { dragged = false; }, 0);
             };
             viewport.addEventListener('pointerup', finish);
             viewport.addEventListener('pointercancel', finish);
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchStartScroll = 0;
+            let touchDragging = false;
+            viewport.addEventListener('touchstart', event => {
+                if (event.touches.length !== 1) return;
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+                touchStartScroll = viewport.scrollLeft;
+                touchDragging = false;
+            }, { passive: true });
+            viewport.addEventListener('touchmove', event => {
+                if (event.touches.length !== 1) return;
+                const distanceX = event.touches[0].clientX - touchStartX;
+                const distanceY = event.touches[0].clientY - touchStartY;
+                if (Math.abs(distanceX) <= 5 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+                touchDragging = true;
+                dragged = true;
+                viewport.classList.add('dragging');
+                viewport.scrollLeft = touchStartScroll - distanceX;
+                event.preventDefault();
+            }, { passive: false });
+            const finishTouch = () => {
+                viewport.classList.remove('dragging');
+                if (touchDragging) suppressClickUntil = Date.now() + 350;
+                touchDragging = false;
+                setTimeout(() => { dragged = false; }, 0);
+            };
+            viewport.addEventListener('touchend', finishTouch, { passive: true });
+            viewport.addEventListener('touchcancel', finishTouch, { passive: true });
             viewport.addEventListener('click', event => {
-                if (!dragged) return;
+                if (!dragged && Date.now() >= suppressClickUntil) return;
                 event.preventDefault();
                 event.stopPropagation();
             }, true);

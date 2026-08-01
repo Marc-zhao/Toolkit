@@ -1,0 +1,26 @@
+.report-builder{display:grid;gap:14px}
+.report-intro{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:14px;border:1px solid rgba(0,212,255,.25);background:rgba(0,212,255,.04)}
+.report-intro strong{display:block;font-size:16px;margin-bottom:5px;color:var(--cyan)}.report-intro span{font-size:12px;color:var(--dim);line-height:1.7}
+.report-filter-grid{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr));gap:9px}
+.report-filter-grid label{margin:0}.report-filter-grid select,.report-filter-grid input{margin-top:5px;font-size:13px;padding:10px}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap}
+.report-status{min-height:20px;font-size:12px;color:var(--dim)}
+.report-paper{background:#fff;color:#172033;border:1px solid #cad3e0;border-radius:5px;padding:22px;line-height:1.65}
+.report-paper *{box-sizing:border-box}
+.report-brand{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:3px solid #008caf;padding-bottom:13px;margin-bottom:17px}
+.report-logo{font-family:var(--px);font-size:12px;color:#008caf;letter-spacing:2px;text-shadow:none}.report-logo span{display:block;font-family:inherit;font-size:6px;color:#59677c;margin-top:6px;letter-spacing:1px}
+.report-title{font-size:22px;font-weight:800;color:#172033;margin-bottom:4px}.report-subtitle{font-size:12px;color:#637087}
+.report-badge{display:inline-block;padding:4px 8px;border:1px solid #aeb9c8;border-radius:3px;font-size:11px;color:#4e5d73;margin-right:5px}
+.report-answer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:16px 0}
+.report-answer{padding:12px;border-left:4px solid #008caf;background:#f3f7fa;min-height:96px}.report-answer.warn{border-color:#db8b13;background:#fff8ea}.report-answer.danger{border-color:#c8445d;background:#fff2f5}
+.report-answer strong{display:block;font-size:12px;color:#536178;margin-bottom:6px}.report-answer b{display:block;font-size:18px;color:#172033;line-height:1.4}.report-answer span{display:block;font-size:11px;color:#6a778b;margin-top:4px}
+.report-section{margin-top:20px}.report-section h3{font-size:16px;color:#172033;margin:0 0 10px;border-bottom:1px solid #d9e0e8;padding-bottom:7px}
+.report-table{width:100%;border-collapse:collapse;font-size:12px}.report-table th,.report-table td{padding:8px;border-bottom:1px solid #e2e7ed;text-align:left;vertical-align:top}.report-table th{color:#536178;background:#f4f7fa}.report-table td strong{color:#172033}
+.report-bar-row{display:grid;grid-template-columns:minmax(100px,160px) 1fr 52px;gap:9px;align-items:center;margin:7px 0;font-size:12px}.report-bar{height:10px;background:#e5eaf0;border-radius:2px;overflow:hidden}.report-bar i{display:block;height:100%;background:#008caf}
+.report-empty{padding:18px;text-align:center;color:#718096;background:#f5f7fa}
+.report-cache-list{display:grid;gap:7px}.report-cache-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--border);background:var(--bg);font-size:12px}.report-cache-item span{color:var(--dim)}
+.teacher-code-admin{border:1px solid rgba(255,215,0,.35);background:rgba(255,215,0,.04);padding:13px;margin-bottom:14px}
+.teacher-code-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.teacher-code-list{display:grid;gap:6px;margin-top:10px}.teacher-code-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--border);background:var(--bg);font-size:12px}.teacher-code-row code{color:var(--gold);overflow-wrap:anywhere}.teacher-code-row span{color:var(--dim);font-size:11px}
+@media(max-width:900px){.report-filter-grid{grid-template-columns:1fr 1fr}.report-answer-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.report-intro,.report-brand{flex-direction:column}.report-filter-grid,.report-answer-grid{grid-template-columns:1fr}.report-paper{padding:14px}.report-title{font-size:19px}.report-bar-row{grid-template-columns:90px 1fr 42px}.report-table{font-size:11px}.report-table th,.report-table td{padding:6px 4px}}
+@media print{body *{visibility:hidden!important}.report-paper,.report-paper *{visibility:visible!important}.report-paper{position:absolute;inset:0;width:100%;border:0;padding:12mm}.report-actions,.topnav{display:none!important}}

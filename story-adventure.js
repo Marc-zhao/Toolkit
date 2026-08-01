@@ -723,6 +723,42 @@ function renderJourneyPanel() {
     enableMapDragging(document.getElementById('world-map-viewport'));
 }
 
+let pendingStoryBranch = null;
+
+function requestStoryBranch(completedChapter, branch, startImmediately = true) {
+    const state = ensureMapState();
+    if (!['a', 'b'].includes(branch) || completedChapter >= G.levels.length - 1) return;
+    const completedNode = selectedChapterNodeId(completedChapter, state);
+    if (!state.completed[completedNode]) return toast('先完成当前章节，再决定剧情走向', 'err');
+    if (state.choices[completedChapter]) {
+        if (state.choices[completedChapter] !== branch) return toast('这条命运路线已经确定，不能中途改写', 'err');
+        if (startImmediately) startMapNode(chapterNodeId(completedChapter + 1, branch));
+        return;
+    }
+    const story = storyById(state.storyId);
+    const beat = getStoryBeat(completedChapter + 1, branch, story);
+    const mode = storyModeFor(branch, completedChapter + 1, state.hero);
+    pendingStoryBranch = { completedChapter, branch, startImmediately };
+    document.getElementById('route-confirm-title').textContent = `${branch.toUpperCase()} · ${beat.routeTitle}`;
+    document.getElementById('route-confirm-copy').textContent = beat.routePrompt;
+    document.getElementById('route-confirm-meta').textContent =
+        `下一章：${modeLabel(mode)} · ${G.levels[completedChapter + 1].words.length} 个词`;
+    openModal('m-route-confirm');
+}
+
+function cancelStoryBranch() {
+    pendingStoryBranch = null;
+    closeModal('m-route-confirm');
+}
+
+async function confirmStoryBranch() {
+    const pending = pendingStoryBranch;
+    if (!pending) return closeModal('m-route-confirm');
+    pendingStoryBranch = null;
+    closeModal('m-route-confirm');
+    await chooseStoryBranch(pending.completedChapter, pending.branch, pending.startImmediately);
+}
+
 async function chooseStoryBranch(completedChapter, branch, startImmediately = false) {
     const state = ensureMapState();
     if (!['a', 'b'].includes(branch) || completedChapter >= G.levels.length - 1) return;
@@ -753,9 +789,8 @@ async function startMapNode(nodeId) {
     let node = graph.nodes.find(item => item.id === nodeId);
     if (!node || ['locked', 'missed'].includes(node.state)) return toast('这个地点还没有解锁', 'err');
     if (node.state === 'choice') {
-        await chooseStoryBranch(node.level - 1, node.branch, false);
-        graph = buildLearningMap();
-        node = graph.nodes.find(item => item.id === nodeId);
+        requestStoryBranch(node.level - 1, node.branch, true);
+        return;
     }
     state.currentNode = node.id;
     state.history.push({ node: node.id, at: new Date().toISOString() });
@@ -817,7 +852,7 @@ function renderStoryResult(win) {
         { branch: 'b', beat: nextB }
     ].map(option => {
         const mode = storyModeFor(option.branch, parsed.index + 1, state.hero);
-        return `<button class="story-choice" type="button" onclick="chooseStoryBranch(${parsed.index}, '${option.branch}')">
+        return `<button class="story-choice" type="button" onclick="requestStoryBranch(${parsed.index}, '${option.branch}', true)">
             <strong>${option.branch.toUpperCase()} · ${escH(option.beat.routeTitle)}</strong>
             <span>${escH(option.beat.routePrompt)}</span>
             <em>下一章：${modeLabel(mode)} · ${G.levels[parsed.index + 1].words.length} 个词</em>

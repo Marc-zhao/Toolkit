@@ -7,6 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./fillblank-map.css">
 <script src="./theme.js"></script>
 <style>
 :root{
@@ -232,7 +233,7 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
     <div><div class="map-title">选择关卡</div><div id="map-pack" style="font-size:13px;color:var(--dim)">—</div></div>
     <button class="btn btn-gray btn-sm" onclick="go('s-title')">← 返回</button>
   </div>
-  <div class="map-body"><div class="map-grid" id="map-grid"></div></div>
+  <div class="map-body" id="map-body"><div class="map-grid" id="map-grid"></div></div>
 </div>
 
 <!-- ══ S-BATTLE ══ -->
@@ -687,7 +688,7 @@ function showTitle(){
 function normWords(raw){return(raw||[]).map(w=>typeof w==='string'?{w,m:''}:{w:w.w||w.word||w.en||'',m:w.m||w.meaning||w.cn||''}).filter(w=>w.w&&w.w.trim())}
 async function loadPacks(){
   const cont=$('pack-list');cont.innerHTML='<div style="text-align:center;color:var(--dim);padding:16px">载入中…</div>';
-  let q=db.from('word_packs').select('id,name,words');
+  let q=db.from('word_packs').select('id,name,words,story_data');
   if(!G.isTeacher&&G.classId){
     const {data:as}=await db.from('class_assignments').select('pack_id').eq('class_id',G.classId);
     const ids=(as||[]).map(a=>a.pack_id);
@@ -1327,5 +1328,6 @@ window.onload=async()=>{
   await initApp();
 };
 </script>
+<script src="./fillblank-map.js"></script>
 </body>
 </html>
