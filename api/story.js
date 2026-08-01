@@ -22,6 +22,7 @@ module.exports = async function handler(req, res) {
 
   let activePackId = '';
   let activeSignature = '';
+  let activeFallbackStory = null;
   try {
     const packId = String(req.body?.packId || '').trim();
     if (!/^[a-zA-Z0-9_-]{2,100}$/.test(packId)) {
@@ -36,6 +37,13 @@ module.exports = async function handler(req, res) {
     const signature = packSignature(pack.name, words);
     activePackId = pack.id;
     activeSignature = signature;
+    if (
+      pack.story_data?.status === 'partial'
+      && pack.story_data?.signature === signature
+      && pack.story_data?.story?.beats?.length === 12
+    ) {
+      activeFallbackStory = pack.story_data;
+    }
     const claim = await callRpc('claim_vq_story_generation', {
       p_pack_id: pack.id,
       p_signature: signature,
@@ -58,28 +66,37 @@ module.exports = async function handler(req, res) {
       p_kind: 'pack_story_generation',
     }, authorization);
     if (!quota?.allowed) {
-      await finishFailure(pack.id, signature, 'AI 生成额度不足', authorization);
+      await finishFailure(pack.id, signature, 'AI 生成额度不足', authorization, activeFallbackStory);
       return res.status(429).json({ error: budgetError(quota?.reason) });
     }
 
-    const generated = await generateStory(pack, words, signature);
+    const generated = activeFallbackStory
+      ? {
+          story: activeFallbackStory.story,
+          heroes: activeFallbackStory.heroes,
+          art: activeFallbackStory.art,
+        }
+      : await generateStory(pack, words, signature);
     const imageResult = await generateAndStoreArt(pack, generated, signature, authorization);
+    const finalMapImage = imageResult.mapImage || generated.art.mapImage || '';
+    const finalHeroImage = imageResult.heroImage || generated.art.heroImage || '';
+    const artComplete = Boolean(finalMapImage && finalHeroImage);
     const storyData = {
       version: 3,
-      status: imageResult.complete ? 'ready' : 'partial',
+      status: artComplete ? 'ready' : 'partial',
       signature,
       generatedAt: new Date().toISOString(),
       generator: {
         textModel: 'glm-4-air',
         imageModel: ZHIPU_IMAGE_MODEL,
-        artStatus: imageResult.complete ? 'ready' : 'fallback',
+        artStatus: artComplete ? 'ready' : 'fallback',
       },
       story: generated.story,
       heroes: generated.heroes,
       art: {
         ...generated.art,
-        mapImage: imageResult.mapImage || '',
-        heroImage: imageResult.heroImage || '',
+        mapImage: finalMapImage,
+        heroImage: finalHeroImage,
         errors: imageResult.errors,
       },
     };
@@ -94,7 +111,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error('[pack-story]', error.message);
     if (activePackId && activeSignature) {
-      await finishFailure(activePackId, activeSignature, error.message, authorization);
+      await finishFailure(activePackId, activeSignature, error.message, authorization, activeFallbackStory);
     }
     return res.status(error.status || 500).json({ error: error.publicMessage || '专属世界生成失败，请稍后重试' });
   }
@@ -195,7 +212,7 @@ mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美
       stream: false,
       response_format: { type: 'json_object' },
     }),
-  }, 32000);
+  }, 60000);
   const text = await response.text();
   if (!response.ok) throw new Error(`Zhipu story HTTP ${response.status}: ${text.slice(0, 180)}`);
   const content = JSON.parse(text).choices?.[0]?.message?.content || '';
@@ -367,18 +384,27 @@ async function uploadAsset(packId, signature, kind, sourceUrl, authorization) {
   return `${SUPABASE_URL}/storage/v1/object/public/story-assets/${path}`;
 }
 
-async function finishFailure(packId, signature, message, authorization) {
-  try {
-    await callRpc('finish_vq_story_generation', {
-      p_pack_id: packId,
-      p_signature: signature,
-      p_story_data: {
+async function finishFailure(packId, signature, message, authorization, fallbackStory = null) {
+  const failureData = fallbackStory
+    ? {
+        ...fallbackStory,
+        status: 'partial',
+        signature,
+        retryError: String(message).slice(0, 180),
+        retryFailedAt: new Date().toISOString(),
+      }
+    : {
         version: 3,
         status: 'failed',
         signature,
         failedAt: new Date().toISOString(),
         error: String(message).slice(0, 180),
-      },
+      };
+  try {
+    await callRpc('finish_vq_story_generation', {
+      p_pack_id: packId,
+      p_signature: signature,
+      p_story_data: failureData,
     }, authorization);
   } catch (error) {
     console.error('[pack-story] Could not save failure:', error.message);

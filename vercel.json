@@ -4,7 +4,7 @@
       "maxDuration": 10
     },
     "api/story.js": {
-      "maxDuration": 120
+      "maxDuration": 180
     }
   },
   "redirects": [
