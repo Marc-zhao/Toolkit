@@ -174,6 +174,7 @@ async function generateStory(pack, words, signature) {
 heroes 固定 id 为 aria、noah、sora，每项格式：
 {"id":"aria","name":"中文名 · 职业","trait":"","detail":"","lineA":"","lineB":""}
 三名角色必须属于这个世界，外观、能力和叙事视角明显不同。
+标题、章节和人物不得出现“词汇、单词、英语、学习、语言密码”等教学标签；必须先从词义中提炼至少三个具体意象，再把它们变成真实的地点、势力、谜团和危险。
 mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美术，地图要有至少 12 个地标和两条分支路线，图片内不得有文字。`;
   const user = `词包名称：${String(pack.name).slice(0, 100)}
 词数：${words.length}
@@ -284,10 +285,18 @@ async function generateAndStoreArt(pack, generated, signature, authorization) {
   const baseStyle = '原创复古RPG 2.5D，手绘像素融合，1990年代主机冒险游戏质感，清晰丰富，适合青少年，无文字、无标签、无UI、无边框、无logo、无水印。';
   const mapPrompt = `${baseStyle} 16:9俯视斜角完整世界地图。${generated.art.mapPrompt} 必须清楚画出两条可探索路线和至少12个地标，起点在左下，终点在右上。`;
   const heroPrompt = `${baseStyle} 3:2角色选择立绘。严格分成三个等宽区域，三位角色全身、同尺度、互不遮挡：${generated.heroes.map(hero => `${hero.name}，${hero.detail}`).join('；')}。${generated.art.heroPrompt}`;
-  const tasks = await Promise.allSettled([
-    generateImage(mapPrompt, '1440x720'),
-    generateImage(heroPrompt, '1344x768'),
-  ]);
+  const tasks = [];
+  try {
+    tasks.push({ status: 'fulfilled', value: await generateImage(mapPrompt, '1440x720') });
+  } catch (error) {
+    tasks.push({ status: 'rejected', reason: error });
+  }
+  await delay(1800);
+  try {
+    tasks.push({ status: 'fulfilled', value: await generateImage(heroPrompt, '1344x768') });
+  } catch (error) {
+    tasks.push({ status: 'rejected', reason: error });
+  }
   const errors = [];
   let mapImage = '';
   let heroImage = '';
@@ -313,19 +322,26 @@ async function generateAndStoreArt(pack, generated, signature, authorization) {
 }
 
 async function generateImage(prompt, size) {
-  const response = await fetchWithTimeout(ZHIPU_IMAGE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-    },
-    body: JSON.stringify({ model: ZHIPU_IMAGE_MODEL, prompt, size }),
-  }, 50000);
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Zhipu image HTTP ${response.status}: ${text.slice(0, 120)}`);
-  const url = JSON.parse(text).data?.[0]?.url;
-  if (!/^https:\/\//i.test(url || '')) throw new Error('Image URL is missing');
-  return url;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetchWithTimeout(ZHIPU_IMAGE_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ZHIPU_API_KEY}`,
+      },
+      body: JSON.stringify({ model: ZHIPU_IMAGE_MODEL, prompt, size }),
+    }, 50000);
+    const text = await response.text();
+    if (response.status === 429 && attempt === 0) {
+      await delay(4500);
+      continue;
+    }
+    if (!response.ok) throw new Error(`Zhipu image HTTP ${response.status}: ${text.slice(0, 120)}`);
+    const url = JSON.parse(text).data?.[0]?.url;
+    if (!/^https:\/\//i.test(url || '')) throw new Error('Image URL is missing');
+    return url;
+  }
+  throw new Error('Image generation retry failed');
 }
 
 async function uploadAsset(packId, signature, kind, sourceUrl, authorization) {
@@ -336,14 +352,14 @@ async function uploadAsset(packId, signature, kind, sourceUrl, authorization) {
     : 'image/jpeg';
   const extension = contentType.includes('png') ? 'png' : (contentType.includes('webp') ? 'webp' : 'jpg');
   const safePackId = packId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
-  const path = `${safePackId}/${signature.slice(0, 16)}-${kind}.${extension}`;
+  const nonce = `${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
+  const path = `${safePackId}/${signature.slice(0, 16)}-${kind}-${nonce}.${extension}`;
   const upload = await fetch(`${SUPABASE_URL}/storage/v1/object/story-assets/${path}`, {
     method: 'POST',
     headers: {
       'apikey': SUPABASE_ANON_KEY,
       'Authorization': authorization,
       'Content-Type': contentType,
-      'x-upsert': 'true',
     },
     body: Buffer.from(await source.arrayBuffer()),
   });
@@ -380,6 +396,10 @@ function fetchWithTimeout(url, options, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function httpError(status, publicMessage) {
