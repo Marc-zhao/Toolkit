@@ -15,7 +15,13 @@ Production vocabulary learning system deployed from this directory.
 ## Learning Experience
 
 - All six user-facing pages share a persisted light/dark appearance selector.
-- The vocabulary map shows a five-step learning path and the next recommended action.
+- Every word pack becomes a complete 4-12 chapter adventure based on its size.
+- Students choose one of three protagonists, see the entire branching map, and
+  decide the next plot route after each completed chapter.
+- The three built-in worlds provide distinct mysteries, turning points, finales,
+  and route-dependent endings without making a student AI request.
+- Story choices also change the next chapter's practice mix between meaning,
+  listening, spelling, and combined battles.
 - The dashboard combines vocabulary, sentence practice, weak-word review, and the
   weekly boss into one personalized daily route.
 

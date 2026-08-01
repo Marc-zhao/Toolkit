@@ -409,6 +409,74 @@
         .map-legend .available i { border-color: var(--cyan); }
         .map-legend .recommended i { border-color: var(--gold); background: rgba(255, 215, 0, .24); }
         .map-legend .done i { border-color: var(--green); background: rgba(78, 255, 145, .24); }
+        .map-legend .missed i { border-color: var(--dim); background: rgba(128, 128, 128, .12); }
+
+        .story-hud {
+            display: grid;
+            grid-template-columns: minmax(230px, 1.1fr) minmax(260px, 1.4fr);
+            gap: 12px;
+            margin-bottom: 14px;
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .story-scene {
+            min-height: 166px;
+            overflow: hidden;
+            border-right: 1px solid var(--border);
+            background: #07111f;
+        }
+
+        .story-scene svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 166px;
+        }
+
+        .story-hud-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px;
+        }
+
+        .story-world-name {
+            font-family: var(--px);
+            font-size: clamp(9px, 1.5vw, 13px);
+            line-height: 1.6;
+            color: var(--gold);
+        }
+
+        .story-objective {
+            font-size: 13px;
+            line-height: 1.75;
+            color: var(--dim);
+        }
+
+        .story-hero-strip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 7px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .story-hero-avatar {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
+            border: 1px solid var(--cyan);
+            background: rgba(0, 212, 255, .08);
+            font-size: 24px;
+        }
+
+        .story-hero-meta { min-width: 0; flex: 1; }
+        .story-hero-meta strong { display: block; color: var(--text); font-size: 13px; }
+        .story-hero-meta span { display: block; margin-top: 2px; color: var(--dim); font-size: 11px; line-height: 1.5; }
 
         .world-map-viewport {
             width: 100%;
@@ -480,6 +548,7 @@
         .world-map-line.done { stroke: var(--green); stroke-dasharray: none; }
         .world-map-line.available { stroke: var(--cyan); }
         .world-map-line.recommended { stroke: var(--gold); stroke-width: 4; }
+        .world-map-line.missed { stroke: var(--dim); opacity: .25; }
 
         .world-node {
             position: absolute;
@@ -501,8 +570,28 @@
         .world-node:hover:not(:disabled) { transform: translate(-50%, -53%); }
         .world-node:disabled { cursor: not-allowed; opacity: .48; }
         .world-node.available { border-color: var(--cyan); color: var(--text); }
+        .world-node.choice { border-color: var(--purple); color: var(--text); box-shadow: 0 0 18px rgba(181, 123, 238, .18); }
         .world-node.recommended { border-color: var(--gold); color: var(--gold); box-shadow: 0 0 18px rgba(255, 215, 0, .18); }
         .world-node.done { border-color: var(--green); color: var(--green); }
+        .world-node.missed {
+            border-style: dashed;
+            opacity: .34;
+            filter: grayscale(1);
+            cursor: default;
+        }
+
+        .world-node.route-a::before,
+        .world-node.route-b::before {
+            position: absolute;
+            left: 7px;
+            top: 6px;
+            font-family: var(--px);
+            font-size: 5px;
+            color: var(--dim);
+        }
+
+        .world-node.route-a::before { content: 'A'; }
+        .world-node.route-b::before { content: 'B'; }
         .world-node.current::after {
             content: '你在这里';
             position: absolute;
@@ -555,6 +644,12 @@
 
             .world-map { height: 560px; }
             .world-node { width: 116px; min-height: 72px; }
+            .story-hud,
+            .story-result-panel.visible { grid-template-columns: 1fr; }
+            .story-scene,
+            .story-result-scene { border-right: 0; border-bottom: 1px solid var(--border); }
+            .hero-choice-grid,
+            .story-choice-grid { grid-template-columns: 1fr; }
         }
 
         .map-grid {
@@ -611,6 +706,75 @@
         .teacher-map-stage .memory { border-color: rgba(78, 255, 145, .4); color: var(--green); }
         .teacher-map-stage .sound { border-color: rgba(0, 212, 255, .4); color: var(--cyan); }
         .teacher-map-stage .spelling { border-color: rgba(255, 140, 66, .4); color: var(--orange); }
+        .teacher-map-stage .story-main { border-color: rgba(255, 215, 0, .4); color: var(--gold); }
+        .teacher-map-stage .story-a { border-color: rgba(0, 212, 255, .4); color: var(--cyan); }
+        .teacher-map-stage .story-b { border-color: rgba(181, 123, 238, .4); color: var(--purple); }
+
+        .hero-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .hero-choice {
+            min-width: 0;
+            padding: 16px 12px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg);
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color .15s, transform .15s;
+        }
+
+        .hero-choice:hover,
+        .hero-choice.selected {
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .hero-choice-avatar { display: block; margin-bottom: 9px; font-size: 38px; line-height: 1; }
+        .hero-choice strong { display: block; margin-bottom: 5px; color: var(--gold); font-size: 14px; }
+        .hero-choice span { display: block; color: var(--dim); font-size: 11px; line-height: 1.6; }
+
+        .story-result-panel {
+            display: none;
+            width: min(760px, calc(100vw - 28px));
+            border: 1px solid var(--border);
+            background: var(--panel);
+        }
+
+        .story-result-panel.visible { display: grid; grid-template-columns: minmax(240px, .95fr) minmax(280px, 1.25fr); }
+        .story-result-scene { min-height: 236px; border-right: 1px solid var(--border); background: #07111f; overflow: hidden; }
+        .story-result-scene svg { display: block; width: 100%; height: 100%; min-height: 236px; }
+        .story-result-copy { padding: 18px; }
+        .story-result-kicker { font-family: var(--px); font-size: 6px; letter-spacing: 1.5px; color: var(--cyan); }
+        .story-result-title { margin: 8px 0; color: var(--gold); font-size: 18px; line-height: 1.4; }
+        .story-result-text { color: var(--dim); font-size: 13px; line-height: 1.8; }
+
+        .story-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
+            margin-top: 14px;
+        }
+
+        .story-choice {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: var(--bg);
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .story-choice:hover { border-color: var(--gold); }
+        .story-choice strong { display: block; margin-bottom: 5px; color: var(--gold); font-size: 13px; }
+        .story-choice span { display: block; color: var(--dim); font-size: 11px; line-height: 1.55; }
+        .story-choice em { display: block; margin-top: 7px; color: var(--cyan); font-size: 10px; font-style: normal; }
 
         .lvl-card {
             background: var(--panel);
@@ -1545,10 +1709,27 @@
                 </div>
                 <div class="journey-percent" id="journey-percent">0%</div>
             </div>
+            <div class="story-hud">
+                <div class="story-scene" id="story-map-scene" aria-hidden="true"></div>
+                <div class="story-hud-copy">
+                    <div class="story-world-name" id="story-world-name">正在打开冒险档案…</div>
+                    <div class="story-objective" id="story-objective"></div>
+                    <div class="story-hero-strip">
+                        <div class="story-hero-avatar" id="story-hero-avatar">?</div>
+                        <div class="story-hero-meta">
+                            <strong id="story-hero-name">尚未选择主角</strong>
+                            <span id="story-hero-status">选择主角后，故事将以不同方式展开。</span>
+                        </div>
+                        <button class="btn btn-xs btn-gray" id="story-hero-button" type="button"
+                            onclick="openHeroPicker()">主角档案</button>
+                    </div>
+                </div>
+            </div>
             <div class="map-legend" aria-label="地图状态图例">
                 <span class="available"><i></i>可挑战</span>
                 <span class="recommended"><i></i>系统推荐</span>
                 <span class="done"><i></i>已完成</span>
+                <span class="missed"><i></i>错过的支线</span>
                 <span><i></i>未解锁但可预览</span>
             </div>
             <div class="world-map-viewport" id="world-map-viewport" aria-label="完整词包学习地图">
@@ -1621,6 +1802,15 @@
             <div class="res-title" id="res-title">STAGE CLEAR!</div>
             <div id="res-msg"
                 style="font-size:14px;color:var(--dim);max-width:380px;text-align:center;line-height:1.7;"></div>
+            <section class="story-result-panel" id="story-result-panel" aria-live="polite">
+                <div class="story-result-scene" id="story-result-scene"></div>
+                <div class="story-result-copy">
+                    <div class="story-result-kicker" id="story-result-kicker">ADVENTURE LOG</div>
+                    <div class="story-result-title" id="story-result-title"></div>
+                    <div class="story-result-text" id="story-result-text"></div>
+                    <div class="story-choice-grid" id="story-choice-grid"></div>
+                </div>
+            </section>
             <div class="stat-row">
                 <div class="stat-box">
                     <div class="stat-val" id="r-score">0</div>
@@ -1706,6 +1896,19 @@
             <div id="teacher-map-preview-summary" style="font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:14px;"></div>
             <div class="teacher-map-preview" id="teacher-map-preview-body"></div>
             <button class="btn btn-cyan" style="width:100%;margin-top:16px;" onclick="closeModal('m-map-preview')">确认</button>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="m-hero">
+        <div class="panel" style="max-width:760px;">
+            <div class="panel-title" style="color:var(--gold);border-color:var(--gold);">选择本次冒险的主角</div>
+            <div style="font-size:13px;color:var(--dim);line-height:1.75;">
+                同一张词包地图会因主角与剧情选择产生不同路线。完成第一章后，主角将锁定到本次冒险结束。
+            </div>
+            <div class="hero-choice-grid" id="hero-choice-grid"></div>
+            <div style="display:flex;justify-content:flex-end;">
+                <button class="btn btn-gray" id="hero-picker-close" type="button" onclick="closeHeroPicker()">稍后再选</button>
+            </div>
         </div>
     </div>
 
@@ -3171,8 +3374,9 @@
                 }
                 if (!G.isReview) {
                     const segmentFinished = G.activeMapNode
-                        ? mapState.completed[`memory-${G.lvIdx}`] &&
-                            (mapState.completed[`sound-${G.lvIdx}`] || mapState.completed[`spelling-${G.lvIdx}`])
+                        ? (isStoryChapterNode(G.activeMapNode) ||
+                            (mapState.completed[`memory-${G.lvIdx}`] &&
+                                (mapState.completed[`sound-${G.lvIdx}`] || mapState.completed[`spelling-${G.lvIdx}`])))
                         : true;
                     if (segmentFinished && !prog.cleared.includes(G.lvIdx)) prog.cleared.push(G.lvIdx);
                 }
@@ -3282,6 +3486,7 @@
             const ba = document.getElementById('new-badge-area');
             if (newBadges.length) { ba.style.display = 'block'; document.getElementById('new-badge-list').innerHTML = newBadges.map(bid => { const b = BADGES.find(x => x.id === bid); return b ? `<div class="badge-box"><div class="badge-em">${b.e}</div><div class="badge-nm">${b.n}</div></div>` : ''; }).join(''); } else ba.style.display = 'none';
 
+            renderStoryResult(win);
             const rb = document.getElementById('res-btns'); rb.innerHTML = '';
             if (G.activeMapNode) {
                 if (!win && !G.isReview) {
@@ -3461,6 +3666,7 @@
             go(lastScreen);
         };
     </script>
+    <script src="./story-adventure.js"></script>
 </body>
 
 </html>
