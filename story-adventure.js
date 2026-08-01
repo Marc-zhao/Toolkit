@@ -2,19 +2,19 @@
 
 const VQ_HEROES = {
     aria: {
-        id: 'aria', icon: '⚔️', name: '阿澜 · 星火剑士', trait: '勇气',
+        id: 'aria', icon: '⚔️', artClass: 'hero-aria', name: '阿澜 · 星火剑士', trait: '勇气',
         detail: '擅长正面突围。她会把危险变成号召同伴前进的机会。',
         lineA: '阿澜握紧剑柄：“路再险，也不能把命运交给别人。”',
         lineB: '阿澜压低声音：“真正的勇气，也包括先看清敌人的牌。”'
     },
     noah: {
-        id: 'noah', icon: '🧿', name: '诺亚 · 影纹学者', trait: '洞察',
+        id: 'noah', icon: '🧿', artClass: 'hero-noah', name: '诺亚 · 影纹学者', trait: '洞察',
         detail: '擅长破解机关。隐藏文字和敌人的谎言很难逃过他的眼睛。',
         lineA: '诺亚记下每个细节：“看似最直接的路，往往藏着第二层答案。”',
         lineB: '诺亚展开手稿：“秘密不会消失，只会等待有人读懂它。”'
     },
     sora: {
-        id: 'sora', icon: '🏹', name: '索拉 · 风语游侠', trait: '共情',
+        id: 'sora', icon: '🏹', artClass: 'hero-sora', name: '索拉 · 风语游侠', trait: '共情',
         detail: '能听懂风与生灵的讯息。她经常找到战斗之外的第三种答案。',
         lineA: '索拉听见远处的呼吸：“有人还在等我们，不能停在这里。”',
         lineB: '索拉收起弓：“先听完对方的故事，或许能救下更多人。”'
@@ -98,6 +98,44 @@ const VQ_STORIES = [
         }
     }
 ];
+
+const VQ_STORY_ART = {
+    'star-chart': {
+        image: './assets/story/star-chart-map.jpg',
+        camp: [118, 820],
+        routes: {
+            a: [[220, 760], [370, 670], [500, 560], [620, 455], [760, 360], [900, 420], [1035, 515], [1170, 440], [1280, 370], [1370, 300], [1450, 220], [1500, 125]],
+            b: [[220, 760], [300, 590], [410, 445], [545, 300], [675, 190], [800, 280], [930, 235], [1050, 170], [1185, 260], [1310, 220], [1420, 180], [1500, 125]]
+        },
+        extras: { context: [1260, 785], review: [1410, 810], boss: [1510, 700] },
+        routeNames: ['风暴航线', '星影航线']
+    },
+    'abyss-crown': {
+        image: './assets/story/abyss-crown-map.jpg',
+        camp: [120, 820],
+        routes: {
+            a: [[235, 735], [390, 690], [530, 760], [665, 675], [790, 760], [930, 700], [1060, 625], [1190, 570], [1325, 510], [1440, 420], [1440, 285], [1390, 145]],
+            b: [[235, 735], [355, 585], [475, 475], [590, 330], [725, 285], [855, 320], [985, 270], [1105, 220], [1220, 300], [1300, 245], [1360, 195], [1390, 145]]
+        },
+        extras: { context: [1190, 805], review: [1360, 815], boss: [1500, 720] },
+        routeNames: ['潮火航路', '回声暗潮']
+    },
+    'sun-engine': {
+        image: './assets/story/sun-engine-map.jpg',
+        camp: [100, 820],
+        routes: {
+            a: [[180, 745], [285, 625], [330, 475], [410, 315], [555, 215], [700, 245], [845, 190], [990, 220], [1120, 285], [1240, 235], [1360, 180], [1460, 120]],
+            b: [[180, 745], [330, 735], [485, 660], [625, 575], [750, 490], [875, 570], [1010, 500], [1140, 430], [1260, 385], [1350, 305], [1410, 215], [1460, 120]]
+        },
+        extras: { context: [1180, 805], review: [1350, 820], boss: [1500, 710] },
+        routeNames: ['逐日高原', '绿洲铁道']
+    }
+};
+
+function heroArt(hero, className = '') {
+    if (!hero) return '';
+    return `<span class="hero-art ${hero.artClass} ${className}" aria-hidden="true"></span>`;
+}
 
 function vqHash(value) {
     let hash = 2166136261;
@@ -260,10 +298,12 @@ function openHeroPicker() {
     grid.innerHTML = Object.values(VQ_HEROES).map(hero => `
         <button class="hero-choice ${state.hero === hero.id ? 'selected' : ''}" type="button"
             onclick="chooseHero('${hero.id}')">
-            <span class="hero-choice-avatar">${hero.icon}</span>
-            <strong>${escH(hero.name)}</strong>
-            <span>${escH(hero.detail)}</span>
-            <span style="margin-top:7px;color:var(--cyan);">核心特质：${escH(hero.trait)}</span>
+            ${heroArt(hero, 'hero-choice-avatar')}
+            <span class="hero-choice-copy">
+                <strong>${escH(hero.name)}</strong>
+                <span>${escH(hero.detail)}</span>
+                <span class="hero-trait">核心特质：${escH(hero.trait)}</span>
+            </span>
         </button>`).join('');
     document.getElementById('hero-picker-close').style.display = state.hero ? 'inline-flex' : 'none';
     if (locked) {
@@ -314,30 +354,37 @@ function buildLearningMap() {
     const completed = state.completed;
     const reviewWords = getReviewWords();
     const chapterCount = G.levels.length;
-    const width = Math.max(1120, 610 + chapterCount * 230);
+    const width = 1600;
+    const height = 900;
     const nodes = [];
     const links = [];
     const story = VQ_STORIES.find(item => item.id === state.storyId) || storyForPack();
+    const art = VQ_STORY_ART[story.id] || VQ_STORY_ART['star-chart'];
     const nodeState = (id, available) => completed[id] ? 'done' : (available ? 'available' : 'locked');
+    const pointFor = (branch, index) => art.routes[branch][storyBeatIndex(index, chapterCount)];
 
-    nodes.push({ id: 'camp', type: 'camp', x: 90, y: 300, icon: '⛺', name: '出发营地', meta: `${story.short} · ${G.pack.words.length} 词`, state: 'done' });
+    nodes.push({
+        id: 'camp', type: 'camp', x: art.camp[0], y: art.camp[1], icon: '◆',
+        name: '冒险者营地', meta: `${story.short} · ${G.pack.words.length} 词`, state: 'done'
+    });
 
     const firstId = chapterNodeId(0);
+    const firstPoint = pointFor('a', 0);
     nodes.push({
         id: firstId, type: 'chapter', level: 0, branch: 'a', mode: storyModeFor('a', 0, state.hero),
-        x: 280, y: 300, icon: '✦', name: getStoryBeat(0, 'a', story).title,
+        x: firstPoint[0], y: firstPoint[1], icon: 'I', name: getStoryBeat(0, 'a', story).title,
         meta: `第 1 章 · ${G.levels[0].words.length} 词`, state: nodeState(firstId, true)
     });
     links.push({ from: 'camp', to: firstId });
 
     for (let index = 1; index < chapterCount; index++) {
-        const x = 280 + index * 230;
         const previousId = selectedChapterNodeId(index - 1, state);
         const previousDone = Boolean(completed[previousId]);
         const selected = state.choices[index - 1];
-        ['a', 'b'].forEach((branch, routeIndex) => {
+        ['a', 'b'].forEach(branch => {
             const id = chapterNodeId(index, branch);
             const beat = getStoryBeat(index, branch, story);
+            const point = pointFor(branch, index);
             let status = 'locked';
             if (selected && selected !== branch) status = 'missed';
             else if (completed[id]) status = 'done';
@@ -346,8 +393,8 @@ function buildLearningMap() {
             nodes.push({
                 id, type: 'chapter', level: index, branch,
                 mode: storyModeFor(branch, index, state.hero),
-                x, y: routeIndex === 0 ? 155 : 445,
-                icon: branch === 'a' ? '⚔' : '◆',
+                x: point[0], y: point[1],
+                icon: String(index + 1),
                 name: beat.routeTitle,
                 meta: `第 ${index + 1} 章 · ${G.levels[index].words.length} 词 · ${modeLabel(storyModeFor(branch, index, state.hero))}`,
                 state: status
@@ -357,31 +404,33 @@ function buildLearningMap() {
         if (index === 1) {
             links.push({ from: firstId, to: chapterNodeId(index, 'a') }, { from: firstId, to: chapterNodeId(index, 'b') });
         } else {
-            ['a', 'b'].forEach(previousBranch => {
-                links.push(
-                    { from: chapterNodeId(index - 1, previousBranch), to: chapterNodeId(index, 'a') },
-                    { from: chapterNodeId(index - 1, previousBranch), to: chapterNodeId(index, 'b') }
-                );
-            });
+            links.push(
+                { from: chapterNodeId(index - 1, 'a'), to: chapterNodeId(index, 'a') },
+                { from: chapterNodeId(index - 1, 'b'), to: chapterNodeId(index, 'b') }
+            );
+            const currentBranch = state.choices[index - 1];
+            const previousBranch = parseChapterNode(previousId)?.branch;
+            if (currentBranch && previousBranch && currentBranch !== previousBranch) {
+                links.push({ from: previousId, to: chapterNodeId(index, currentBranch), chosen: true });
+            }
         }
     }
 
-    const finalX = 350 + chapterCount * 230;
     const storyComplete = chapterCount > 0 && Boolean(completed[selectedChapterNodeId(chapterCount - 1, state)]);
     const contextDone = Boolean(completed.context);
     const needsReview = reviewWords.length >= 2;
     nodes.push({
-        id: 'context', type: 'context', x: finalX, y: 300, icon: '▤',
+        id: 'context', type: 'context', x: art.extras.context[0], y: art.extras.context[1], icon: '文',
         name: '遗迹译文室', meta: '句子选词填空 · 故事终章',
         state: nodeState('context', storyComplete)
     });
     nodes.push({
-        id: 'review', type: 'review', x: finalX + 205, y: 445, icon: '↺',
+        id: 'review', type: 'review', x: art.extras.review[0], y: art.extras.review[1], icon: '忆',
         name: '记忆修复舱', meta: needsReview ? `${reviewWords.length} 个薄弱词` : '当前没有薄弱词',
         state: completed.review ? 'done' : (contextDone && needsReview ? 'available' : 'locked')
     });
     nodes.push({
-        id: 'boss', type: 'boss', x: finalX + 410, y: 300, icon: '♛',
+        id: 'boss', type: 'boss', x: art.extras.boss[0], y: art.extras.boss[1], icon: '冠',
         name: '命运守卫战', meta: '词包综合挑战',
         state: nodeState('boss', contextDone && (!needsReview || completed.review))
     });
@@ -403,57 +452,22 @@ function buildLearningMap() {
     if (recommended && !decisionNodes.length) recommended.recommended = true;
 
     return {
-        width: finalX + 530, height: 600, nodes, links, recommended, decisionNodes,
-        reviewWords, story, storyComplete, progressTotal: chapterCount + 3
+        width, height, nodes, links, recommended, decisionNodes,
+        reviewWords, story, art, storyComplete, progressTotal: chapterCount + 3
     };
 }
 
-function sceneSvg(story, progress = 0, hero = null) {
-    const [dark, mid, bright, accent] = story.palette;
-    const markerX = 56 + Math.round(Math.max(0, Math.min(1, progress)) * 270);
-    const heroGlyph = hero?.icon || '✦';
-    const sceneStep = Math.max(1, Math.round(progress * 12));
-    const phase = Math.min(3, Math.floor(Math.max(0, progress - .001) * 4));
-    const phaseGlyphs = story.id === 'star-chart'
-        ? ['⌁', '⚡', '◈', '✦']
-        : (story.id === 'abyss-crown' ? ['◌', '♒', '♜', '♛'] : ['⚙', '⌛', '▣', '☀']);
-    const shared = `
-        <defs>
-            <linearGradient id="vq-sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${dark}"/><stop offset="1" stop-color="${mid}"/></linearGradient>
-            <filter id="vq-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <rect width="380" height="210" fill="url(#vq-sky)"/>
-        <circle cx="320" cy="45" r="27" fill="${accent}" opacity=".85" filter="url(#vq-glow)"/>`;
-    let art = '';
-    if (story.id === 'star-chart') {
-        art = `
-            <path d="M0 156 C58 125 105 167 164 140 S276 112 380 148 V210 H0Z" fill="${dark}"/>
-            <path d="M58 118 l54 -19 48 24 -18 15 -67 2zM222 92 l42 -14 48 18 -16 15 -61 0z" fill="${bright}" opacity=".34"/>
-            <path d="M45 55 L92 42 L139 67 L188 38 L244 61" fill="none" stroke="${accent}" stroke-width="2" stroke-dasharray="4 5"/>
-            <path d="M250 122 q34 -25 65 0 q-19 14 -49 11z" fill="${bright}"/><rect x="278" y="103" width="5" height="20" fill="${accent}"/>`;
-    } else if (story.id === 'abyss-crown') {
-        art = `
-            <path d="M0 174 Q75 132 136 168 T270 158 T380 166 V210 H0Z" fill="${dark}"/>
-            <path d="M62 154 V92 H104 V154 M72 92 V70 H94 V92 M238 160 V76 H296 V160 M252 76 V53 H282 V76" fill="${bright}" opacity=".25"/>
-            <path d="M0 42 Q95 62 190 42 T380 42 M0 78 Q95 98 190 78 T380 78" fill="none" stroke="${bright}" opacity=".25"/>
-            <circle cx="162" cy="91" r="20" fill="none" stroke="${accent}" stroke-width="3"/><path d="M151 91 h22 M162 80 v22" stroke="${accent}" stroke-width="2"/>`;
-    } else {
-        art = `
-            <path d="M0 169 L62 132 L116 161 L180 112 L252 164 L315 125 L380 158 V210 H0Z" fill="${dark}"/>
-            <circle cx="320" cy="45" r="13" fill="${dark}"/><path d="M320 17 V5 M320 85 V73 M292 45 H280 M360 45 H348" stroke="${accent}" stroke-width="4"/>
-            <path d="M22 151 H350" stroke="${bright}" stroke-width="5"/><path d="M35 151 l18 -19 h85 l22 19z" fill="${bright}"/><circle cx="67" cy="157" r="9" fill="${dark}"/><circle cx="132" cy="157" r="9" fill="${dark}"/>`;
-    }
-    return `<svg viewBox="0 0 380 210" role="img" aria-label="${escH(story.title)}">
-        ${shared}${art}
-        <g transform="translate(24 22)">
-            <rect width="54" height="28" fill="${dark}" stroke="${accent}" opacity=".9"/>
-            <text x="13" y="20" fill="${accent}" font-size="17">${phaseGlyphs[phase]}</text>
-            <text x="36" y="19" text-anchor="middle" fill="${bright}" font-size="10">${sceneStep}</text>
-        </g>
-        <path d="M48 188 H334" stroke="${bright}" stroke-width="3" stroke-dasharray="6 6" opacity=".55"/>
-        <circle cx="${markerX}" cy="188" r="15" fill="${dark}" stroke="${accent}" stroke-width="2" filter="url(#vq-glow)"/>
-        <text x="${markerX}" y="194" text-anchor="middle" font-size="18">${heroGlyph}</text>
-    </svg>`;
+function storyScene(story, progress = 0, hero = null, caption = '') {
+    const art = VQ_STORY_ART[story.id] || VQ_STORY_ART['star-chart'];
+    const safeProgress = Math.max(0, Math.min(1, progress));
+    const position = Math.round(8 + safeProgress * 84);
+    const chapter = Math.max(1, Math.round(safeProgress * 12));
+    return `<div class="story-scene-art" style="background-image:url('${art.image}');background-position:${position}% center;">
+        <span class="story-scene-shade" aria-hidden="true"></span>
+        <span class="story-scene-chapter">CHAPTER ${String(chapter).padStart(2, '0')}</span>
+        ${heroArt(hero, 'story-scene-character')}
+        ${caption ? `<span class="story-scene-caption">${escH(caption)}</span>` : ''}
+    </div>`;
 }
 
 function currentStoryChapter(state) {
@@ -502,12 +516,13 @@ function renderStoryHud(graph) {
     const done = G.levels.filter((_, index) => state.completed[selectedChapterNodeId(index, state)]).length;
     const progress = G.levels.length ? done / G.levels.length : 0;
     const beat = getStoryBeat(Math.min(chapter, G.levels.length - 1), state.choices[Math.max(0, chapter - 1)] || 'a', graph.story);
-    document.getElementById('story-map-scene').innerHTML = sceneSvg(graph.story, progress, hero);
+    document.getElementById('story-map-scene').innerHTML = storyScene(graph.story, progress, hero, beat.title);
     document.getElementById('story-world-name').textContent = graph.story.title;
     document.getElementById('story-objective').textContent = graph.storyComplete
         ? `主线结局已抵达。${state.ending || graph.story.endings.a}`
         : `${graph.story.premise} 当前目标：${beat.title}。`;
-    document.getElementById('story-hero-avatar').textContent = hero?.icon || '?';
+    const avatar = document.getElementById('story-hero-avatar');
+    avatar.innerHTML = hero ? heroArt(hero, 'story-hero-portrait') : '<span class="hero-empty">?</span>';
     document.getElementById('story-hero-name').textContent = hero?.name || '尚未选择主角';
     document.getElementById('story-hero-status').textContent = hero
         ? `${hero.trait}路线 · 已完成 ${done}/${G.levels.length} 章`
@@ -524,8 +539,8 @@ function renderJourneyPanel() {
     const curve = link => {
         const from = byId[link.from];
         const to = byId[link.to];
-        const bend = Math.max(55, Math.abs(to.x - from.x) * .4);
-        return `M ${from.x} ${from.y} C ${from.x + bend} ${from.y}, ${to.x - bend} ${to.y}, ${to.x} ${to.y}`;
+        const bend = Math.max(35, Math.abs(to.x - from.x) * .28);
+        return `M ${from.x} ${from.y} C ${from.x + bend} ${from.y - 12}, ${to.x - bend} ${to.y + 12}, ${to.x} ${to.y}`;
     };
     const lineClass = link => {
         const from = byId[link.from];
@@ -538,26 +553,35 @@ function renderJourneyPanel() {
     };
     const icon = node => node.state === 'done' ? '✓' :
         (node.state === 'locked' ? '🔒' : (node.state === 'missed' ? '×' : (node.recommended ? '★' : '')));
+    const hero = heroForState(state);
     const world = document.getElementById('journey-track');
-    world.style.width = `${width}px`;
-    world.style.height = `${height}px`;
+    world.style.width = '100%';
+    world.style.height = 'auto';
+    world.style.aspectRatio = `${width} / ${height}`;
+    world.style.backgroundImage = `linear-gradient(180deg, rgba(3, 8, 16, .02), rgba(3, 8, 16, .2)), url('${graph.art.image}')`;
     world.innerHTML = `
-        <div class="world-map-zone sound" style="left:170px;top:48px;width:${width - 340}px;height:205px;"><strong>路线 A · 迎击与行动</strong></div>
-        <div class="world-map-zone memory" style="left:18px;top:255px;width:${width - 36}px;height:90px;"><strong>共同命运线</strong></div>
-        <div class="world-map-zone spelling" style="left:170px;top:355px;width:${width - 340}px;height:205px;"><strong>路线 B · 追踪与真相</strong></div>
+        <div class="world-map-titleplate">
+            <strong>${escH(graph.story.short)}</strong>
+            <span>A · ${escH(graph.art.routeNames[0])}</span>
+            <span>B · ${escH(graph.art.routeNames[1])}</span>
+        </div>
+        <div class="world-map-vignette" aria-hidden="true"></div>
         <svg class="world-map-lines" viewBox="0 0 ${width} ${height}" aria-hidden="true">
             ${links.map(link => `<path class="world-map-line ${lineClass(link)}" d="${curve(link)}"></path>`).join('')}
         </svg>
         ${nodes.map(node => `
             <button class="world-node ${node.state} ${node.recommended ? 'recommended' : ''} ${node.branch ? `route-${node.branch}` : ''} ${state.currentNode === node.id ? 'current' : ''}"
-                style="left:${node.x}px;top:${node.y}px;" type="button"
+                style="left:${(node.x / width * 100).toFixed(3)}%;top:${(node.y / height * 100).toFixed(3)}%;" type="button"
                 ${['locked', 'missed'].includes(node.state) ? 'disabled' : ''}
                 onclick="startMapNode('${node.id}')"
                 aria-label="${escH(node.name)}，${escH(node.meta)}">
                 <span class="world-node-state">${icon(node)}</span>
                 <span class="world-node-icon">${node.icon}</span>
-                <span class="world-node-name">${escH(node.name)}</span>
-                <span class="world-node-meta">${escH(node.meta)}</span>
+                <span class="world-node-card">
+                    <strong>${escH(node.name)}</strong>
+                    <span>${escH(node.meta)}</span>
+                </span>
+                ${state.currentNode === node.id && hero ? heroArt(hero, 'world-player') : ''}
             </button>`).join('')}`;
 
     const chapterDone = G.levels.filter((_, index) => state.completed[selectedChapterNodeId(index, state)]).length;
@@ -680,7 +704,7 @@ function renderStoryResult(win) {
     const beat = getStoryBeat(parsed.index, parsed.branch, story);
     const isFinal = parsed.index === G.levels.length - 1;
     const progress = (parsed.index + 1) / G.levels.length;
-    document.getElementById('story-result-scene').innerHTML = sceneSvg(story, progress, hero);
+    document.getElementById('story-result-scene').innerHTML = storyScene(story, progress, hero, beat.routeTitle);
     document.getElementById('story-result-kicker').textContent =
         isFinal ? 'ENDING UNLOCKED · 结局已抵达' : `CHAPTER ${parsed.index + 1} COMPLETE · 冒险记录`;
     document.getElementById('story-result-title').textContent = beat.routeTitle;
