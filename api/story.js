@@ -2,9 +2,6 @@ const crypto = require('node:crypto');
 
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || process.env.Zhipu;
 const ZHIPU_CHAT_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-const ZHIPU_IMAGE_URL = 'https://open.bigmodel.cn/api/paas/v4/images/generations';
-const ZHIPU_IMAGE_MODEL = process.env.ZHIPU_IMAGE_MODEL || 'cogview-3-flash';
-const ZHIPU_WATERMARK_ENABLED = false;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dosseusntiuzmldpwpow.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
 
@@ -88,7 +85,7 @@ module.exports = async function handler(req, res) {
     if (retryVersionId && claim.story_data?.status === 'partial') activeFallbackStory = claim.story_data;
 
     const quota = await callRpc('reserve_ai_budget', {
-      p_estimated_tokens: 14000,
+      p_estimated_tokens: Math.min(9000, 2600 + storyBeatCount * 190),
       p_kind: createNew ? 'pack_story_alternative' : 'pack_story_generation',
     }, authorization);
     if (!quota?.allowed) {
@@ -103,13 +100,10 @@ module.exports = async function handler(req, res) {
           art: activeFallbackStory.art,
         }
       : await generateStory(pack, words, generationSeed, existingStories, storyBeatCount);
-    const imageResult = await generateAndStoreArt(pack, generated, generationSeed, authorization);
-    const finalMapImage = imageResult.mapImage || generated.art.mapImage || '';
-    const finalHeroImage = imageResult.heroImage || generated.art.heroImage || '';
-    const artComplete = Boolean(finalMapImage && finalHeroImage);
+    const curatedArt = curatedArtForStory(generated.art.worldSkin, generationSeed);
     const storyData = {
-      version: 5,
-      status: artComplete ? 'ready' : 'partial',
+      version: 6,
+      status: 'ready',
       signature,
       worldVersionId: activeVersionId,
       worldVersionNo: versionNo,
@@ -118,16 +112,17 @@ module.exports = async function handler(req, res) {
       generatedAt: new Date().toISOString(),
       generator: {
         textModel: 'glm-4-air',
-        imageModel: ZHIPU_IMAGE_MODEL,
-        artStatus: artComplete ? 'ready' : 'fallback',
+        imageModel: 'vocaquest-curated-atlas',
+        artStatus: 'ready',
       },
       story: generated.story,
       heroes: generated.heroes,
       art: {
         ...generated.art,
-        mapImage: finalMapImage,
-        heroImage: finalHeroImage,
-        errors: imageResult.errors,
+        worldSkin: curatedArt.worldSkin,
+        mapImage: curatedArt.mapImage,
+        heroImage: './assets/story/heroes.jpg',
+        errors: [],
       },
     };
 
@@ -321,7 +316,7 @@ async function generateStory(pack, words, signature, existingStories = [], chapt
 {
  "story":{"id":"ai-${signature.slice(0, 12)}","title":"","short":"","premise":"","palette":["#深色","#中色","#亮色","#强调色"],"beats":[${chapterCount}项],"endings":{"a":"","b":""}},
  "heroes":[3项],
- "art":{"routeNames":["",""],"mapPrompt":"","heroPrompt":"","terrainTags":[6项]}
+ "art":{"routeNames":["",""],"worldSkin":"star-chart、abyss-crown 或 sun-engine 三选一"}
 }
 每个 beat 格式：
 {"title":"","text":"","a":["支线标题","行动选择","通关结果"],"b":["支线标题","调查选择","通关结果"]}
@@ -330,7 +325,7 @@ heroes 固定 id 为 aria、noah、sora，每项格式：
 {"id":"aria","name":"中文名 · 职业","trait":"","detail":"","lineA":"","lineB":""}
 三名角色必须属于这个世界，外观、能力和叙事视角明显不同。
 标题、章节和人物不得出现“词汇、单词、英语、学习、语言密码”等教学标签；必须先从词义中提炼至少三个具体意象，再把它们变成真实的地点、势力、谜团和危险。
-mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美术，地图要有两条分支路线和足够地标，图片内不得有文字、标签、logo或水印。
+worldSkin 必须根据故事选择最合适的固定世界：star-chart 是浮岛、天空与星光；abyss-crown 是海底、洞窟与幽暗遗迹；sun-engine 是荒原、绿洲、冰原与机械文明。
 每章的 title、a[0]、b[0] 必须是具体事件或地点，禁止“行动路线 10、调查路线 10、第十关”这类占位名称。`;
   const user = `词包名称：${String(pack.name).slice(0, 100)}
 词数：${words.length}
@@ -432,14 +427,27 @@ function validateGeneratedStory(value, signature, existingStories = [], chapterC
   });
   const art = {
     routeNames: [cleanText(value.art?.routeNames?.[0], 30), cleanText(value.art?.routeNames?.[1], 30)],
-    mapPrompt: cleanText(value.art?.mapPrompt, 1200),
-    heroPrompt: cleanText(value.art?.heroPrompt, 1200),
-    terrainTags: (value.art?.terrainTags || []).slice(0, 8).map(tag => cleanText(tag, 30)).filter(Boolean),
+    worldSkin: ['star-chart', 'abyss-crown', 'sun-engine'].includes(value.art?.worldSkin)
+      ? value.art.worldSkin
+      : ['star-chart', 'abyss-crown', 'sun-engine'][Number.parseInt(signature.slice(0, 8), 16) % 3],
   };
-  if (!art.routeNames.every(Boolean) || !art.mapPrompt || !art.heroPrompt || art.terrainTags.length < 4) {
-    throw new Error('AI art direction is incomplete');
+  if (!art.routeNames.every(Boolean)) {
+    throw new Error('AI route direction is incomplete');
   }
   return { story, heroes, art };
+}
+
+function curatedArtForStory(worldSkin, seed) {
+  const skins = {
+    'star-chart': './assets/story/star-chart-map.jpg',
+    'abyss-crown': './assets/story/abyss-crown-map.jpg',
+    'sun-engine': './assets/story/sun-engine-map.jpg',
+  };
+  const fallback = Object.keys(skins)[Number.parseInt(String(seed).slice(0, 8), 16) % 3];
+  return {
+    worldSkin: skins[worldSkin] ? worldSkin : fallback,
+    mapImage: skins[worldSkin] || skins[fallback],
+  };
 }
 
 function normalizeBeat(beat, index) {
@@ -512,97 +520,6 @@ function cleanText(value, max) {
   return String(value || '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
-async function generateAndStoreArt(pack, generated, signature, authorization) {
-  const baseStyle = '原创复古RPG 2.5D，手绘像素融合，1990年代主机冒险游戏质感，清晰丰富，适合青少年，无文字、无标签、无UI、无边框、无logo、无水印。';
-  const mapPrompt = `${baseStyle} 16:9俯视斜角完整世界地图。${generated.art.mapPrompt} 必须清楚画出两条可探索路线和至少12个地标，起点在左下，终点在右上。`;
-  const heroPrompt = `${baseStyle} 3:2角色选择立绘。严格分成三个等宽区域，三位角色全身、同尺度、互不遮挡：${generated.heroes.map(hero => `${hero.name}，${hero.detail}`).join('；')}。${generated.art.heroPrompt}`;
-  const tasks = [];
-  try {
-    tasks.push({ status: 'fulfilled', value: await generateImage(mapPrompt, '1440x720') });
-  } catch (error) {
-    tasks.push({ status: 'rejected', reason: error });
-  }
-  await delay(1800);
-  try {
-    tasks.push({ status: 'fulfilled', value: await generateImage(heroPrompt, '1344x768') });
-  } catch (error) {
-    tasks.push({ status: 'rejected', reason: error });
-  }
-  const errors = [];
-  let mapImage = '';
-  let heroImage = '';
-  if (tasks[0].status === 'fulfilled') {
-    try {
-      mapImage = await uploadAsset(pack.id, signature, 'map', tasks[0].value, authorization);
-    } catch (error) {
-      errors.push(`map-upload:${error.message}`);
-    }
-  } else {
-    errors.push(`map:${tasks[0].reason.message}`);
-  }
-  if (tasks[1].status === 'fulfilled') {
-    try {
-      heroImage = await uploadAsset(pack.id, signature, 'heroes', tasks[1].value, authorization);
-    } catch (error) {
-      errors.push(`heroes-upload:${error.message}`);
-    }
-  } else {
-    errors.push(`heroes:${tasks[1].reason.message}`);
-  }
-  return { mapImage, heroImage, errors: errors.map(error => error.slice(0, 180)), complete: Boolean(mapImage && heroImage) };
-}
-
-async function generateImage(prompt, size) {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await fetchWithTimeout(ZHIPU_IMAGE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ZHIPU_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: ZHIPU_IMAGE_MODEL,
-        prompt,
-        size,
-        watermark_enabled: ZHIPU_WATERMARK_ENABLED,
-      }),
-    }, 50000);
-    const text = await response.text();
-    if (response.status === 429 && attempt === 0) {
-      await delay(4500);
-      continue;
-    }
-    if (!response.ok) throw new Error(`Zhipu image HTTP ${response.status}: ${text.slice(0, 120)}`);
-    const url = JSON.parse(text).data?.[0]?.url;
-    if (!/^https:\/\//i.test(url || '')) throw new Error('Image URL is missing');
-    return url;
-  }
-  throw new Error('Image generation retry failed');
-}
-
-async function uploadAsset(packId, signature, kind, sourceUrl, authorization) {
-  const source = await fetchWithTimeout(sourceUrl, {}, 20000);
-  if (!source.ok) throw new Error(`Generated image download failed: ${source.status}`);
-  const contentType = /^image\/(jpeg|png|webp)$/i.test(source.headers.get('content-type') || '')
-    ? source.headers.get('content-type')
-    : 'image/jpeg';
-  const extension = contentType.includes('png') ? 'png' : (contentType.includes('webp') ? 'webp' : 'jpg');
-  const safePackId = packId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
-  const nonce = `${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
-  const path = `${safePackId}/${signature.slice(0, 16)}-${kind}-${nonce}.${extension}`;
-  const upload = await fetch(`${SUPABASE_URL}/storage/v1/object/story-assets/${path}`, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': authorization,
-      'Content-Type': contentType,
-    },
-    body: Buffer.from(await source.arrayBuffer()),
-  });
-  if (!upload.ok) throw new Error(`Story asset upload failed: ${upload.status} ${(await upload.text()).slice(0, 100)}`);
-  return `${SUPABASE_URL}/storage/v1/object/public/story-assets/${path}`;
-}
-
 async function finishFailure(packId, versionId, signature, message, authorization, fallbackStory = null) {
   const failureData = fallbackStory
     ? {
@@ -613,7 +530,7 @@ async function finishFailure(packId, versionId, signature, message, authorizatio
         retryFailedAt: new Date().toISOString(),
       }
     : {
-        version: 5,
+        version: 6,
         status: 'failed',
         signature,
         failedAt: new Date().toISOString(),

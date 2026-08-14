@@ -18,7 +18,7 @@
     button.setAttribute('aria-pressed', String(isLight));
     button.setAttribute('aria-label', isLight ? '当前为白天模式，切换到黑夜模式' : '当前为黑夜模式，切换到白天模式');
     button.title = isLight ? '切换到黑夜模式' : '切换到白天模式';
-    button.querySelector('.vq-theme-toggle-icon').textContent = isLight ? '☀️' : '🌙';
+    button.querySelector('.vq-theme-toggle-icon').textContent = isLight ? 'DAY' : 'NIGHT';
     button.querySelector('.vq-theme-toggle-label').textContent = isLight ? '白天模式' : '黑夜模式';
   }
 

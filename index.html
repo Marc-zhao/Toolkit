@@ -1893,20 +1893,20 @@
         :focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
         @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
     </style>
+    <link rel="stylesheet" href="./rpg-remaster.css">
 </head>
 
 <body>
     <div class="flash" id="flash-el"></div>
 
     <div class="screen active" id="s-title">
-        <div class="logo-glyph">🐉</div>
         <div class="logo-main">词汇闯关</div>
-        <div class="logo-sub">VOCAQUEST · CAMPUS EDITION</div>
+        <div class="logo-sub">VOCAQUEST · STORY-DRIVEN LEARNING</div>
 
         <div class="btn-row">
-            <button class="btn btn-red" onclick="go('s-enter')">⚔ 学生闯关</button>
-            <button class="btn btn-gold" onclick="go('s-lb')">🏆 校园排行榜</button>
-            <button class="btn btn-cyan" onclick="enterTeacher()">📚 教师入口</button>
+            <button class="btn btn-red" onclick="go('s-enter')">学生闯关</button>
+            <button class="btn btn-gold" onclick="go('s-lb')">校园排行榜</button>
+            <button class="btn btn-cyan" onclick="enterTeacher()">教师入口</button>
         </div>
         <div style="display:flex;gap:10px;position:absolute;bottom:52px;left:50%;transform:translateX(-50%)">
             <button class="btn btn-gray btn-xs" onclick="window.location.href='./dashboard.html'"
@@ -1950,7 +1950,7 @@
         <div class="nav">
             <button class="btn btn-sm btn-cyan" onclick="go('s-enter')">← 返回</button>
             <span class="nav-title" id="map-packname">关卡地图</span>
-            <button class="btn btn-sm btn-gold" onclick="go('s-lb')">🏆</button>
+            <button class="btn btn-sm btn-gold" onclick="go('s-lb')">排行</button>
         </div>
         <div
             style="text-align:center;margin-top:80px;display:flex;flex-direction:column;gap:8px;align-items:center;width:100%;">
@@ -2722,7 +2722,7 @@
                 <div class="story-generation-steps">
                     <div class="story-generation-step"><strong>1. 分析词包主题</strong>从 ${pack.words.length} 个词中识别主题、时代、场景与情绪。</div>
                     <div class="story-generation-step"><strong>2. 编写完整冒险</strong>按每章最多 10 个词生成 ${Math.max(1, Math.ceil(pack.words.length / 10))} 章连续故事、三位主角、A/B 支线和两个结局。</div>
-                    <div class="story-generation-step"><strong>3. 绘制游戏素材</strong>生成这个词包独有的 2.5D 地图和人物立绘，并永久保存。</div>
+                    <div class="story-generation-step"><strong>3. 匹配世界美术</strong>根据故事主题选择官方 2.5D 地图、统一角色与怪物图鉴，不再临时生成低质量图片。</div>
                 </div>`;
             document.getElementById('teacher-map-preview-actions').innerHTML = '<button class="btn btn-gray" style="width:100%;" disabled>生成完成前请保持页面打开</button>';
             openModal('m-map-preview');
@@ -3345,7 +3345,7 @@
             const addLink = (from, to) => links.push({ from, to });
             const nodeState = (id, available) => completed[id] ? 'done' : (available ? 'available' : 'locked');
 
-            addNode({ id: 'camp', type: 'camp', x: 90, y: 300, icon: '🏕️', name: '探险营地', meta: `${G.pack.words.length} 个词`, state: 'done' });
+            addNode({ id: 'camp', type: 'camp', x: 90, y: 300, icon: '00', name: '探险营地', meta: `${G.pack.words.length} 个词`, state: 'done' });
 
             for (let i = 0; i < segmentCount; i++) {
                 const x = 260 + i * 230;
@@ -3357,17 +3357,17 @@
                 const memoryReady = Boolean(completed[memoryId]);
 
                 addNode({
-                    id: memoryId, type: 'memory', level: i, x, y: 300, icon: '🧠',
+                    id: memoryId, type: 'memory', level: i, x, y: 300, icon: 'M',
                     name: `记忆森林 ${i + 1}`, meta: `${G.levels[i].words.length} 词 · 识义`,
                     state: nodeState(memoryId, previousReady)
                 });
                 addNode({
-                    id: soundId, type: 'sound', level: i, x, y: 125, icon: '🎧',
+                    id: soundId, type: 'sound', level: i, x, y: 125, icon: 'L',
                     name: `回声峡谷 ${i + 1}`, meta: '可选 · 听音辨义',
                     state: nodeState(soundId, memoryReady)
                 });
                 addNode({
-                    id: spellingId, type: 'spelling', level: i, x, y: 475, icon: '✍️',
+                    id: spellingId, type: 'spelling', level: i, x, y: 475, icon: 'S',
                     name: `拼写熔炉 ${i + 1}`, meta: '可选 · 主动拼写',
                     state: nodeState(spellingId, memoryReady)
                 });
@@ -3389,17 +3389,17 @@
             const bossReady = contextDone && (!needsReview || completed.review);
 
             addNode({
-                id: contextId, type: 'context', x: finalX, y: 300, icon: '🏙️',
+                id: contextId, type: 'context', x: finalX, y: 300, icon: 'C',
                 name: '语境城邦', meta: '句子选词填空',
                 state: nodeState(contextId, mainReady)
             });
             addNode({
-                id: 'review', type: 'review', x: finalX + 200, y: 475, icon: '🧭',
+                id: 'review', type: 'review', x: finalX + 200, y: 475, icon: 'R',
                 name: '薄弱词修复站', meta: needsReview ? `${reviewWords.length} 个词待强化` : '当前没有薄弱词',
                 state: completed.review ? 'done' : (reviewReady ? 'available' : 'locked')
             });
             addNode({
-                id: 'boss', type: 'boss', x: finalX + 410, y: 300, icon: '🏰',
+                id: 'boss', type: 'boss', x: finalX + 410, y: 300, icon: 'B',
                 name: '词包守卫战', meta: '综合挑战',
                 state: nodeState('boss', bossReady)
             });
@@ -3525,7 +3525,7 @@
                 if (from.state === 'done' && to.state === 'available') return 'available';
                 return '';
             };
-            const stateIcon = node => node.state === 'done' ? '✓' : (node.state === 'locked' ? '🔒' : (node.recommended ? '★' : ''));
+            const stateIcon = node => node.state === 'done' ? '✓' : (node.state === 'locked' ? '×' : (node.recommended ? '★' : ''));
             const currentNode = state.currentNode;
             const world = document.getElementById('journey-track');
             world.style.width = `${width}px`;

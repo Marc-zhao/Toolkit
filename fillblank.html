@@ -201,15 +201,15 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
 :focus-visible{outline:3px solid var(--cyan);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
+<link rel="stylesheet" href="./rpg-remaster.css">
 </head>
 <body>
 <div class="fx-layer" id="fx"></div>
 
 <!-- ══ S-TITLE ══ -->
 <div class="screen active" id="s-title">
-  <div class="title-logo">📝</div>
-  <div class="title-main">FILLBLANK</div>
-  <div class="title-sub">句子填空 · 打怪练习</div>
+  <div class="title-main">语境冒险</div>
+  <div class="title-sub">CONTEXT QUEST · 句子填空</div>
   <div id="user-bar" style="display:none;font-family:var(--px);font-size:8px;color:var(--dim);letter-spacing:2px"></div>
 
   <div class="panel" id="pack-panel" style="max-width:480px;display:none">
@@ -217,8 +217,8 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
     <div id="pack-list" style="max-height:260px;overflow-y:auto"><div style="text-align:center;color:var(--dim);padding:16px">载入中…</div></div>
     <div style="margin-top:12px;display:flex;gap:9px;flex-wrap:wrap">
       <button class="btn btn-red" style="flex:2;min-width:130px" onclick="showMap()">▶ 选择关卡</button>
-      <button class="btn btn-purple btn-sm" id="study-btn" style="flex:1;min-width:80px;display:none" onclick="openStudy()">📖 错题</button>
-      <button class="btn btn-gray btn-sm" id="teacher-btn" style="flex:1;min-width:80px;display:none" onclick="go('s-teacher');switchT('packs')">📚 教师</button>
+      <button class="btn btn-purple btn-sm" id="study-btn" style="flex:1;min-width:80px;display:none" onclick="openStudy()">错题</button>
+      <button class="btn btn-gray btn-sm" id="teacher-btn" style="flex:1;min-width:80px;display:none" onclick="go('s-teacher');switchT('packs')">教师</button>
       <a href="./dashboard.html" class="btn btn-gray btn-sm" style="flex:1;min-width:80px">← 首页</a>
     </div>
   </div>
@@ -332,7 +332,7 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
 <!-- ══ S-TEACHER ══ -->
 <div class="screen" id="s-teacher" style="padding:0;align-items:stretch">
   <div class="nav" style="padding:12px 16px;margin:0;border-bottom:1px solid var(--border)">
-    <div style="font-family:var(--px);font-size:9px;color:var(--purple)">📚 教师管理</div>
+    <div style="font-family:var(--px);font-size:9px;color:var(--purple)">教师管理</div>
     <button class="btn btn-xs btn-gray" onclick="go('s-title')">← 返回</button>
   </div>
   <div class="t-tabs">
@@ -769,7 +769,7 @@ function renderMapGrid(){
     const avail=done||i===1||G.completedStages.includes(i-1);
     const mon=MONSTERS[(i-1)%MONSTERS.length];
     const cls=done?'done':avail?'avail':'locked';
-    const st=done?'✓ 完成':avail?'▶ 挑战':'🔒 锁定';
+    const st=done?'✓ 完成':avail?'挑战':'锁定';
     const fn=done?`showStageDetail(${i})`:avail?`startStage(${i})`:'';
     cells.push(`<div class="sc ${cls}" onclick="${fn}">
       <div class="sc-num">关卡 ${i}</div>

@@ -1,0 +1,304 @@
+/* VocaQuest visual remaster: curated RPG art, readable maps, restrained motion. */
+
+#s-title {
+    isolation: isolate;
+    overflow: hidden;
+    color: #fff;
+    background: url('./assets/story/star-chart-map.jpg') center / cover no-repeat !important;
+}
+
+#s-title::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background:
+        linear-gradient(90deg, rgba(10, 35, 38, .82), rgba(10, 35, 38, .28) 64%, rgba(10, 35, 38, .08)),
+        linear-gradient(0deg, rgba(10, 26, 33, .62), transparent 55%);
+}
+
+#s-title > * { position: relative; z-index: 1; }
+.logo-glyph,
+.title-logo { display: none !important; }
+
+.logo-main,
+.title-main {
+    max-width: 760px;
+    color: #fff !important;
+    font-family: "Songti SC", "STSong", "Noto Serif SC", serif !important;
+    font-size: clamp(38px, 7vw, 72px) !important;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0 !important;
+    text-shadow: 0 3px 20px rgba(0, 0, 0, .35) !important;
+}
+
+.logo-sub,
+.title-sub {
+    color: rgba(255, 255, 255, .78) !important;
+    font-family: Inter, "PingFang SC", sans-serif !important;
+    font-size: 14px !important;
+    letter-spacing: .14em !important;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, .4);
+}
+
+#s-title .btn-row,
+#s-title #pack-panel,
+#s-title #login-panel {
+    background: color-mix(in srgb, var(--panel) 86%, transparent);
+    border-color: rgba(255,255,255,.28);
+    box-shadow: 0 20px 55px rgba(8, 28, 30, .22);
+    backdrop-filter: blur(16px);
+}
+
+#s-title .btn-row { padding: 10px; border: 1px solid rgba(255,255,255,.24); border-radius: 6px; }
+#s-title .btn { text-shadow: none; }
+
+.journey-panel,
+.fb-story-shell {
+    width: min(1280px, 100%);
+}
+
+.journey-panel {
+    max-width: 1280px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.journey-head { padding: 0 4px; }
+.journey-kicker,
+.fb-story-kicker { letter-spacing: .12em !important; text-shadow: none !important; }
+
+.story-hud {
+    grid-template-columns: minmax(320px, .9fr) minmax(360px, 1.25fr) !important;
+    border-color: color-mix(in srgb, var(--border) 82%, transparent) !important;
+    background: color-mix(in srgb, var(--panel) 96%, transparent) !important;
+    box-shadow: 0 14px 38px rgba(19, 39, 43, .1);
+}
+
+.story-scene,
+.story-result-scene { background: #294d4a !important; }
+.story-scene-art { background-size: cover !important; background-position: center 46% !important; }
+.story-scene-shade { background: linear-gradient(180deg, transparent 44%, rgba(11, 35, 35, .72) 100%) !important; }
+.story-hud-copy { padding: 24px !important; }
+.story-world-name { font-family: "Songti SC", "STSong", serif !important; font-size: 24px !important; letter-spacing: 0 !important; text-shadow: none !important; }
+.story-objective { font-size: 15px !important; }
+
+.story-hero-avatar {
+    width: 58px !important;
+    height: 58px !important;
+    flex-basis: 58px !important;
+    border: 2px solid color-mix(in srgb, var(--gold) 72%, #fff) !important;
+    background-color: #e4d6b7 !important;
+    box-shadow: 0 4px 12px rgba(31, 48, 45, .16);
+}
+
+.world-map-viewport,
+.fb-map-viewport {
+    border: 1px solid color-mix(in srgb, var(--border) 82%, transparent) !important;
+    border-radius: 6px !important;
+    background: #dce8df !important;
+    box-shadow: 0 22px 54px rgba(20, 44, 45, .16) !important;
+    touch-action: pan-y pinch-zoom !important;
+    scrollbar-width: thin;
+}
+
+.world-map,
+.fb-world-map { background-color: #b8ccbc !important; }
+.world-map.vq-generated-map-art { background-size: cover !important; background-position: center !important; }
+.world-map-vignette { background: linear-gradient(180deg, rgba(9, 34, 38, .05), transparent 72%, rgba(9, 34, 38, .2)) !important; }
+.world-map-vignette::before,
+.fb-world-map::before { display: none !important; }
+.fb-world-map::after { background: linear-gradient(180deg, rgba(8,31,35,.05), transparent 70%, rgba(8,31,35,.2)) !important; }
+
+.world-map-zone {
+    position: absolute;
+    z-index: 1;
+    pointer-events: none;
+    border-top: 1px solid rgba(255, 255, 255, .26);
+}
+
+.world-map-zone strong {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    padding: 6px 9px;
+    border: 1px solid rgba(255,255,255,.44);
+    border-radius: 3px;
+    color: #fff;
+    background: rgba(17, 49, 48, .68);
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-shadow: 0 1px 3px rgba(0,0,0,.5);
+}
+
+.world-map-lines,
+.fb-map-line { filter: drop-shadow(0 2px 2px rgba(18, 35, 30, .5)) !important; }
+.world-map-line,
+.fb-map-line path {
+    stroke: rgba(255, 248, 219, .74) !important;
+    stroke-width: 4 !important;
+    stroke-dasharray: 7 10 !important;
+}
+.world-map-line.done,
+.fb-map-line path.done { stroke: #90d29a !important; stroke-dasharray: none !important; }
+.world-map-line.recommended { stroke: #f6cf69 !important; stroke-width: 6 !important; }
+
+.world-node,
+.fb-node {
+    width: 44px !important;
+    height: 44px !important;
+    border: 3px solid rgba(255, 249, 224, .95) !important;
+    background: #233f3d !important;
+    color: #fff7dc !important;
+    box-shadow: 0 4px 0 #17302f, 0 10px 18px rgba(13, 33, 31, .35) !important;
+}
+
+.world-node::after,
+.fb-node::after { display: none !important; }
+.world-node.available,
+.fb-node.available { border-color: #9ed7e4 !important; }
+.world-node.choice,
+.fb-node.choice { border-color: #d2b0e5 !important; }
+.world-node.recommended { border-color: #f8d46f !important; box-shadow: 0 0 0 5px rgba(248,212,111,.24), 0 6px 18px rgba(13,33,31,.35) !important; }
+.world-node.done,
+.fb-node.done { border-color: #8fd19d !important; background: #205f4b !important; }
+.world-node:disabled,
+.fb-node.locked { opacity: .58 !important; }
+
+.world-node-name,
+.world-node-meta {
+    position: absolute;
+    left: 50%;
+    display: none;
+    width: 124px;
+    transform: translateX(-50%);
+    padding: 5px 7px;
+    border-radius: 3px;
+    color: #fff;
+    background: rgba(15, 39, 39, .88);
+    font-family: Inter, "PingFang SC", sans-serif;
+    font-size: 11px;
+    line-height: 1.35;
+    pointer-events: none;
+}
+.world-node-name { top: 52px; font-weight: 800; }
+.world-node-meta { top: 80px; color: rgba(255,255,255,.7); }
+.world-node:hover .world-node-name,
+.world-node:focus-visible .world-node-name,
+.world-node.current .world-node-name,
+.world-node.recommended .world-node-name { display: block; }
+
+.world-node-state { background: #fff8df !important; color: #24423e !important; border: 0 !important; font-weight: 900; }
+.world-player,
+.fb-map-hero {
+    width: 58px !important;
+    height: 58px !important;
+    border: 3px solid #f6d269 !important;
+    border-radius: 50% !important;
+    background-color: #e4d6b7 !important;
+    background-size: 330% auto !important;
+    background-position-y: 16% !important;
+    box-shadow: 0 0 0 4px rgba(255,255,255,.7), 0 7px 16px rgba(15,34,33,.38) !important;
+    animation: none !important;
+}
+.world-player { right: -50px !important; bottom: -48px !important; }
+.fb-map-hero { transform: translate(-50%, -72%) !important; }
+
+.world-map-titleplate,
+.fb-map-plate {
+    border: 1px solid rgba(255,255,255,.56) !important;
+    color: #fff !important;
+    background: rgba(16, 48, 47, .76) !important;
+    box-shadow: 0 8px 20px rgba(12, 34, 33, .18) !important;
+}
+
+.journey-next,
+.fb-map-next {
+    border: 1px solid color-mix(in srgb, var(--border) 80%, transparent) !important;
+    border-left: 4px solid var(--gold) !important;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--panel) 94%, transparent) !important;
+}
+
+.hero-choice-grid,
+.fb-hero-grid { gap: 16px !important; }
+.hero-choice,
+.fb-hero-choice {
+    overflow: hidden;
+    border: 1px solid var(--border) !important;
+    background: var(--panel) !important;
+    box-shadow: 0 12px 28px rgba(25, 43, 41, .1);
+}
+.hero-choice.selected,
+.hero-choice:hover,
+.fb-hero-choice:hover { border-color: var(--gold) !important; transform: translateY(-2px); }
+.hero-choice-avatar { aspect-ratio: 3 / 4 !important; background-color: #d7c9aa !important; background-size: 300% auto !important; background-position-y: 10% !important; }
+.fb-hero-portrait { height: 280px !important; background-color: #d7c9aa !important; background-position-y: 8% !important; border-radius: 3px; }
+.hero-choice-avatar::after,
+.fb-hero-portrait::after { display: none !important; }
+.hero-choice-copy { padding: 18px !important; }
+.hero-choice strong,
+.fb-hero-choice strong { color: var(--text) !important; font-size: 16px !important; }
+
+#s-battle { max-width: 920px !important; padding-inline: 14px !important; }
+#s-battle .b-header,
+#s-battle .b-top {
+    padding: 14px 16px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--panel) 96%, transparent) !important;
+}
+#s-battle .q-card,
+#s-battle .q-area { width: 100%; }
+#s-battle .q-card,
+#s-battle .sent-box,
+#s-battle .ctx-box {
+    border-color: color-mix(in srgb, var(--border) 86%, transparent) !important;
+    background: color-mix(in srgb, var(--panel) 96%, transparent) !important;
+    box-shadow: none !important;
+}
+.mon-name { color: #fff4ca !important; text-shadow: 0 2px 5px rgba(0,0,0,.55) !important; z-index: 3; margin-top: -5px !important; }
+
+.fb-map-viewport { cursor: grab; }
+.fb-node-card { background: rgba(15,39,39,.92) !important; border-color: rgba(255,255,255,.42) !important; }
+.fb-node-card strong { color: #fff !important; }
+.fb-confirm-card { border-radius: 4px; background: var(--panel) !important; }
+
+html[data-theme="light"] #s-battle .b-header,
+html[data-theme="light"] #s-battle .b-top,
+html[data-theme="light"] #s-battle .q-card,
+html[data-theme="light"] #s-battle .q-area { color: var(--text); }
+
+@media (max-width: 620px) {
+    #s-title { background-position: 34% center !important; }
+    #s-title::before { background: linear-gradient(90deg, rgba(10,35,38,.78), rgba(10,35,38,.24)), linear-gradient(0deg, rgba(10,26,33,.7), transparent 62%); }
+    .logo-main,
+    .title-main { font-size: 42px !important; }
+    .story-hud,
+    .story-result-panel.visible { grid-template-columns: 1fr !important; }
+    .story-hud-copy { padding: 18px !important; }
+    .story-world-name { font-size: 21px !important; }
+    .world-map-viewport,
+    .fb-map-viewport { max-width: 100vw; margin-inline: 0; }
+    .world-node,
+    .fb-node { width: 42px !important; height: 42px !important; }
+    .world-node-name,
+    .world-node-meta { display: none !important; }
+    .fb-node-card { display: none !important; }
+    .hero-choice-grid { grid-template-columns: 1fr !important; }
+    .hero-choice { grid-template-columns: 138px 1fr !important; }
+    .hero-choice-avatar { min-height: 190px !important; }
+    .fb-hero-grid { grid-template-columns: 1fr !important; }
+    .fb-hero-choice { display: grid; grid-template-columns: 132px 1fr; gap: 14px; padding: 10px !important; }
+    .fb-hero-portrait { height: 174px !important; margin: 0 !important; }
+    #s-battle { padding-inline: 10px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .world-player,
+    .fb-map-hero,
+    .hero-choice,
+    .fb-hero-choice { animation: none !important; transition: none !important; }
+}

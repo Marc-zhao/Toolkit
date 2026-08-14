@@ -2,19 +2,19 @@
 
 const VQ_HEROES = {
     aria: {
-        id: 'aria', icon: '⚔️', artClass: 'hero-aria', name: '阿澜 · 星火剑士', trait: '勇气',
+        id: 'aria', icon: 'A', artClass: 'hero-aria', name: '阿澜 · 星火剑士', trait: '勇气',
         detail: '擅长正面突围。她会把危险变成号召同伴前进的机会。',
         lineA: '阿澜握紧剑柄：“路再险，也不能把命运交给别人。”',
         lineB: '阿澜压低声音：“真正的勇气，也包括先看清敌人的牌。”'
     },
     noah: {
-        id: 'noah', icon: '🧿', artClass: 'hero-noah', name: '诺亚 · 影纹学者', trait: '洞察',
+        id: 'noah', icon: 'N', artClass: 'hero-noah', name: '诺亚 · 影纹学者', trait: '洞察',
         detail: '擅长破解机关。隐藏文字和敌人的谎言很难逃过他的眼睛。',
         lineA: '诺亚记下每个细节：“看似最直接的路，往往藏着第二层答案。”',
         lineB: '诺亚展开手稿：“秘密不会消失，只会等待有人读懂它。”'
     },
     sora: {
-        id: 'sora', icon: '🏹', artClass: 'hero-sora', name: '索拉 · 风语游侠', trait: '共情',
+        id: 'sora', icon: 'S', artClass: 'hero-sora', name: '索拉 · 风语游侠', trait: '共情',
         detail: '能听懂风与生灵的讯息。她经常找到战斗之外的第三种答案。',
         lineA: '索拉听见远处的呼吸：“有人还在等我们，不能停在这里。”',
         lineB: '索拉收起弓：“先听完对方的故事，或许能救下更多人。”'
@@ -164,7 +164,9 @@ function heroCatalog(pack = G.pack) {
 
 function storyArt(story, pack = G.pack, chapterCount = 12) {
     const custom = generatedStoryData(pack);
-    const fallback = VQ_STORY_ART[story?.id]
+    const requestedSkin = custom?.art?.worldSkin;
+    const fallback = VQ_STORY_ART[requestedSkin]
+        || VQ_STORY_ART[story?.id]
         || VQ_STORY_ART[Object.keys(VQ_STORY_ART)[vqHash(custom?.signature || story?.id || pack?.id) % 3]];
     const needsDynamicRoute = chapterCount !== 12;
     if ((!custom || story?.id !== custom.story.id) && !needsDynamicRoute) return fallback;
@@ -172,9 +174,9 @@ function storyArt(story, pack = G.pack, chapterCount = 12) {
     const width = Math.max(1600, 420 + Math.max(1, chapterCount) * 132);
     return {
         ...fallback,
-        generated: Boolean(custom),
-        image: storyAssetUrl(custom?.art?.mapImage, fallback.image),
-        heroImage: storyAssetUrl(custom?.art?.heroImage, fallback.heroImage || './assets/story/heroes.jpg'),
+        generated: false,
+        image: fallback.image,
+        heroImage: './assets/story/heroes.jpg',
         width,
         camp: [105, 760],
         extras: { context: [width - 330, 770], review: [width - 190, 815], boss: [width - 95, 700] },
@@ -926,8 +928,8 @@ function previewTeacherMap(packId, storyOverride = null, versionMeta = null) {
     document.getElementById('teacher-map-preview-body').innerHTML = `
         <div style="padding:12px;border:1px solid var(--border);margin-bottom:12px;background:var(--bg);font-size:12px;line-height:1.8;">
             <strong style="color:var(--gold);">专属主角</strong> · ${heroes.map(hero => escH(hero.name)).join('　')}
-            <br><strong style="color:${artReady ? 'var(--green)' : 'var(--gold)'};">美术资源</strong> ·
-            ${artReady ? '专属地图和人物立绘已永久保存' : '当前使用备用美术，点击下方按钮重试图片生成'}
+            <br><strong style="color:var(--green);">世界美术</strong> ·
+            已匹配 VocaQuest 官方地图、角色与怪物图鉴
         </div>
         ${levels.map((level, index) => {
         if (index === 0) {

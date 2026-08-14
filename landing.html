@@ -3,602 +3,424 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VocaQuest · 游戏化词汇学习平台</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <meta name="description" content="VocaQuest 将教师词包转化为自适应、故事化的英语学习冒险。">
+    <title>VocaQuest · 每个词包都是一场冒险</title>
     <link rel="stylesheet" href="./theme.css">
     <script src="./theme.js"></script>
     <style>
         :root {
-            --bg: #0a0a18;
-            --panel: #141428;
-            --border: #2a2a50;
-            --primary: #e94560;
-            --cyan: #00d4ff;
-            --gold: #ffd700;
-            --green: #4eff91;
-            --purple: #b57bee;
-            --text: #ffffff;
-            --dim: #a0a0ba;
-            --px: 'Press Start 2P', monospace;
+            --ink: #17233a;
+            --muted: #5d6b7f;
+            --paper: #f5f4ee;
+            --surface: #fffef9;
+            --line: #d8d8cf;
+            --forest: #176b59;
+            --forest-dark: #0d443a;
+            --gold: #c78e2a;
+            --sky: #ddecf0;
+            --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+            --sans: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-            overflow-x: hidden;
+            margin: 0;
+            color: var(--ink);
+            background: var(--paper);
+            font-family: var(--sans);
+            font-size: 16px;
+            line-height: 1.65;
         }
-        body::before {
-            content: '';
-            position: fixed; inset: 0;
-            background-image:
-                linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
-            background-size: 40px 40px;
-            pointer-events: none; z-index: 0;
-        }
-        body::after {
-            content: '';
-            position: fixed; inset: 0;
-            background:
-                radial-gradient(ellipse at 15% 40%, rgba(233,69,96,.07) 0%, transparent 55%),
-                radial-gradient(ellipse at 85% 15%, rgba(0,212,255,.07) 0%, transparent 55%);
-            pointer-events: none; z-index: 0;
-        }
+        a { color: inherit; }
+        button, input, textarea, select { font: inherit; }
+        .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
 
-        /* ── NAV ── */
-        nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-            padding: 14px clamp(20px,5vw,48px);
-            display: flex; align-items: center; justify-content: space-between;
-            background: rgba(10,10,24,.92);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
+        .site-nav {
+            position: fixed;
+            z-index: 30;
+            inset: 0 0 auto;
+            height: 72px;
+            color: #fff;
+            background: rgba(18, 33, 48, .62);
+            border-bottom: 1px solid rgba(255,255,255,.16);
+            backdrop-filter: blur(14px);
         }
-        .nav-logo {
-            font-family: var(--px);
-            font-size: clamp(7px,1.2vw,9px);
-            color: var(--cyan);
-            text-shadow: 0 0 8px var(--cyan);
-            letter-spacing: 2px;
-            text-decoration: none;
-        }
-        .nav-links {
-            display: flex; gap: clamp(14px,2.5vw,28px);
-            align-items: center; list-style: none;
-        }
-        .nav-links a {
-            font-size: 13px; color: var(--dim);
-            text-decoration: none; transition: color .15s;
-            letter-spacing: .5px; cursor: pointer;
-        }
-        .nav-links a:hover { color: var(--text); }
-        .nav-cta {
-            font-family: var(--px);
-            font-size: clamp(7px,1.1vw,9px);
-            letter-spacing: 1px;
-            padding: 10px 20px;
-            border: 1px solid var(--gold);
-            color: var(--gold);
-            text-decoration: none;
-            transition: all .15s;
-            text-shadow: 0 0 8px rgba(255,215,0,.3);
-            box-shadow: 0 0 14px rgba(255,215,0,.1);
-        }
-        .nav-cta:hover {
-            background: var(--gold);
-            color: #000;
-            box-shadow: 0 0 24px rgba(255,215,0,.4);
-        }
-        @media (max-width: 600px) {
-            .nav-links li:not(:last-child) { display: none; }
-        }
-
-        /* ── HERO ── */
-        .hero {
-            min-height: 100vh;
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            text-align: center; padding: 100px 24px 60px;
-            position: relative; z-index: 1; gap: 22px;
-        }
-        .hero-badge {
-            font-family: var(--px);
-            font-size: clamp(6px,1vw,8px);
-            color: var(--cyan); letter-spacing: 4px;
-            border: 1px solid rgba(0,212,255,.3);
-            padding: 8px 18px;
-            text-shadow: 0 0 10px var(--cyan);
-            animation: fadeUp .8s ease both;
-        }
-        .hero-icons {
-            display: flex; gap: 16px; justify-content: center;
-            font-size: clamp(40px,8vw,64px);
-            animation: fadeUp .6s ease both;
-            filter: drop-shadow(0 0 20px rgba(233,69,96,.5));
-        }
-        .hero-icons span { animation: float 3s ease-in-out infinite; }
-        .hero-icons span:nth-child(2) { animation-delay: .4s; }
-        .hero-icons span:nth-child(3) { animation-delay: .8s; }
-        .hero-icons span:nth-child(4) { animation-delay: 1.2s; }
-        @keyframes float {
-            0%,100% { transform: translateY(0); }
-            50%      { transform: translateY(-12px); }
-        }
-        .hero-title {
-            font-family: var(--px);
-            font-size: clamp(14px,3vw,26px);
-            color: var(--primary);
-            text-shadow: 0 0 30px var(--primary);
-            letter-spacing: clamp(2px,.8vw,6px);
-            line-height: 1.8;
-            animation: fadeUp .8s .1s ease both;
-        }
-        .hero-sub {
-            font-family: var(--px);
-            font-size: clamp(6px,1vw,8px);
-            color: var(--cyan); letter-spacing: 4px;
-            text-shadow: 0 0 10px var(--cyan);
-            animation: fadeUp .8s .15s ease both;
-        }
-        .hero-desc {
-            color: var(--dim);
-            font-size: clamp(14px,1.8vw,16px);
-            line-height: 1.9; max-width: 560px;
-            animation: fadeUp .8s .2s ease both;
-        }
-        .hero-desc em { color: var(--text); font-style: normal; }
-        .cta-btn {
-            font-family: var(--px);
-            font-size: clamp(9px,1.6vw,12px);
-            letter-spacing: 2px;
-            padding: clamp(14px,2.5vw,20px) clamp(28px,5vw,48px);
-            background: transparent;
-            border: 2px solid var(--gold);
-            color: var(--gold);
-            cursor: pointer; position: relative; overflow: hidden;
-            text-decoration: none; display: inline-block;
-            box-shadow: 0 0 28px rgba(255,215,0,.2);
-            transition: all .2s;
-            animation: fadeUp .8s .3s ease both, pulse-gold 2.5s 1.5s ease-in-out infinite;
-        }
-        .cta-btn::before {
-            content: ''; position: absolute; inset: 0;
-            background: var(--gold);
-            transform: scaleX(0); transform-origin: left;
-            transition: .25s; z-index: -1;
-        }
-        .cta-btn:hover { color: #000; box-shadow: 0 0 50px rgba(255,215,0,.5); }
-        .cta-btn:hover::before { transform: scaleX(1); }
-        .cta-btn:active { transform: scale(.96); }
-        @keyframes pulse-gold {
-            0%,100% { box-shadow: 0 0 28px rgba(255,215,0,.2); }
-            50%      { box-shadow: 0 0 55px rgba(255,215,0,.5); }
-        }
-        .scroll-hint {
-            position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
-            animation: fadeUp 1s 1s ease both;
-        }
-        .scroll-hint span { font-family: var(--px); font-size: 7px; color: var(--dim); letter-spacing: 2px; }
-        .scroll-arrow {
-            width: 18px; height: 18px;
-            border-right: 2px solid var(--dim); border-bottom: 2px solid var(--dim);
-            transform: rotate(45deg);
-            animation: bounce 1.4s ease-in-out infinite;
-        }
-        @keyframes bounce {
-            0%,100% { transform: rotate(45deg) translateY(0); }
-            50%      { transform: rotate(45deg) translateY(5px); }
-        }
-
-        /* ── SECTIONS ── */
-        .section {
-            position: relative; z-index: 1;
-            padding: clamp(60px,8vw,100px) clamp(20px,5vw,60px);
-            max-width: 1100px; margin: 0 auto;
-        }
-        .section-label {
-            font-family: var(--px);
-            font-size: clamp(6px,1vw,8px);
-            color: var(--cyan); letter-spacing: 4px;
-            text-shadow: 0 0 10px var(--cyan);
-            margin-bottom: 12px;
-        }
-        .section-title {
-            font-size: clamp(20px,3.5vw,32px);
-            font-weight: 700; margin-bottom: 40px; line-height: 1.4;
-        }
-        .section-title em { color: var(--primary); font-style: normal; }
-        .divider {
-            position: relative; z-index: 1; height: 1px;
-            background: linear-gradient(to right, transparent, var(--border), transparent);
-            margin: 0 clamp(20px,5vw,60px);
-        }
-
-        /* ── TOOLS GRID ── */
-        .tools-grid {
+        .nav-inner { height: 100%; display: flex; align-items: center; gap: 28px; }
+        .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 800; letter-spacing: .08em; }
+        .brand-mark {
+            width: 30px;
+            aspect-ratio: 1;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px,1fr));
-            gap: 20px;
+            place-items: center;
+            border: 1px solid rgba(255,255,255,.75);
+            transform: rotate(45deg);
         }
-        .tool-card {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 28px 24px;
-            transition: all .2s; position: relative; overflow: hidden;
-            text-decoration: none; color: inherit; display: block;
-        }
-        .tool-card:hover { transform: translateY(-5px); }
-        .tool-card.c-red:hover   { border-color: var(--primary); box-shadow: 0 10px 30px rgba(233,69,96,.15); }
-        .tool-card.c-cyan:hover  { border-color: var(--cyan);    box-shadow: 0 10px 30px rgba(0,212,255,.12); }
-        .tool-card.c-gold:hover  { border-color: var(--gold);    box-shadow: 0 10px 30px rgba(255,215,0,.12); }
-        .tool-card.c-purple:hover{ border-color: var(--purple);  box-shadow: 0 10px 30px rgba(181,123,238,.12); }
-        .tool-status {
-            position: absolute; top: 16px; right: 16px;
-            font-family: var(--px); font-size: 7px; letter-spacing: 1px;
-            padding: 4px 8px; border-radius: 2px;
-        }
-        .tool-status.live   { color: var(--green);  border: 1px solid var(--green);  background: rgba(78,255,145,.08); }
-        .tool-status.soon   { color: var(--dim);    border: 1px solid var(--border); }
-        .tool-icon { font-size: 40px; margin-bottom: 16px; }
-        .tool-name {
-            font-family: var(--px);
-            font-size: clamp(8px,1.2vw,10px);
-            margin-bottom: 10px; letter-spacing: 1px;
-        }
-        .tool-card.c-red   .tool-name { color: var(--primary); text-shadow: 0 0 8px var(--primary); }
-        .tool-card.c-cyan  .tool-name { color: var(--cyan);    text-shadow: 0 0 8px var(--cyan); }
-        .tool-card.c-gold  .tool-name { color: var(--gold);    text-shadow: 0 0 8px var(--gold); }
-        .tool-card.c-purple.tool-name { color: var(--purple);  text-shadow: 0 0 8px var(--purple); }
-        .tool-desc { color: var(--dim); font-size: clamp(13px,1.6vw,14px); line-height: 1.75; }
-        .tool-tags {
-            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px;
-        }
-        .tag {
-            font-size: 11px; padding: 3px 8px;
-            background: rgba(255,255,255,.04);
-            border: 1px solid var(--border);
-            border-radius: 2px; color: var(--dim);
+        .brand-mark::after { content: "V"; transform: rotate(-45deg); font-size: 13px; font-weight: 900; }
+        .nav-links { margin-left: auto; display: flex; align-items: center; gap: 26px; }
+        .nav-links a { color: rgba(255,255,255,.82); text-decoration: none; font-size: 14px; }
+        .nav-links a:hover { color: #fff; }
+        .nav-login {
+            padding: 9px 17px;
+            border: 1px solid rgba(255,255,255,.72);
+            border-radius: 4px;
+            font-weight: 700;
         }
 
-        /* ── HOW ── */
-        .steps-wrap {
-            display: flex; flex-direction: column;
-            position: relative; max-width: 640px;
+        .hero {
+            min-height: 760px;
+            height: 100svh;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            overflow: hidden;
+            color: #fff;
+            background: url("./assets/story/star-chart-map.jpg") center 42% / cover no-repeat;
         }
-        .steps-wrap::before {
-            content: ''; position: absolute;
-            left: 22px; top: 0; bottom: 0; width: 2px;
-            background: linear-gradient(to bottom, var(--primary), var(--cyan), var(--gold));
-            opacity: .25;
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(90deg, rgba(11, 32, 39, .86) 0%, rgba(11, 32, 39, .54) 42%, rgba(11, 32, 39, .08) 74%),
+                linear-gradient(0deg, rgba(11, 25, 36, .72) 0%, transparent 42%);
         }
-        .step { display: flex; gap: 24px; align-items: flex-start; padding: 22px 0; }
-        .step-num {
-            font-family: var(--px); font-size: 9px;
-            width: 46px; height: 46px; border-radius: 50%;
-            border: 2px solid var(--primary);
-            display: flex; align-items: center; justify-content: center;
-            color: var(--primary); flex-shrink: 0;
-            background: var(--bg);
-            box-shadow: 0 0 14px rgba(233,69,96,.25);
-            position: relative; z-index: 1;
+        .hero-content { position: relative; z-index: 1; padding: 150px 0 106px; max-width: 680px; }
+        .eyebrow { margin: 0 0 18px; font-size: 13px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+        .hero h1 {
+            margin: 0;
+            max-width: 650px;
+            font-family: var(--serif);
+            font-size: clamp(46px, 6vw, 78px);
+            font-weight: 800;
+            line-height: 1.12;
+            letter-spacing: 0;
+            text-wrap: balance;
         }
-        .step-body { padding-top: 8px; }
-        .step-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
-        .step-desc  { color: var(--dim); font-size: 14px; line-height: 1.75; }
+        .hero-copy { max-width: 580px; margin: 24px 0 30px; color: rgba(255,255,255,.88); font-size: 19px; line-height: 1.8; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+        .button {
+            min-height: 48px;
+            padding: 0 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 800;
+            transition: transform .18s ease, background .18s ease;
+        }
+        .button:hover { transform: translateY(-2px); }
+        .button-primary { color: #132a29; background: #f5d782; border-color: #f5d782; }
+        .button-secondary { color: #fff; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.62); backdrop-filter: blur(8px); }
+        .hero-facts {
+            position: absolute;
+            z-index: 2;
+            right: max(20px, calc((100vw - 1180px) / 2));
+            bottom: 34px;
+            display: flex;
+            gap: 1px;
+            background: rgba(255,255,255,.22);
+        }
+        .hero-fact { min-width: 150px; padding: 14px 18px; background: rgba(11,32,39,.7); backdrop-filter: blur(10px); }
+        .hero-fact strong { display: block; font-family: var(--serif); font-size: 20px; }
+        .hero-fact span { color: rgba(255,255,255,.68); font-size: 12px; }
 
-        /* ── CONTACT ── */
-        .contact-wrap {
-            background: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: clamp(28px,5vw,48px);
-            max-width: 640px;
-        }
-        .contact-intro { color: var(--dim); font-size: 15px; line-height: 1.8; margin-bottom: 28px; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-size: 13px; color: var(--dim); margin-bottom: 6px; }
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-            width: 100%; background: #080816;
-            border: 1px solid var(--border); color: var(--text);
-            padding: 12px 15px; font-size: 15px; font-family: inherit;
-            border-radius: 4px; outline: none;
-            transition: border-color .2s, box-shadow .2s; resize: vertical;
-        }
-        .form-group input:focus,
-        .form-group textarea:focus,
-        .form-group select:focus {
-            border-color: var(--cyan);
-            box-shadow: 0 0 12px rgba(0,212,255,.1);
-        }
-        .form-row { display: flex; gap: 14px; flex-wrap: wrap; }
-        .form-row .form-group { flex: 1; min-width: 180px; }
-        .send-btn {
-            font-family: var(--px); font-size: 10px; letter-spacing: 2px;
-            padding: 15px 28px; background: transparent;
-            border: 2px solid var(--cyan); color: var(--cyan);
-            cursor: pointer; transition: all .2s; width: 100%;
-            box-shadow: 0 0 16px rgba(0,212,255,.12);
-            position: relative; overflow: hidden;
-        }
-        .send-btn::before {
-            content: ''; position: absolute; inset: 0;
-            background: var(--cyan);
-            transform: scaleX(0); transform-origin: left;
-            transition: .25s; z-index: -1;
-        }
-        .send-btn:hover { color: #000; }
-        .send-btn:hover::before { transform: scaleX(1); }
-        .send-btn:active { transform: scale(.97); }
-        .form-msg {
-            margin-top: 12px; font-family: var(--px); font-size: 8px;
-            letter-spacing: 1px; text-align: center; min-height: 18px;
-        }
-        .form-msg.ok  { color: var(--green); }
-        .form-msg.err { color: var(--primary); }
+        .intro { padding: 92px 0 82px; background: var(--surface); }
+        .intro-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 88px; align-items: start; }
+        .section-kicker { margin: 0 0 14px; color: var(--forest); font-size: 13px; font-weight: 800; letter-spacing: .16em; }
+        .section-title { margin: 0; font-family: var(--serif); font-size: clamp(32px, 4vw, 52px); line-height: 1.25; letter-spacing: 0; }
+        .intro-copy { margin: 4px 0 0; color: var(--muted); font-size: 18px; line-height: 1.9; }
+        .intro-copy strong { color: var(--ink); }
 
-        /* ── FOOTER ── */
-        footer {
-            position: relative; z-index: 1;
-            border-top: 1px solid var(--border);
-            padding: 28px clamp(20px,5vw,60px);
-            display: flex; justify-content: space-between;
-            align-items: center; flex-wrap: wrap; gap: 12px;
-            margin-top: 40px;
+        .journey { padding: 0 0 96px; background: var(--surface); }
+        .journey-frame {
+            position: relative;
+            min-height: 620px;
+            overflow: hidden;
+            border-radius: 6px;
+            background: url("./assets/story/sun-engine-map.jpg") center / cover no-repeat;
+            box-shadow: 0 26px 70px rgba(26,48,50,.18);
         }
-        .footer-brand {
-            font-family: var(--px); font-size: 8px;
-            color: var(--primary); text-shadow: 0 0 8px var(--primary); letter-spacing: 2px;
+        .journey-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 42%, rgba(8,33,38,.82) 76%); }
+        .journey-copy {
+            position: absolute;
+            z-index: 2;
+            right: 0;
+            top: 0;
+            width: min(470px, 48%);
+            height: 100%;
+            padding: 58px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            color: #fff;
         }
-        .footer-copy { font-size: 12px; color: var(--dim); }
+        .journey-copy h2 { margin: 0 0 18px; font-family: var(--serif); font-size: clamp(30px, 3.4vw, 46px); line-height: 1.3; }
+        .journey-copy p { margin: 0 0 24px; color: rgba(255,255,255,.8); font-size: 17px; }
+        .journey-list { display: grid; gap: 14px; }
+        .journey-item { padding-top: 14px; border-top: 1px solid rgba(255,255,255,.24); }
+        .journey-item strong { display: block; margin-bottom: 3px; }
+        .journey-item span { color: rgba(255,255,255,.66); font-size: 14px; }
 
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(18px); }
-            to   { opacity: 1; transform: translateY(0); }
+        .features { padding: 100px 0; background: #e9eee8; }
+        .features-head { max-width: 710px; margin-bottom: 52px; }
+        .feature-list { border-top: 1px solid #bfc9c1; }
+        .feature-row {
+            display: grid;
+            grid-template-columns: 76px 270px 1fr;
+            gap: 28px;
+            align-items: baseline;
+            padding: 30px 0;
+            border-bottom: 1px solid #bfc9c1;
         }
-        :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
-        @media (prefers-reduced-motion: reduce) {
-            *,*::before,*::after { animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important; }
+        .feature-index { color: var(--forest); font-weight: 800; letter-spacing: .12em; }
+        .feature-row h3 { margin: 0; font-family: var(--serif); font-size: 24px; }
+        .feature-row p { margin: 0; color: var(--muted); font-size: 16px; }
+
+        .tools { padding: 100px 0; background: var(--paper); }
+        .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 46px; }
+        .tool-panel {
+            min-height: 340px;
+            position: relative;
+            overflow: hidden;
+            padding: 34px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            background: var(--surface);
+            text-decoration: none;
         }
+        .tool-panel::before { content: ""; position: absolute; inset: auto 0 0; height: 7px; background: var(--forest); transition: height .25s ease; opacity: .92; }
+        .tool-panel:hover::before { height: 12px; }
+        .tool-panel h3 { margin: 28px 0 12px; font-family: var(--serif); font-size: 30px; }
+        .tool-panel p { max-width: 520px; margin: 0; color: var(--muted); }
+        .tool-label { color: var(--forest); font-size: 12px; font-weight: 900; letter-spacing: .16em; }
+        .tool-arrow { position: absolute; right: 30px; bottom: 28px; font-size: 25px; }
+        .tool-panel.is-fill::before { background: #35698a; }
+        .tool-panel.is-fill .tool-label { color: #35698a; }
+        .support-tools { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 0; }
+        .support-item { padding: 26px 30px; border-right: 1px solid var(--line); }
+        .support-item:last-child { border-right: 0; }
+        .support-item strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 20px; }
+        .support-item span { color: var(--muted); font-size: 14px; }
+
+        .teacher { padding: 96px 0; color: #fff; background: var(--forest-dark); }
+        .teacher-grid { display: grid; grid-template-columns: .78fr 1.22fr; gap: 90px; align-items: start; }
+        .teacher .section-kicker { color: #a7d2bf; }
+        .teacher .section-title { color: #fff; }
+        .teacher p { color: rgba(255,255,255,.7); }
+        .teacher-steps { counter-reset: teacher; border-top: 1px solid rgba(255,255,255,.24); }
+        .teacher-step { counter-increment: teacher; position: relative; padding: 24px 0 24px 52px; border-bottom: 1px solid rgba(255,255,255,.24); }
+        .teacher-step::before { content: "0" counter(teacher); position: absolute; left: 0; top: 25px; color: #f5d782; font-weight: 800; }
+        .teacher-step strong { display: block; margin-bottom: 5px; }
+        .teacher-step span { color: rgba(255,255,255,.65); font-size: 14px; }
+
+        .contact { padding: 90px 0; background: var(--surface); }
+        .contact-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; }
+        .contact-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        .field { display: grid; gap: 6px; }
+        .field.full { grid-column: 1 / -1; }
+        .field label { color: var(--muted); font-size: 13px; }
+        .field input, .field textarea, .field select { width: 100%; border: 1px solid var(--line); border-radius: 4px; padding: 12px 13px; background: #fff; color: var(--ink); }
+        .field textarea { min-height: 116px; resize: vertical; }
+        .send { grid-column: 1 / -1; border: 0; border-radius: 4px; padding: 14px 20px; color: #fff; background: var(--forest); font-weight: 800; cursor: pointer; }
+        .form-msg { grid-column: 1 / -1; min-height: 22px; color: var(--forest); font-size: 14px; }
+
+        footer { padding: 26px 0; background: #142a2b; color: rgba(255,255,255,.62); font-size: 13px; }
+        .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
+        :focus-visible { outline: 3px solid #f5d782; outline-offset: 3px; }
+
+        @media (max-width: 800px) {
+            .shell { width: min(100% - 28px, 1180px); }
+            .site-nav { height: 64px; }
+            .nav-links a:not(.nav-login) { display: none; }
+            .hero { min-height: 720px; align-items: center; background-position: 42% center; }
+            .hero::before { background: linear-gradient(90deg, rgba(9,31,36,.82), rgba(9,31,36,.34)), linear-gradient(0deg, rgba(9,31,36,.74), transparent 55%); }
+            .hero-content { padding: 112px 0 180px; }
+            .hero h1 { font-size: clamp(42px, 13vw, 62px); }
+            .hero-copy { font-size: 17px; }
+            .hero-facts { left: 14px; right: 14px; bottom: 18px; display: grid; grid-template-columns: repeat(3, 1fr); }
+            .hero-fact { min-width: 0; padding: 11px 10px; }
+            .hero-fact strong { font-size: 15px; }
+            .hero-fact span { font-size: 10px; }
+            .intro-grid, .teacher-grid, .contact-grid { grid-template-columns: 1fr; gap: 30px; }
+            .intro { padding: 68px 0 58px; }
+            .journey { padding-bottom: 70px; }
+            .journey-frame { min-height: 660px; background-position: 42% center; }
+            .journey-frame::after { background: linear-gradient(0deg, rgba(8,33,38,.92) 0%, rgba(8,33,38,.2) 65%); }
+            .journey-copy { top: auto; bottom: 0; width: 100%; height: auto; padding: 34px 24px; }
+            .feature-row { grid-template-columns: 48px 1fr; gap: 14px; }
+            .feature-row p { grid-column: 2; }
+            .tool-grid { grid-template-columns: 1fr; }
+            .support-tools { grid-column: auto; grid-template-columns: 1fr; }
+            .support-item { border-right: 0; border-bottom: 1px solid var(--line); }
+            .support-item:last-child { border-bottom: 0; }
+            .contact-form { grid-template-columns: 1fr; }
+            .field.full, .send, .form-msg { grid-column: auto; }
+            .footer-inner { flex-direction: column; }
+        }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
     </style>
 </head>
 <body>
-
-<!-- ── 顶部导航 ── -->
-<nav>
-    <a class="nav-logo" href="#">⚔ VOCAQUEST</a>
-    <ul class="nav-links">
-        <li><a href="#tools">工具介绍</a></li>
-        <li><a href="#how">使用方式</a></li>
-        <li><a href="#contact">联系我</a></li>
-        <li><a class="nav-cta" href="./dashboard.html">▶ 进入 Dashboard</a></li>
-    </ul>
-</nav>
-
-<!-- ── HERO ── -->
-<section class="hero">
-    <div class="hero-badge">VOCAQUEST · CAMPUS LEARNING HUB</div>
-    <div class="hero-icons">
-        <span>⚔️</span><span>📝</span><span>🦈</span><span>🏆</span>
-    </div>
-    <h1 class="hero-title">词汇学习，也可以像游戏</h1>
-    <p class="hero-sub">VOCAQUEST · WORDS IN ACTION</p>
-    <p class="hero-desc">
-        把重复练习变成<em>游戏闯关</em>。<br>
-        从单词记忆到语境填空，再到每周 Boss 和班级对战。<br>
-        一个账号，连续记录每一次学习进步。
-    </p>
-
-    <a class="cta-btn" href="./dashboard.html">▶ 进入 Dashboard</a>
-
-    <div class="scroll-hint">
-        <span>了解所有工具</span>
-        <div class="scroll-arrow"></div>
-    </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ── 工具介绍 ── -->
-<section class="section" id="tools">
-    <p class="section-label">// TOOLS</p>
-    <h2 class="section-title">四种<em>学习玩法</em>，一个平台</h2>
-    <div class="tools-grid">
-
-        <a class="tool-card c-red" href="./index.html">
-            <div class="tool-status live">● 已上线</div>
-            <div class="tool-icon">⚔️</div>
-            <div class="tool-name">词汇闯关 · VOCAQUEST</div>
-            <p class="tool-desc">像素风 RPG 单词学习游戏。上传词包，击败词汇怪兽，积累 XP 冲上排行榜。支持 Excel、PDF、Word 等多种格式导入。</p>
-            <div class="tool-tags">
-                <span class="tag">英语词汇</span>
-                <span class="tag">RPG闯关</span>
-                <span class="tag">班级排行</span>
-                <span class="tag">教师管理</span>
-            </div>
-        </a>
-
-        <a class="tool-card c-cyan" href="./fillblank.html">
-            <div class="tool-status live">● 已上线</div>
-            <div class="tool-icon">📝</div>
-            <div class="tool-name">句子填空 · FILLBLANK</div>
-            <p class="tool-desc">AI 自动根据词包生成填空练习题。学生在真实语境中运用学过的单词，巩固记忆效果，老师一键生成，立即分配。</p>
-            <div class="tool-tags">
-                <span class="tag">AI生成题目</span>
-                <span class="tag">语境练习</span>
-                <span class="tag">词包联动</span>
-            </div>
-        </a>
-
-        <a class="tool-card c-gold" href="./boss.html">
-            <div class="tool-status live">● 每周开放</div>
-            <div class="tool-icon">🦈</div>
-            <div class="tool-name">每周首领战 · WEEKLY BOSS</div>
-            <p class="tool-desc">把本周错题变成限时 Boss 战。达到目标正确率即可获得专属宠物、称号和 XP 奖励。</p>
-            <div class="tool-tags">
-                <span class="tag">错题复习</span>
-                <span class="tag">限时挑战</span>
-                <span class="tag">成长奖励</span>
-            </div>
-        </a>
-
-        <a class="tool-card c-purple" href="./challenge.html">
-            <div class="tool-status live">● 周末开放</div>
-            <div class="tool-icon">🏆</div>
-            <div class="tool-name">班级对战 · CLASS CHALLENGE</div>
-            <p class="tool-desc">班级之间共同挑战同一套词汇题，用全班成绩争夺周榜冠军和专属荣誉。</p>
-            <div class="tool-tags">
-                <span class="tag">班级协作</span>
-                <span class="tag">周榜竞技</span>
-                <span class="tag">团队荣誉</span>
-            </div>
-        </a>
-
-    </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ── 平台特色 ── -->
-<section class="section" id="features">
-    <p class="section-label">// PLATFORM FEATURES</p>
-    <h2 class="section-title">平台<em>核心特色</em></h2>
-    <div class="tools-grid">
-        <div class="tool-card c-cyan">
-            <div class="tool-icon">🎯</div>
-            <div class="tool-name" style="color:var(--cyan);text-shadow:0 0 8px var(--cyan);">自适应学生水平</div>
-            <p class="tool-desc">系统结合历史正确率、练习次数和词汇 XP 持续更新能力等级，并自动发放基础、标准或进阶难度；同一词包的难度内容生成一次即可重复使用。</p>
-        </div>
-        <div class="tool-card c-red">
-            <div class="tool-icon">🗺️</div>
-            <div class="tool-name" style="color:var(--primary);text-shadow:0 0 8px var(--primary);">故事化 RPG 学习地图</div>
-            <p class="tool-desc">每个词包拥有专属世界、主角和剧情支线。每关最多 10 个词，章节数量随词包自动拆分；词汇闯关和句子填空共享连续冒险体验。</p>
-        </div>
-        <div class="tool-card c-gold">
-            <div class="tool-icon">📊</div>
-            <div class="tool-name" style="color:var(--gold);text-shadow:0 0 8px var(--gold);">可导出的学习报告</div>
-            <p class="tool-desc">班级周报、学期对比、高频错词 Top 20、词汇难度分布和学生个人档案一站生成，相同数据直接调用缓存，并可导出带 VocaQuest 标识的 PDF。</p>
-        </div>
-        <div class="tool-card c-purple">
-            <div class="tool-icon">🏆</div>
-            <div class="tool-name" style="color:var(--purple);text-shadow:0 0 8px var(--purple);">成就、XP 与排行榜</div>
-            <p class="tool-desc">两个学习工具统一累计 XP，并展示总榜与分工具榜。宠物、称号、徽章、Boss 和班级挑战把持续练习转化为可见成长。</p>
-        </div>
-        <div class="tool-card c-cyan">
-            <div class="tool-icon">🔐</div>
-            <div class="tool-name" style="color:var(--cyan);text-shadow:0 0 8px var(--cyan);">安全邀请码与班级管理</div>
-            <p class="tool-desc">学生单次邀请码使用后立即失效；班级邀请码会自动加入指定班级。班级选择一经确认不可更改，每班最多 60 人。</p>
-        </div>
-        <div class="tool-card c-red">
-            <div class="tool-icon">🧠</div>
-            <div class="tool-name" style="color:var(--primary);text-shadow:0 0 8px var(--primary);">教师内容一次生成</div>
-            <p class="tool-desc">老师上传词包后生成故事、美术与三档语境练习，后续学生共享缓存内容，减少重复调用和教师备课时间。</p>
-        </div>
-    </div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ── 使用方式 ── -->
-<section class="section" id="how">
-    <p class="section-label">// HOW IT WORKS</p>
-    <h2 class="section-title">3 步开始<em>学习</em></h2>
-    <div class="steps-wrap">
-        <div class="step">
-            <div class="step-num">01</div>
-            <div class="step-body">
-                <div class="step-title">获取邀请码</div>
-                <p class="step-desc">从老师处获取一次性学生邀请码或班级邀请码。班级邀请码会自动加入对应班级，一次性邀请码使用后立即失效。</p>
+    <nav class="site-nav" aria-label="主导航">
+        <div class="shell nav-inner">
+            <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>VOCAQUEST</span></a>
+            <div class="nav-links">
+                <a href="#experience">学习体验</a>
+                <a href="#features">平台能力</a>
+                <a href="#teacher">教师使用</a>
+                <a class="nav-login" href="./dashboard.html">进入平台</a>
             </div>
         </div>
-        <div class="step">
-            <div class="step-num">02</div>
-            <div class="step-body">
-                <div class="step-title">注册账号，进入 Dashboard</div>
-                <p class="step-desc">输入姓名、邮箱、密码与邀请码完成注册。使用单次邀请码的学生可在 Dashboard 自行选择一次班级，确认后不可更改。</p>
+    </nav>
+
+    <main id="top">
+        <section class="hero">
+            <div class="shell">
+                <div class="hero-content">
+                    <p class="eyebrow">Story-driven adaptive learning</p>
+                    <h1>每个词包，都是一场新的冒险</h1>
+                    <p class="hero-copy">老师上传教学内容，VocaQuest 将它组织成适合不同学生水平的任务、剧情分支与完整学习地图。学生不是完成一张练习单，而是在推进自己的故事。</p>
+                    <div class="hero-actions">
+                        <a class="button button-primary" href="./dashboard.html">开始使用</a>
+                        <a class="button button-secondary" href="#experience">查看学习体验</a>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="step">
-            <div class="step-num">03</div>
-            <div class="step-body">
-                <div class="step-title">选择工具，开始练习！</div>
-                <p class="step-desc">点击任意工具卡片进入练习。老师已分配任务的工具会优先显示，完成任务积累 XP，冲上总排行榜。</p>
+            <div class="hero-facts" aria-label="平台特点">
+                <div class="hero-fact"><strong>三档难度</strong><span>随学生水平变化</span></div>
+                <div class="hero-fact"><strong>完整世界</strong><span>主线与剧情支线</span></div>
+                <div class="hero-fact"><strong>教师报告</strong><span>班级与个人档案</span></div>
             </div>
-        </div>
-    </div>
-</section>
+        </section>
 
-<div class="divider"></div>
-
-<!-- ── 联系我 ── -->
-<section class="section" id="contact">
-    <p class="section-label">// CONTACT</p>
-    <h2 class="section-title">联系<em>我</em></h2>
-    <div class="contact-wrap">
-        <p class="contact-intro">
-            如果你是教师，想申请使用权限或邀请码；或者对工具有建议、遇到问题，欢迎发邮件联系我。通常在 24 小时内回复。
-        </p>
-        <div class="form-row">
-            <div class="form-group">
-                <label>你的姓名</label>
-                <input type="text" id="c-name" placeholder="张老师">
+        <section class="intro" id="experience">
+            <div class="shell intro-grid">
+                <div>
+                    <p class="section-kicker">A LEARNING WORLD, NOT A WORKSHEET</p>
+                    <h2 class="section-title">把练习放进一个值得探索的世界</h2>
+                </div>
+                <p class="intro-copy">同一份词包会被拆成合理长度的章节。学生选择主角、完成词汇或语境任务、决定剧情走向，并在地图上看见自己的位置。<strong>故事服务于学习节奏，学习结果也会改变后续路线。</strong></p>
             </div>
-            <div class="form-group">
-                <label>你的邮箱</label>
-                <input type="email" id="c-email" placeholder="teacher@school.com">
+        </section>
+
+        <section class="journey">
+            <div class="shell">
+                <div class="journey-frame">
+                    <div class="journey-copy">
+                        <p class="section-kicker">ONE PACK, MANY PATHS</p>
+                        <h2>一张完整地图，清楚看见每次进步</h2>
+                        <p>地图从开始就完整可见，但只有达到当前位置的关卡可以挑战。路线选择会在确认后写入个人冒险档案。</p>
+                        <div class="journey-list">
+                            <div class="journey-item"><strong>合理拆分关卡</strong><span>每关不超过 10 个学习目标</span></div>
+                            <div class="journey-item"><strong>不同路线，不同练习组合</strong><span>词义、听音、拼写与语境任务动态变化</span></div>
+                            <div class="journey-item"><strong>世界可以复用</strong><span>教师保存多个版本并选择学生当前看到的世界</span></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="form-group">
-            <label>咨询类型</label>
-            <select id="c-type">
-                <option value="">-- 请选择 --</option>
-                <option value="invite">申请教师／学生邀请码</option>
-                <option value="tool">咨询工具使用</option>
-                <option value="bug">报告问题 Bug</option>
-                <option value="feature">功能建议</option>
-                <option value="other">其他</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>消息内容</label>
-            <textarea id="c-msg" rows="5" placeholder="请描述你的需求或问题……"></textarea>
-        </div>
-        <button class="send-btn" onclick="sendContact()">▶ 发 送 邮 件</button>
-        <div class="form-msg" id="form-msg"></div>
-    </div>
-</section>
+        </section>
 
-<!-- ── FOOTER ── -->
-<footer>
-    <div class="footer-brand">⚔ VOCAQUEST · BY MARC</div>
-    <div class="footer-copy">© 2025 Designed by 赵月杨 Marc · 为教育而生</div>
-</footer>
+        <section class="features" id="features">
+            <div class="shell">
+                <div class="features-head">
+                    <p class="section-kicker">BUILT FOR REAL CLASSROOMS</p>
+                    <h2 class="section-title">让教师看清问题，让学生愿意继续</h2>
+                </div>
+                <div class="feature-list">
+                    <div class="feature-row"><span class="feature-index">01</span><h3>自适应学生水平</h3><p>根据历史正确率、完成速度和薄弱词变化学生等级，同一词包复用基础、标准与进阶内容。</p></div>
+                    <div class="feature-row"><span class="feature-index">02</span><h3>故事化 RPG 学习地图</h3><p>词汇记忆和句子填空共享词包、故事地图、XP 与成长记录，不再是两个割裂的工具。</p></div>
+                    <div class="feature-row"><span class="feature-index">03</span><h3>可导出的学习报告</h3><p>班级周报、学期对比、高频错词、难度分布和学生个人档案可直接生成并导出 PDF。</p></div>
+                    <div class="feature-row"><span class="feature-index">04</span><h3>成就、XP 与排行榜</h3><p>学习经验、成就、首领战和班级挑战共同记录长期成长，而不是只奖励一次答对。</p></div>
+                </div>
+            </div>
+        </section>
 
-<script>
-    function sendContact() {
-        const name  = document.getElementById('c-name').value.trim();
-        const email = document.getElementById('c-email').value.trim();
-        const type  = document.getElementById('c-type').value;
-        const msg   = document.getElementById('c-msg').value.trim();
-        const msgEl = document.getElementById('form-msg');
+        <section class="tools">
+            <div class="shell">
+                <p class="section-kicker">THE LEARNING SYSTEM</p>
+                <h2 class="section-title">两种练习，一条连续成长路线</h2>
+                <div class="tool-grid">
+                    <a class="tool-panel" href="./index.html">
+                        <span class="tool-label">VOCABULARY QUEST</span>
+                        <h3>词汇冒险</h3>
+                        <p>从识义、听音到拼写与综合战斗，以章节方式完成老师布置的词包。</p>
+                        <span class="tool-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <a class="tool-panel is-fill" href="./fillblank.html">
+                        <span class="tool-label">CONTEXT QUEST</span>
+                        <h3>语境填空</h3>
+                        <p>在不提前暴露中文答案的前提下，使用真实语境、语法范围与难度提示完成练习。</p>
+                        <span class="tool-arrow" aria-hidden="true">→</span>
+                    </a>
+                    <div class="tool-panel support-tools">
+                        <div class="support-item"><strong>每周首领战</strong><span>集中复习本周持续出错的内容</span></div>
+                        <div class="support-item"><strong>班级挑战</strong><span>以共同目标建立班级学习节奏</span></div>
+                        <div class="support-item"><strong>学习档案</strong><span>记录掌握率、难词与阶段变化</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-        if (!name || !email || !type || !msg) {
-            msgEl.textContent = '⚠ 请填写所有字段'; msgEl.className = 'form-msg err'; return;
+        <section class="teacher" id="teacher">
+            <div class="shell teacher-grid">
+                <div>
+                    <p class="section-kicker">FOR TEACHERS</p>
+                    <h2 class="section-title">从上传词包到看懂班级，只需一个后台</h2>
+                    <p>内容只生成一次并供同词包复用，减少重复调用。教师始终保留对班级、世界版本和任务难度的控制。</p>
+                </div>
+                <div class="teacher-steps">
+                    <div class="teacher-step"><strong>上传并检查词包</strong><span>系统自动去重、拆分章节并准备三档练习。</span></div>
+                    <div class="teacher-step"><strong>选择学生看到的世界</strong><span>保留多个故事版本，预览后再切换，不覆盖旧内容。</span></div>
+                    <div class="teacher-step"><strong>分配班级并跟踪进度</strong><span>使用班级邀请码加入，查看完成率、共同难词和未完成学生。</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="contact" id="contact">
+            <div class="shell contact-grid">
+                <div>
+                    <p class="section-kicker">CONTACT</p>
+                    <h2 class="section-title">申请教师使用权限</h2>
+                    <p class="intro-copy">填写信息后会打开你的邮件客户端。教师账号与班级邀请码均由平台安全生成。</p>
+                </div>
+                <div class="contact-form">
+                    <div class="field"><label for="c-name">姓名</label><input id="c-name" autocomplete="name" placeholder="张老师"></div>
+                    <div class="field"><label for="c-email">邮箱</label><input id="c-email" type="email" autocomplete="email" placeholder="teacher@school.com"></div>
+                    <div class="field full"><label for="c-type">咨询类型</label><select id="c-type"><option value="">请选择</option><option value="invite">申请教师权限</option><option value="tool">使用咨询</option><option value="bug">报告问题</option><option value="feature">功能建议</option><option value="other">其他</option></select></div>
+                    <div class="field full"><label for="c-msg">内容</label><textarea id="c-msg" placeholder="请简要说明学校、班级和使用需求"></textarea></div>
+                    <button class="send" type="button" onclick="sendContact()">打开邮件并发送</button>
+                    <div class="form-msg" id="form-msg" aria-live="polite"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer><div class="shell footer-inner"><strong>VOCAQUEST</strong><span>Designed by Marc · Story-driven English learning</span></div></footer>
+
+    <script>
+        function sendContact() {
+            const name = document.getElementById('c-name').value.trim();
+            const email = document.getElementById('c-email').value.trim();
+            const type = document.getElementById('c-type').value;
+            const message = document.getElementById('c-msg').value.trim();
+            const feedback = document.getElementById('form-msg');
+            if (!name || !email || !type || !message) {
+                feedback.textContent = '请完整填写姓名、邮箱、类型和内容。';
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                feedback.textContent = '请检查邮箱格式。';
+                return;
+            }
+            const labels = { invite: '申请教师权限', tool: '使用咨询', bug: '报告问题', feature: '功能建议', other: '其他' };
+            const subject = encodeURIComponent(`[VocaQuest] ${labels[type]} - ${name}`);
+            const body = encodeURIComponent(`姓名：${name}\n回复邮箱：${email}\n类型：${labels[type]}\n\n${message}`);
+            window.open(`mailto:kinsgimth@hotmail.com?subject=${subject}&body=${body}`, '_blank');
+            feedback.textContent = '邮件内容已经准备好。';
         }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            msgEl.textContent = '⚠ 邮箱格式不正确'; msgEl.className = 'form-msg err'; return;
-        }
-        const typeMap = { invite:'申请邀请码', tool:'工具咨询', bug:'报告问题', feature:'功能建议', other:'其他' };
-        const subject = encodeURIComponent(`[Marc Toolkit] ${typeMap[type]||type} - 来自 ${name}`);
-        const body    = encodeURIComponent(`姓名：${name}\n回复邮箱：${email}\n类型：${typeMap[type]||type}\n\n内容：\n${msg}`);
-        window.open(`mailto:kinsgimth@hotmail.com?subject=${subject}&body=${body}`, '_blank');
-        msgEl.textContent = '✅ 已打开邮件客户端，请发送！'; msgEl.className = 'form-msg ok';
-    }
-</script>
+    </script>
 </body>
 </html>
