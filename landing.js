@@ -3,6 +3,21 @@
   const menuToggle = document.querySelector('.menu-toggle');
   const navLinks = document.querySelector('.nav-links');
 
+  function dockDisplayControls() {
+    const dock = document.querySelector('[data-vq-controls]');
+    const themeButton = document.querySelector('.vq-theme-toggle');
+    const fontButton = document.querySelector('.vq-font-toggle');
+    if (!dock || !themeButton || !fontButton) return;
+    themeButton.classList.add('vq-theme-toggle-nav');
+    fontButton.classList.add('vq-font-toggle-nav');
+    dock.append(fontButton, themeButton);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', dockDisplayControls, { once: true });
+  } else {
+    dockDisplayControls();
+  }
+
   function setMenu(open) {
     nav.classList.toggle('is-open', open);
     document.body.classList.toggle('menu-open', open);
@@ -73,44 +88,61 @@
 
   const mapSection = document.querySelector('.map-story');
   const mapStage = document.querySelector('.map-sticky');
-  const mapImage = document.querySelector('.map-image');
+  const mapImages = Array.from(document.querySelectorAll('.map-image'));
   const mapProgressLabel = document.getElementById('map-progress-label');
   const worldName = document.getElementById('world-name');
   const questTitle = document.getElementById('quest-title');
   const questCopy = document.getElementById('quest-copy');
   const worldTabs = Array.from(document.querySelectorAll('.world-tab'));
-  const questNodes = Array.from(document.querySelectorAll('.quest-node'));
   const mapChapters = [
     {
       label: 'CHAPTER 01',
       world: '起点 · 星辰观测台',
       title: '先看见完整世界，\n再走出自己的路线',
       copy: '地图从第一天就完整展开。学生知道终点在哪里，也能看见每次练习让自己前进了多少。',
-      scale: 1.04,
-      x: '-5%',
-      y: '4%'
+      image: './assets/landing/map-observatory.jpg'
     },
     {
       label: 'CHAPTER 02',
       world: '中段 · 失落字典城',
       title: '学习表现，\n会改变下一段旅程',
       copy: '同一词包准备三档难度。系统根据历史正确率、速度和薄弱词，让学生进入更合适的任务组合。',
-      scale: 1.18,
-      x: '4%',
-      y: '1%'
+      image: './assets/landing/map-dictionary-city.jpg'
     },
     {
       label: 'CHAPTER 03',
       world: '分支 · 风暴记忆桥',
       title: '选择有后果，\n但每一步都会被确认',
       copy: '学生先阅读剧情与任务，再确认路线。完成、错题和选择都会进入个人学习档案，成为下一章的依据。',
-      scale: 1.29,
-      x: '-6%',
-      y: '8%'
+      image: './assets/landing/map-storm-bridge.jpg'
     }
   ];
   let activeChapter = -1;
+  let activeMapLayer = 0;
   let manualChapterUntil = 0;
+
+  mapChapters.forEach(function (chapter) {
+    const preload = new Image();
+    preload.src = chapter.image;
+  });
+
+  function showMapScene(source) {
+    const current = mapImages[activeMapLayer];
+    if (current.getAttribute('src') === source) return;
+    const nextLayerIndex = activeMapLayer === 0 ? 1 : 0;
+    const next = mapImages[nextLayerIndex];
+    let activated = false;
+    function activate() {
+      if (activated) return;
+      activated = true;
+      next.classList.add('is-active');
+      current.classList.remove('is-active');
+      activeMapLayer = nextLayerIndex;
+    }
+    next.addEventListener('load', activate, { once: true });
+    next.src = source;
+    if (next.complete) requestAnimationFrame(activate);
+  }
 
   function setChapter(index) {
     const next = Math.max(0, Math.min(mapChapters.length - 1, index));
@@ -121,11 +153,8 @@
     worldName.textContent = chapter.world;
     questTitle.innerHTML = chapter.title.replace('\n', '<br>');
     questCopy.textContent = chapter.copy;
-    mapStage.style.setProperty('--map-scale', chapter.scale);
-    mapStage.style.setProperty('--map-x', chapter.x);
-    mapStage.style.setProperty('--map-y', chapter.y);
+    showMapScene(chapter.image);
     worldTabs.forEach(function (tab, tabIndex) { tab.classList.toggle('is-active', tabIndex === next); });
-    questNodes.forEach(function (node, nodeIndex) { node.classList.toggle('is-active', nodeIndex === next); });
   }
 
   function updateMapStory() {
@@ -134,7 +163,6 @@
     const travel = mapSection.offsetHeight - window.innerHeight;
     const progress = travel > 0 ? Math.max(0, Math.min(1, (window.scrollY - start) / travel)) : 0;
     setChapter(Math.min(2, Math.floor(progress * 3)));
-    mapImage.style.filter = `saturate(${1 + progress * .12}) contrast(${1.02 + progress * .08})`;
   }
   window.addEventListener('scroll', updateMapStory, { passive: true });
   worldTabs.forEach(function (tab) {
@@ -143,20 +171,14 @@
       setChapter(Number(tab.dataset.stage));
     });
   });
-  questNodes.forEach(function (node) {
-    node.addEventListener('click', function () {
-      manualChapterUntil = Date.now() + 1400;
-      setChapter(Number(node.dataset.stage));
-    });
-  });
   setChapter(0);
 
   const heroData = [
-    { number: 'HERO 01', name: '林思 · 语言学侦探', description: '从词义和符号里发现规律，用推理打开隐藏路线。', shift: '-2%', focus: '20%' },
-    { number: 'HERO 02', name: '陈诺 · 行动派冒险家', description: '依靠听音与快速判断突破危机，让剧情更快向前。', shift: '0%', focus: '45%' },
-    { number: 'HERO 03', name: '苏晓 · 记忆收藏家', description: '把单词与场景建立联结，从回忆中找回关键线索。', shift: '2%', focus: '70%' }
+    { number: 'ARCHETYPE 01', name: '星图师', tag: 'STAR NAVIGATOR', description: '观察词义之间的轨道，用规律与推理发现隐藏路线。', trait: '语义观察 · 路线推演', image: './assets/landing/hero-star.jpg', label: '星图师角色立绘' },
+    { number: 'ARCHETYPE 02', name: '符文学者', tag: 'RUNE LINGUIST', description: '拆解词根、语境与结构，让复杂线索重新变得清晰。', trait: '构词分析 · 语境解码', image: './assets/landing/hero-rune.jpg', label: '符文学者角色立绘' },
+    { number: 'ARCHETYPE 03', name: '记忆游侠', tag: 'MEMORY RANGER', description: '把声音、场景与词汇连接起来，从记忆中找回关键路径。', trait: '听音联结 · 记忆回溯', image: './assets/landing/hero-memory.jpg', label: '记忆游侠角色立绘' }
   ];
-  const characterVisual = document.querySelector('.character-visual');
+  const characterPortrait = document.querySelector('.character-portrait');
   const characterTabs = Array.from(document.querySelectorAll('.character-tab'));
   characterTabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -166,8 +188,14 @@
       document.getElementById('character-number').textContent = data.number;
       document.getElementById('character-name').textContent = data.name;
       document.getElementById('character-description').textContent = data.description;
-      characterVisual.style.setProperty('--hero-shift', data.shift);
-      characterVisual.style.setProperty('--focus-left', data.focus);
+      document.getElementById('character-trait').textContent = data.trait;
+      characterPortrait.classList.add('is-changing');
+      window.setTimeout(function () {
+        characterPortrait.style.backgroundImage = `url('${data.image}')`;
+        characterPortrait.setAttribute('aria-label', data.label);
+        characterPortrait.querySelector('span').textContent = data.tag;
+        characterPortrait.classList.remove('is-changing');
+      }, 140);
     });
   });
 

@@ -66,6 +66,12 @@ await check('landing-core-features', async () => {
   }
   assert(cards >= 4, 'Homepage does not show the core feature set');
   await page.screenshot({ path: `${outputDir}/landing-desktop.png`, fullPage: true });
+  await page.locator('.map-sticky').scrollIntoViewIfNeeded();
+  await page.locator('.world-tab').nth(1).click();
+  await page.waitForTimeout(950);
+  await page.locator('.map-sticky').screenshot({ path: `${outputDir}/landing-map-desktop.png` });
+  await page.locator('.character-stage').scrollIntoViewIfNeeded();
+  await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-desktop.png` });
   await context.close();
   return { cards };
 });
@@ -82,6 +88,8 @@ await check('landing-mobile-layout', async () => {
   assert(!details.overflow, 'Mobile homepage has horizontal overflow');
   assert(details.emojiCount === 0, 'Mobile homepage still contains decorative emoji');
   await page.screenshot({ path: `${outputDir}/landing-mobile.png`, fullPage: false });
+  await page.locator('.character-stage').scrollIntoViewIfNeeded();
+  await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-mobile.png` });
   await context.close();
   return details;
 });
@@ -96,21 +104,32 @@ await check('landing-interactions', async () => {
   await page.locator('.menu-toggle').click();
 
   await page.locator('.world-tab').nth(1).click();
-  await page.waitForTimeout(250);
+  await page.waitForTimeout(950);
   const worldName = await page.locator('#world-name').innerText();
+  const dictionaryScene = await page.locator('.map-image.is-active').getAttribute('src');
 
-  await page.locator('.quest-node').nth(2).click();
+  await page.locator('.world-tab').nth(2).click();
+  await page.waitForTimeout(950);
   const questTitle = await page.locator('#quest-title').innerText();
+  const bridgeScene = await page.locator('.map-image.is-active').getAttribute('src');
 
   await page.locator('.character-tab').nth(2).click();
+  await page.waitForTimeout(220);
   const characterName = await page.locator('#character-name').innerText();
+  const characterImage = await page.locator('.character-portrait').evaluate(element => getComputedStyle(element).backgroundImage);
+  const controlsDocked = await page.locator('.landing-controls').evaluate(element =>
+    element.contains(document.querySelector('.vq-theme-toggle')) && element.contains(document.querySelector('.vq-font-toggle'))
+  );
 
   assert(menuOpen && menuVisible, 'Mobile navigation does not open');
   assert(worldName === '中段 · 失落字典城', 'World selector did not update the active chapter');
+  assert(dictionaryScene.includes('map-dictionary-city'), 'Dictionary chapter reused the previous map image');
   assert(questTitle.includes('选择有后果'), 'Quest preview did not update');
-  assert(characterName.includes('苏晓'), 'Character selector did not update');
+  assert(bridgeScene.includes('map-storm-bridge') && bridgeScene !== dictionaryScene, 'Storm chapter did not switch to a distinct map image');
+  assert(characterName === '记忆游侠' && characterImage.includes('hero-memory'), 'Character selector did not switch to the new RPG portrait');
+  assert(controlsDocked, 'Display controls are not docked inside the navigation');
   await context.close();
-  return { menuOpen, menuVisible, worldName, questTitle, characterName };
+  return { menuOpen, menuVisible, worldName, dictionaryScene, questTitle, bridgeScene, characterName, controlsDocked };
 });
 
 await check('landing-light-theme-navigation', async () => {

@@ -6,6 +6,7 @@
     <meta name="description" content="VocaQuest 将教师词包转化为自适应、故事化的英语学习冒险。">
     <title>VocaQuest · 每个词包都是一整个世界</title>
     <link rel="preload" as="image" href="./assets/landing/vocaquest-world.jpg">
+    <link rel="preload" as="image" href="./assets/landing/map-observatory.jpg">
     <link rel="stylesheet" href="./theme.css">
     <link rel="stylesheet" href="./landing.css">
     <script src="./theme.js"></script>
@@ -15,10 +16,11 @@
 
     <nav class="site-nav" aria-label="主导航">
         <a class="brand" href="#top" aria-label="VocaQuest 首页">
-            <span class="brand-orbit" aria-hidden="true"><i></i></span>
-            <span>VOCAQUEST</span>
+            <span class="vq-brand-mark" aria-hidden="true"><i>V</i><i>Q</i></span>
+            <span class="vq-brand-word">VOCAQUEST</span>
         </a>
         <div class="nav-actions">
+            <div class="landing-controls" data-vq-controls aria-label="显示设置"></div>
             <a class="nav-enter" href="./dashboard.html">进入平台</a>
             <button class="menu-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false"><span></span><span></span></button>
         </div>
@@ -71,7 +73,10 @@
 
         <section class="map-story" id="map">
             <div class="map-sticky">
-                <img class="map-image" src="./assets/landing/vocaquest-map.jpg" alt="包含观测台、图书馆、风暴桥与终点城堡的 2.5D 学习地图">
+                <div class="map-scenes" aria-hidden="true">
+                    <img class="map-image is-active" src="./assets/landing/map-observatory.jpg" alt="">
+                    <img class="map-image" src="./assets/landing/map-observatory.jpg" alt="">
+                </div>
                 <div class="map-vignette" aria-hidden="true"></div>
                 <div class="map-topline"><span>02 / LEARNING MAP</span><span id="map-progress-label">CHAPTER 01</span></div>
                 <div class="map-story-copy">
@@ -84,11 +89,6 @@
                         <button class="world-tab" type="button" data-stage="2"><span>03</span><strong>风暴桥</strong></button>
                     </div>
                 </div>
-                <div class="quest-nodes" aria-label="示例学习关卡">
-                    <button class="quest-node is-active" type="button" data-stage="0" aria-label="第一章"></button>
-                    <button class="quest-node" type="button" data-stage="1" aria-label="第二章"></button>
-                    <button class="quest-node" type="button" data-stage="2" aria-label="第三章"></button>
-                </div>
                 <div class="map-scroll-cue" aria-hidden="true"><span>SCROLL TO MOVE</span><i></i></div>
             </div>
         </section>
@@ -98,19 +98,19 @@
                 <p class="section-no">03 / CHOOSE YOUR HERO</p>
                 <h2>同一个世界，<br>三种看待冒险的方式。</h2>
             </div>
-            <div class="character-visual">
-                <img src="./assets/landing/vocaquest-heroes.jpg" alt="三位 VocaQuest 学生冒险主角">
-                <div class="character-focus" aria-hidden="true"></div>
+            <div class="character-stage">
                 <div class="character-copy">
-                    <span id="character-number">HERO 01</span>
-                    <h3 id="character-name">林思 · 语言学侦探</h3>
-                    <p id="character-description">从词义和符号里发现规律，用推理打开隐藏路线。</p>
+                    <span id="character-number">ARCHETYPE 01</span>
+                    <h3 id="character-name">星图师</h3>
+                    <p id="character-description">观察词义之间的轨道，用规律与推理发现隐藏路线。</p>
+                    <div class="character-trait"><span>核心能力</span><strong id="character-trait">语义观察 · 路线推演</strong></div>
+                    <div class="character-tabs" aria-label="主角职业选择预览">
+                        <button class="character-tab is-active" type="button" data-hero="0"><small>01</small><span>星图师</span></button>
+                        <button class="character-tab" type="button" data-hero="1"><small>02</small><span>符文学者</span></button>
+                        <button class="character-tab" type="button" data-hero="2"><small>03</small><span>记忆游侠</span></button>
+                    </div>
                 </div>
-                <div class="character-tabs" aria-label="主角选择预览">
-                    <button class="character-tab is-active" type="button" data-hero="0"><small>01</small><span>林思</span></button>
-                    <button class="character-tab" type="button" data-hero="1"><small>02</small><span>陈诺</span></button>
-                    <button class="character-tab" type="button" data-hero="2"><small>03</small><span>苏晓</span></button>
-                </div>
+                <div class="character-portrait" role="img" aria-label="星图师角色立绘"><span>STAR NAVIGATOR</span></div>
             </div>
         </section>
 
