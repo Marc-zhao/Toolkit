@@ -4,807 +4,169 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="VocaQuest 将教师词包转化为自适应、故事化的英语学习冒险。">
-    <title>VocaQuest · 每个词包都是一场冒险</title>
+    <title>VocaQuest · 每个词包都是一整个世界</title>
+    <link rel="preload" as="image" href="./assets/landing/vocaquest-world.jpg">
     <link rel="stylesheet" href="./theme.css">
+    <link rel="stylesheet" href="./landing.css">
     <script src="./theme.js"></script>
-    <style>
-        :root {
-            --night: #070b12;
-            --deep: #0b1320;
-            --panel: #111c2c;
-            --panel-soft: #162437;
-            --line: rgba(155, 192, 208, .22);
-            --line-strong: rgba(155, 218, 231, .5);
-            --text: #f7f2e6;
-            --muted: #aab6c5;
-            --cyan: #67d8e8;
-            --cyan-deep: #147f93;
-            --gold: #f1c65a;
-            --gold-deep: #9d6e13;
-            --red: #ef6b68;
-            --green: #68d39b;
-            --sans: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
-            --display: "Arial Narrow", "DIN Condensed", Impact, sans-serif;
-            --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-        }
-
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; background: var(--night); }
-        body {
-            margin: 0;
-            min-width: 320px;
-            overflow-x: hidden;
-            color: var(--text);
-            background: var(--night);
-            font-family: var(--sans);
-            font-size: 16px;
-            line-height: 1.65;
-        }
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            z-index: 90;
-            pointer-events: none;
-            opacity: .2;
-            background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px);
-            background-size: 100% 4px;
-        }
-        a { color: inherit; }
-        button, input, textarea, select { font: inherit; }
-        button { color: inherit; }
-        .shell { width: min(1220px, calc(100% - 48px)); margin: 0 auto; }
-
-        /* Navigation */
-        .site-nav {
-            position: fixed;
-            z-index: 100;
-            inset: 0 0 auto;
-            height: 76px;
-            color: #fff;
-            background: rgba(5, 10, 18, .94);
-            border-bottom: 1px solid rgba(103, 216, 232, .22);
-            box-shadow: 0 10px 34px rgba(0, 0, 0, .3);
-            backdrop-filter: blur(18px);
-        }
-        .nav-inner { height: 100%; display: flex; align-items: center; gap: 28px; }
-        .brand {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            text-decoration: none;
-            font-family: var(--mono);
-            font-size: 15px;
-            font-weight: 900;
-            letter-spacing: .16em;
-        }
-        .brand-mark {
-            width: 38px;
-            height: 38px;
-            display: grid;
-            place-items: center;
-            color: var(--night);
-            background: var(--cyan);
-            border: 1px solid #bdf5fc;
-            box-shadow: 0 0 22px rgba(103, 216, 232, .32);
-            clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
-            font-family: var(--display);
-            font-size: 17px;
-            letter-spacing: 0;
-        }
-        .nav-links { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-        .nav-links a {
-            position: relative;
-            padding: 12px 14px;
-            color: #dbe5ee;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 700;
-            transition: color .18s ease, background .18s ease;
-        }
-        .nav-links a:not(.nav-login)::after {
-            content: "";
-            position: absolute;
-            left: 14px;
-            right: 14px;
-            bottom: 6px;
-            height: 2px;
-            background: var(--cyan);
-            box-shadow: 0 0 10px var(--cyan);
-            transform: scaleX(0);
-            transition: transform .18s ease;
-        }
-        .nav-links a:hover,
-        .nav-links a.is-active { color: #fff; background: rgba(255,255,255,.045); }
-        .nav-links a:hover::after,
-        .nav-links a.is-active::after { transform: scaleX(1); }
-        .nav-login {
-            margin-left: 8px;
-            padding: 11px 19px !important;
-            color: #161006 !important;
-            background: var(--gold);
-            border: 1px solid #ffe8a2;
-            box-shadow: 0 0 22px rgba(241, 198, 90, .2);
-        }
-        .nav-login:hover { background: #ffe294 !important; transform: translateY(-1px); }
-        .menu-toggle {
-            display: none;
-            width: 44px;
-            height: 44px;
-            margin-left: auto;
-            padding: 10px;
-            border: 1px solid var(--line-strong);
-            background: rgba(255,255,255,.04);
-            cursor: pointer;
-        }
-        .menu-toggle span { display: block; height: 2px; margin: 5px 0; background: #fff; transition: transform .2s ease, opacity .2s ease; }
-
-        /* Hero */
-        .hero {
-            min-height: 760px;
-            height: 100svh;
-            position: relative;
-            display: flex;
-            align-items: center;
-            overflow: hidden;
-            isolation: isolate;
-            background: #061019;
-        }
-        .hero-backdrop {
-            position: absolute;
-            inset: -3%;
-            z-index: -3;
-            background: url("./assets/story/star-chart-map.jpg") center 48% / cover no-repeat;
-            transform: scale(1.04);
-            transition: opacity .32s ease, transform 7s ease;
-        }
-        .hero.is-swapping .hero-backdrop { opacity: .28; transform: scale(1.08); }
-        .hero::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            z-index: -2;
-            background:
-                linear-gradient(90deg, rgba(4, 9, 17, .96) 0%, rgba(4, 9, 17, .76) 43%, rgba(4, 9, 17, .17) 75%),
-                linear-gradient(0deg, #070b12 0%, transparent 38%),
-                radial-gradient(circle at 73% 42%, transparent 0, rgba(4,9,17,.1) 32%, rgba(4,9,17,.55) 78%);
-        }
-        .hero::after {
-            content: "";
-            position: absolute;
-            inset: 76px 0 auto;
-            height: 1px;
-            z-index: 1;
-            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-            opacity: .55;
-        }
-        .hero-grid {
-            width: 100%;
-            display: grid;
-            grid-template-columns: minmax(0, 680px) 1fr;
-            gap: 70px;
-            align-items: center;
-            padding: 132px 0 82px;
-        }
-        .hero-copy { position: relative; z-index: 3; }
-        .hero-kicker {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 0 0 22px;
-            color: var(--cyan);
-            font-family: var(--mono);
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: .18em;
-        }
-        .hero-kicker::before { content: ""; width: 42px; height: 2px; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
-        .hero h1 {
-            margin: 0;
-            font-family: var(--display);
-            font-size: clamp(72px, 10vw, 136px);
-            font-weight: 900;
-            line-height: .82;
-            letter-spacing: .015em;
-            text-transform: uppercase;
-            text-shadow: 0 6px 0 rgba(0,0,0,.26), 0 0 48px rgba(103,216,232,.14);
-        }
-        .hero-title-cn {
-            margin: 24px 0 0;
-            max-width: 620px;
-            color: #fff4d6;
-            font-size: clamp(27px, 3vw, 42px);
-            font-weight: 900;
-            line-height: 1.3;
-            letter-spacing: 0;
-        }
-        .hero-description { max-width: 600px; margin: 20px 0 30px; color: #c4d0dc; font-size: 18px; line-height: 1.8; }
-        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-        .button {
-            min-height: 52px;
-            padding: 0 23px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 18px;
-            border: 1px solid transparent;
-            border-radius: 3px;
-            text-decoration: none;
-            font-weight: 900;
-            transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
-        }
-        .button::after { content: "→"; font-family: var(--mono); font-size: 18px; }
-        .button:hover { transform: translateY(-3px); }
-        .button-primary { color: #151006; background: var(--gold); border-color: #ffe6a0; box-shadow: 0 0 30px rgba(241,198,90,.22); }
-        .button-primary:hover { background: #ffe08c; box-shadow: 0 8px 34px rgba(241,198,90,.3); }
-        .button-secondary { color: #fff; background: rgba(8,17,29,.65); border-color: rgba(181,229,238,.55); backdrop-filter: blur(9px); }
-        .button-secondary:hover { border-color: var(--cyan); background: rgba(24,64,75,.65); }
-        .hero-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 28px; color: #8ea0b4; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
-        .hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
-        .hero-meta span::before { content: ""; width: 6px; height: 6px; background: var(--green); box-shadow: 0 0 9px var(--green); }
-
-        .world-console {
-            justify-self: end;
-            width: min(390px, 100%);
-            padding: 20px;
-            border: 1px solid rgba(168, 226, 236, .38);
-            background: rgba(5, 12, 22, .78);
-            box-shadow: 0 24px 80px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.035);
-            backdrop-filter: blur(16px);
-        }
-        .console-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-        .console-label { color: var(--cyan); font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
-        .console-signal { display: flex; gap: 4px; }
-        .console-signal i { width: 4px; height: 12px; background: var(--green); opacity: .4; animation: signal 1.3s ease-in-out infinite; }
-        .console-signal i:nth-child(2) { height: 17px; animation-delay: .16s; }
-        .console-signal i:nth-child(3) { height: 22px; animation-delay: .32s; }
-        @keyframes signal { 50% { opacity: 1; box-shadow: 0 0 9px var(--green); } }
-        .world-preview {
-            position: relative;
-            aspect-ratio: 16 / 10;
-            margin: 18px 0;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,.18);
-            background: url("./assets/story/star-chart-map.jpg") center / cover no-repeat;
-            transition: background-image .24s ease;
-        }
-        .world-preview::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(3,8,15,.92), transparent 58%); }
-        .preview-status { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 13px; }
-        .preview-status small { display: block; color: var(--cyan); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; }
-        .preview-status strong { display: block; margin-top: 3px; font-size: 20px; }
-        .route-line { position: absolute; z-index: 2; left: 17%; right: 13%; top: 45%; height: 2px; background: repeating-linear-gradient(90deg, var(--gold) 0 8px, transparent 8px 15px); transform: rotate(-7deg); opacity: .86; }
-        .route-line::before, .route-line::after { content: ""; position: absolute; top: 50%; width: 13px; height: 13px; border: 3px solid var(--gold); border-radius: 50%; background: #142333; transform: translateY(-50%); box-shadow: 0 0 15px var(--gold); }
-        .route-line::before { left: -5px; }
-        .route-line::after { right: -5px; }
-        .world-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-        .world-tab {
-            min-height: 62px;
-            padding: 9px 8px;
-            border: 1px solid var(--line);
-            background: rgba(255,255,255,.025);
-            color: var(--muted);
-            cursor: pointer;
-            text-align: left;
-            transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
-        }
-        .world-tab:hover { transform: translateY(-2px); border-color: var(--line-strong); color: #fff; }
-        .world-tab.is-active { color: #fff; border-color: var(--gold); background: rgba(241,198,90,.09); box-shadow: inset 0 -2px 0 var(--gold); }
-        .world-tab span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; }
-        .world-tab strong { display: block; margin-top: 4px; font-size: 13px; }
-        .scroll-marker { position: absolute; z-index: 4; left: 50%; bottom: 22px; transform: translateX(-50%); color: #9ba9b7; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; }
-        .scroll-marker::after { content: ""; display: block; width: 1px; height: 28px; margin: 7px auto 0; background: linear-gradient(var(--cyan), transparent); animation: scrollPulse 1.8s ease-in-out infinite; }
-        @keyframes scrollPulse { 50% { transform: scaleY(.55); transform-origin: top; opacity: .45; } }
-
-        /* Shared sections */
-        .section { position: relative; padding: 108px 0; }
-        .section-head { display: grid; grid-template-columns: .8fr 1.2fr; gap: 72px; align-items: end; margin-bottom: 52px; }
-        .eyebrow { margin: 0 0 12px; color: var(--cyan); font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: .16em; }
-        .section-title { margin: 0; font-size: clamp(36px, 4.4vw, 60px); line-height: 1.13; font-weight: 900; letter-spacing: 0; }
-        .section-lead { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.85; }
-
-        /* Interactive journey */
-        .journey { background: #0b121d; }
-        .journey::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(103,216,232,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(103,216,232,.035) 1px, transparent 1px); background-size: 52px 52px; }
-        .quest-board {
-            position: relative;
-            min-height: 660px;
-            overflow: hidden;
-            border: 1px solid rgba(133,205,217,.3);
-            background: url("./assets/story/sun-engine-map.jpg") center / cover no-repeat;
-            box-shadow: 0 36px 100px rgba(0,0,0,.38);
-        }
-        .quest-board::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,9,17,.15) 0%, rgba(4,9,17,.1) 50%, rgba(4,9,17,.9) 75%, rgba(4,9,17,.97) 100%); }
-        .map-route { position: absolute; inset: 0 35% 0 0; }
-        .map-route::before { content: ""; position: absolute; left: 11%; right: 5%; top: 54%; height: 4px; background: repeating-linear-gradient(90deg, rgba(255,226,139,.9) 0 18px, transparent 18px 31px); transform: rotate(-8deg); filter: drop-shadow(0 0 7px rgba(241,198,90,.6)); }
-        .quest-node {
-            position: absolute;
-            width: 54px;
-            height: 54px;
-            border: 3px solid rgba(255,255,255,.7);
-            border-radius: 50%;
-            background: rgba(7,14,24,.9);
-            box-shadow: 0 8px 25px rgba(0,0,0,.45);
-            font-family: var(--mono);
-            font-weight: 900;
-            cursor: pointer;
-            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-        }
-        .quest-node:nth-child(1) { left: 10%; top: 58%; }
-        .quest-node:nth-child(2) { left: 28%; top: 49%; }
-        .quest-node:nth-child(3) { left: 47%; top: 53%; }
-        .quest-node:nth-child(4) { left: 65%; top: 40%; }
-        .quest-node:nth-child(5) { left: 82%; top: 35%; }
-        .quest-node:hover { transform: scale(1.12); border-color: var(--cyan); box-shadow: 0 0 25px rgba(103,216,232,.55); }
-        .quest-node.is-active { color: #161006; border-color: #fff0bd; background: var(--gold); box-shadow: 0 0 0 7px rgba(241,198,90,.17), 0 0 30px rgba(241,198,90,.75); transform: scale(1.16); }
-        .quest-node.is-complete { border-color: var(--green); color: var(--green); }
-        .quest-panel {
-            position: absolute;
-            z-index: 2;
-            top: 0;
-            right: 0;
-            width: 38%;
-            height: 100%;
-            padding: 58px 46px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border-left: 1px solid rgba(103,216,232,.2);
-        }
-        .quest-count { color: var(--gold); font-family: var(--mono); font-size: 11px; font-weight: 900; letter-spacing: .14em; }
-        .quest-panel h3 { margin: 14px 0 12px; font-size: clamp(28px, 3vw, 42px); line-height: 1.25; }
-        .quest-panel p { margin: 0 0 24px; color: #b7c3cf; }
-        .quest-stats { display: grid; grid-template-columns: repeat(2, 1fr); border: 1px solid var(--line); }
-        .quest-stat { padding: 15px; }
-        .quest-stat + .quest-stat { border-left: 1px solid var(--line); }
-        .quest-stat strong { display: block; color: #fff; font-size: 19px; }
-        .quest-stat span { color: #8191a2; font-size: 12px; }
-        .quest-tip { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--cyan); font-size: 13px; }
-
-        /* Characters */
-        .characters { background: #efe8d7; color: #17202a; }
-        .characters .eyebrow { color: #167c8c; }
-        .characters .section-lead { color: #596470; }
-        .character-stage { display: grid; grid-template-columns: 1.12fr .88fr; min-height: 570px; border: 1px solid #c8bda5; background: #f9f4e8; box-shadow: 0 30px 80px rgba(38,30,20,.13); }
-        .character-art { position: relative; min-height: 570px; overflow: hidden; background-image: url("./assets/story/heroes.jpg"); background-size: 300% 100%; background-position: 50% 50%; background-repeat: no-repeat; transition: background-position .35s ease; }
-        .character-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 60%, rgba(249,244,232,.22)); }
-        .character-number { position: absolute; z-index: 2; top: 22px; left: 24px; padding: 8px 12px; color: #fff; background: rgba(10,18,25,.76); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; }
-        .character-copy { padding: 58px 50px; display: flex; flex-direction: column; justify-content: center; }
-        .character-role { color: #167c8c; font-family: var(--mono); font-size: 11px; font-weight: 900; letter-spacing: .15em; }
-        .character-copy h3 { margin: 13px 0 12px; font-size: clamp(34px, 4vw, 52px); line-height: 1.2; }
-        .character-copy > p { margin: 0; color: #596470; font-size: 17px; }
-        .character-tabs { display: grid; gap: 8px; margin-top: 30px; }
-        .character-tab { padding: 14px 16px; display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; border: 1px solid #d0c6b1; background: rgba(255,255,255,.34); color: #52606c; text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
-        .character-tab:hover { transform: translateX(4px); border-color: #167c8c; }
-        .character-tab.is-active { color: #17202a; border-color: #167c8c; background: #fffdf7; box-shadow: inset 4px 0 0 #167c8c; }
-        .character-tab b { font-family: var(--mono); color: #167c8c; }
-        .character-tab span { font-weight: 800; }
-        .character-tab small { color: #7b858e; }
-
-        /* Product system */
-        .system { background: #0f1825; }
-        .system-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
-        .system-card { position: relative; overflow: hidden; min-height: 300px; padding: 30px; border: 1px solid var(--line); background: var(--panel); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
-        .system-card:hover { transform: translateY(-5px); border-color: var(--line-strong); box-shadow: 0 22px 55px rgba(0,0,0,.25); }
-        .system-card.large { grid-column: span 7; }
-        .system-card.medium { grid-column: span 5; }
-        .system-card.third { grid-column: span 4; min-height: 250px; }
-        .system-index { color: var(--cyan); font-family: var(--mono); font-size: 10px; font-weight: 900; letter-spacing: .14em; }
-        .system-card h3 { margin: 17px 0 10px; font-size: 26px; }
-        .system-card p { max-width: 560px; margin: 0; color: var(--muted); }
-        .system-art-map { padding-right: 46%; background: linear-gradient(90deg, var(--panel) 0 52%, transparent), url("./assets/story/abyss-crown-map.jpg") right center / 54% 100% no-repeat; }
-        .system-meter { margin-top: 30px; }
-        .meter-head { display: flex; justify-content: space-between; color: #c4d0db; font-size: 12px; }
-        .meter-track { height: 8px; margin-top: 8px; background: #070c14; }
-        .meter-fill { width: 76%; height: 100%; background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); box-shadow: 0 0 16px rgba(103,216,232,.38); }
-        .report-lines { margin-top: 27px; display: grid; gap: 12px; }
-        .report-line { display: grid; grid-template-columns: 92px 1fr 38px; gap: 10px; align-items: center; color: #b7c3cf; font-size: 12px; }
-        .report-bar { height: 6px; background: #070c14; }
-        .report-bar i { display: block; height: 100%; background: var(--gold); }
-        .report-line:nth-child(2) .report-bar i { background: var(--red); }
-        .report-line:nth-child(3) .report-bar i { background: var(--green); }
-        .system-link { position: absolute; right: 24px; bottom: 22px; color: var(--cyan); font-family: var(--mono); font-size: 11px; text-decoration: none; }
-
-        /* Teacher */
-        .teacher { background: #171d1a; border-top: 1px solid rgba(104,211,155,.2); border-bottom: 1px solid rgba(104,211,155,.2); }
-        .teacher-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 76px; align-items: start; }
-        .teacher-copy { position: sticky; top: 118px; }
-        .teacher-copy p { color: var(--muted); font-size: 17px; }
-        .teacher-steps { border-top: 1px solid rgba(255,255,255,.16); }
-        .teacher-step { display: grid; grid-template-columns: 54px 1fr; gap: 20px; padding: 27px 0; border-bottom: 1px solid rgba(255,255,255,.16); }
-        .teacher-step b { color: var(--gold); font-family: var(--mono); }
-        .teacher-step strong { display: block; margin-bottom: 6px; font-size: 19px; }
-        .teacher-step span { color: var(--muted); }
-
-        /* Contact */
-        .contact { background: #ece7da; color: #17202a; }
-        .contact .eyebrow { color: #167c8c; }
-        .contact-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; }
-        .contact-copy p { color: #5d6872; font-size: 17px; }
-        .contact-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-        .field { display: grid; gap: 7px; }
-        .field.full { grid-column: 1 / -1; }
-        .field label { color: #59636c; font-size: 13px; font-weight: 700; }
-        .field input, .field textarea, .field select { width: 100%; border: 1px solid #bfb6a3; border-radius: 2px; padding: 13px 14px; background: #fffdf7; color: #17202a; outline: none; }
-        .field input:focus, .field textarea:focus, .field select:focus { border-color: #167c8c; box-shadow: 0 0 0 3px rgba(22,124,140,.12); }
-        .field textarea { min-height: 118px; resize: vertical; }
-        .send { grid-column: 1 / -1; min-height: 50px; border: 1px solid #176f7c; border-radius: 2px; color: #fff; background: #176f7c; font-weight: 900; cursor: pointer; transition: background .18s ease, transform .18s ease; }
-        .send:hover { transform: translateY(-2px); background: #115864; }
-        .form-msg { grid-column: 1 / -1; min-height: 24px; color: #176f7c; font-size: 14px; }
-
-        footer { padding: 30px 0; background: #050910; color: #8695a5; border-top: 1px solid rgba(103,216,232,.16); }
-        .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
-        .footer-inner strong { color: #fff; font-family: var(--mono); letter-spacing: .14em; }
-        :focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
-
-        html[data-theme="light"] {
-            --panel: #fffdf6;
-            --panel-soft: #f4efe3;
-            --line: rgba(28, 75, 85, .2);
-            --line-strong: rgba(22, 124, 140, .5);
-            --text: #172431;
-            --muted: #5b6874;
-            --cyan: #137f91;
-            --cyan-deep: #0b6574;
-            --gold: #b27d17;
-            --gold-deep: #80580d;
-            --red: #be4949;
-            --green: #22815b;
-        }
-        html[data-theme="light"] body { color: var(--text); background: #eee9dd; }
-        html[data-theme="light"] .site-nav {
-            color: #172431;
-            background: rgba(255, 252, 244, .97) !important;
-            border-bottom-color: rgba(22,124,140,.3);
-            box-shadow: 0 10px 30px rgba(45,43,35,.14);
-        }
-        html[data-theme="light"] .brand { color: #172431; }
-        html[data-theme="light"] .brand-mark { color: #fff; background: #137f91; border-color: #0b6574; }
-        html[data-theme="light"] .nav-links a { color: #334352; }
-        html[data-theme="light"] .nav-links a:hover,
-        html[data-theme="light"] .nav-links a.is-active { color: #0b5967; background: rgba(19,127,145,.08); }
-        html[data-theme="light"] .nav-login { color: #fff !important; background: #167889; border-color: #0e6170; box-shadow: none; }
-        html[data-theme="light"] .nav-login:hover { color: #fff !important; background: #0d5e6c !important; }
-        html[data-theme="light"] .menu-toggle { border-color: rgba(19,127,145,.5); background: rgba(19,127,145,.05); }
-        html[data-theme="light"] .menu-toggle span { background: #172431; }
-        html[data-theme="light"] .journey { color: #172431; background: #e7eceb; }
-        html[data-theme="light"] .journey .section-lead { color: #55646f; }
-        html[data-theme="light"] .system { color: #172431; background: #dfe7e8; }
-        html[data-theme="light"] .system .section-lead,
-        html[data-theme="light"] .system-card p { color: #5b6874; }
-        html[data-theme="light"] .system-card { box-shadow: 0 16px 42px rgba(35,56,61,.08); }
-        html[data-theme="light"] .system-meter .meter-track,
-        html[data-theme="light"] .report-bar { background: #d8dfdc; }
-        html[data-theme="light"] .system-link { color: #0b6574; }
-        html[data-theme="light"] .teacher { color: #fff; }
-        html[data-theme="light"] .teacher .section-title,
-        html[data-theme="light"] .teacher strong { color: #fff; }
-        html[data-theme="light"] footer { color: #91a0ad; }
-
-        @media (max-width: 980px) {
-            .hero-grid { grid-template-columns: 1fr; gap: 34px; }
-            .world-console { justify-self: start; width: min(520px, 100%); }
-            .hero { height: auto; min-height: 900px; }
-            .hero::before { background: linear-gradient(90deg, rgba(4,9,17,.93), rgba(4,9,17,.48)), linear-gradient(0deg, #070b12 0%, transparent 45%); }
-            .section-head, .teacher-layout, .contact-layout { grid-template-columns: 1fr; gap: 30px; }
-            .quest-board { min-height: 780px; }
-            .quest-board::before { background: linear-gradient(0deg, rgba(4,9,17,.97) 0 45%, rgba(4,9,17,.08) 70%); }
-            .map-route { inset: 0 0 40%; }
-            .quest-panel { top: auto; bottom: 0; width: 100%; height: 46%; padding: 35px 30px; border-left: 0; border-top: 1px solid rgba(103,216,232,.2); }
-            .character-stage { grid-template-columns: 1fr; }
-            .character-art { min-height: 520px; }
-            .system-card.large, .system-card.medium { grid-column: span 12; }
-            .system-card.third { grid-column: span 6; }
-            .teacher-copy { position: static; }
-        }
-
-        @media (max-width: 760px) {
-            .shell { width: min(100% - 28px, 1220px); }
-            .site-nav { height: 66px; }
-            .brand { font-size: 13px; }
-            .brand-mark { width: 34px; height: 34px; }
-            .menu-toggle { display: block; }
-            .nav-links {
-                position: absolute;
-                top: 66px;
-                left: 0;
-                right: 0;
-                display: none;
-                padding: 12px 14px 18px;
-                background: rgba(5,10,18,.98);
-                border-bottom: 1px solid var(--line-strong);
-                box-shadow: 0 20px 40px rgba(0,0,0,.4);
-            }
-            .site-nav.is-open .nav-links { display: grid; }
-            html[data-theme="light"] .site-nav.is-open .nav-links { background: rgba(255,252,244,.99); }
-            .site-nav.is-open .menu-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
-            .site-nav.is-open .menu-toggle span:nth-child(2) { opacity: 0; }
-            .site-nav.is-open .menu-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-            .nav-links a { padding: 13px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
-            .nav-login { margin: 8px 0 0; text-align: center; }
-            .hero { min-height: 920px; }
-            .hero-grid { padding: 112px 0 74px; }
-            .hero h1 { font-size: clamp(58px, 18vw, 86px); }
-            .hero-title-cn { font-size: 28px; }
-            .hero-description { font-size: 16px; }
-            .button { width: 100%; }
-            .world-console { padding: 14px; }
-            .world-tabs { grid-template-columns: 1fr; }
-            .world-tab { min-height: 52px; display: grid; grid-template-columns: 62px 1fr; align-items: center; }
-            .world-tab strong { margin: 0; }
-            .scroll-marker { display: none; }
-            .section { padding: 78px 0; }
-            .section-head { margin-bottom: 34px; }
-            .section-title { font-size: 38px; }
-            .section-lead { font-size: 16px; }
-            .quest-board { min-height: 680px; }
-            .map-route { inset: 0 0 47%; }
-            .quest-node { width: 44px; height: 44px; font-size: 12px; }
-            .quest-panel { height: 49%; padding: 27px 20px; }
-            .quest-panel h3 { font-size: 27px; margin: 9px 0; }
-            .quest-panel p { font-size: 14px; margin-bottom: 15px; }
-            .character-art { min-height: 430px; }
-            .character-copy { padding: 34px 22px; }
-            .character-tab { grid-template-columns: 28px 1fr; }
-            .character-tab small { grid-column: 2; }
-            .system-card.large, .system-card.medium, .system-card.third { grid-column: span 12; }
-            .system-art-map { padding-right: 30px; padding-bottom: 210px; background: linear-gradient(0deg, transparent 0 42%, var(--panel) 73%), url("./assets/story/abyss-crown-map.jpg") center bottom / 100% 58% no-repeat; }
-            .contact-form { grid-template-columns: 1fr; }
-            .field.full, .send, .form-msg { grid-column: auto; }
-            .footer-inner { flex-direction: column; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
-        }
-    </style>
 </head>
 <body>
+    <div class="page-progress" aria-hidden="true"><i></i></div>
+
     <nav class="site-nav" aria-label="主导航">
-        <div class="shell nav-inner">
-            <a class="brand" href="#top" aria-label="VocaQuest 首页"><span class="brand-mark" aria-hidden="true">VQ</span><span>VOCAQUEST</span></a>
-            <button class="menu-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false"><span></span><span></span><span></span></button>
-            <div class="nav-links">
-                <a href="#experience">冒险地图</a>
-                <a href="#characters">主角系统</a>
-                <a href="#features">学习系统</a>
-                <a href="#teacher">教师后台</a>
-                <a class="nav-login" href="./dashboard.html">进入平台</a>
+        <a class="brand" href="#top" aria-label="VocaQuest 首页">
+            <span class="brand-orbit" aria-hidden="true"><i></i></span>
+            <span>VOCAQUEST</span>
+        </a>
+        <div class="nav-actions">
+            <a class="nav-enter" href="./dashboard.html">进入平台</a>
+            <button class="menu-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false"><span></span><span></span></button>
+        </div>
+        <div class="nav-links" aria-hidden="true">
+            <div class="nav-link-list">
+                <a href="#experience"><small>01</small><span>故事世界</span></a>
+                <a href="#map"><small>02</small><span>学习地图</span></a>
+                <a href="#characters"><small>03</small><span>主角系统</span></a>
+                <a href="#features"><small>04</small><span>学习能力</span></a>
+                <a href="#teacher"><small>05</small><span>教师后台</span></a>
             </div>
+            <div class="nav-footer"><span>STORY-DRIVEN ENGLISH LEARNING</span><a href="./dashboard.html">START YOUR QUEST →</a></div>
         </div>
     </nav>
 
     <main id="top">
-        <section class="hero" id="hero">
-            <div class="hero-backdrop" aria-hidden="true"></div>
-            <div class="shell hero-grid">
-                <div class="hero-copy">
-                    <p class="hero-kicker">STORY-DRIVEN ENGLISH LEARNING</p>
-                    <h1>VOCAQUEST</h1>
-                    <p class="hero-title-cn">让每个词包，成为一场真正的冒险</p>
-                    <p class="hero-description">老师上传教学内容，系统建立完整世界、角色与剧情路线。学生根据自己的水平进入不同任务，在推进故事的同时掌握词汇与语境。</p>
-                    <div class="hero-actions">
-                        <a class="button button-primary" href="./dashboard.html">进入冒险</a>
-                        <a class="button button-secondary" href="#experience">查看世界地图</a>
-                    </div>
-                    <div class="hero-meta" aria-label="平台核心能力">
-                        <span>自适应难度</span><span>词包专属世界</span><span>教师学习报告</span>
+        <section class="hero" aria-labelledby="hero-title">
+            <div class="hero-media" aria-hidden="true"><img src="./assets/landing/vocaquest-world.jpg" alt=""></div>
+            <div class="hero-frame" aria-hidden="true"></div>
+            <div class="hero-content">
+                <p class="hero-kicker"><span>VQ / 2026</span><span>ADAPTIVE RPG LEARNING</span></p>
+                <h1 id="hero-title">VOCAQUEST</h1>
+                <div class="hero-bottom">
+                    <p class="hero-statement">每个词包<br>都是一整个世界</p>
+                    <div class="hero-intro">
+                        <p>教师上传内容，学生进入故事。词汇、语境、选择与成长记录在同一条冒险路线里发生。</p>
+                        <a class="round-link" href="./dashboard.html"><span>ENTER<br>WORLD</span><i aria-hidden="true">→</i></a>
                     </div>
                 </div>
-
-                <aside class="world-console" aria-label="世界地图选择器">
-                    <div class="console-head">
-                        <span class="console-label">WORLD ARCHIVE / 03</span>
-                        <span class="console-signal" aria-hidden="true"><i></i><i></i><i></i></span>
-                    </div>
-                    <div class="world-preview">
-                        <span class="route-line" aria-hidden="true"></span>
-                        <div class="preview-status"><small>ACTIVE WORLD</small><strong id="world-name">星图边境</strong></div>
-                    </div>
-                    <div class="world-tabs">
-                        <button class="world-tab is-active" type="button" data-image="./assets/story/star-chart-map.jpg" data-name="星图边境"><span>WORLD 01</span><strong>星图边境</strong></button>
-                        <button class="world-tab" type="button" data-image="./assets/story/abyss-crown-map.jpg" data-name="深渊王冠"><span>WORLD 02</span><strong>深渊王冠</strong></button>
-                        <button class="world-tab" type="button" data-image="./assets/story/sun-engine-map.jpg" data-name="太阳引擎"><span>WORLD 03</span><strong>太阳引擎</strong></button>
-                    </div>
-                </aside>
             </div>
-            <div class="scroll-marker">SCROLL TO EXPLORE</div>
+            <div class="hero-coordinate" aria-hidden="true"><span>31.2304 N</span><i></i><span>121.4737 E</span></div>
+            <a class="hero-scroll" href="#experience"><span>SCROLL</span><i></i></a>
         </section>
 
-        <section class="section journey" id="experience">
-            <div class="shell">
-                <div class="section-head">
-                    <div><p class="eyebrow">THE ADVENTURE MAP</p><h2 class="section-title">每一步学习，都在地图上留下进度</h2></div>
-                    <p class="section-lead">一份词包会按照合理数量拆成章节。学生可以看见完整世界，选择角色和剧情支线，但每一次路线决定都会经过确认，并写入自己的冒险档案。</p>
-                </div>
-                <div class="quest-board">
-                    <div class="map-route" aria-label="示例学习路线">
-                        <button class="quest-node is-complete" type="button" data-stage="0">01</button>
-                        <button class="quest-node is-active" type="button" data-stage="1">02</button>
-                        <button class="quest-node" type="button" data-stage="2">03</button>
-                        <button class="quest-node" type="button" data-stage="3">04</button>
-                        <button class="quest-node" type="button" data-stage="4">05</button>
-                    </div>
-                    <div class="quest-panel">
-                        <span class="quest-count" id="quest-count">CHAPTER 02 / ACTIVE</span>
-                        <h3 id="quest-title">穿过失落观测站</h3>
-                        <p id="quest-copy">完成本章词义与听音任务，找出星图中被隐藏的航线。选择不同答案，会开启下一章的不同入口。</p>
-                        <div class="quest-stats">
-                            <div class="quest-stat"><strong id="quest-words">8 个</strong><span>本章学习目标</span></div>
-                            <div class="quest-stat"><strong id="quest-mode">听音 + 识义</strong><span>当前任务组合</span></div>
-                        </div>
-                        <div class="quest-tip">点击地图节点，预览不同章节状态</div>
+        <section class="manifesto" id="experience">
+            <div class="ticker" aria-hidden="true"><div>ONE PACK · ONE WORLD · MANY PATHS · ONE PACK · ONE WORLD · MANY PATHS ·</div></div>
+            <div class="manifesto-inner reveal">
+                <p class="section-no">01 / THE IDEA</p>
+                <h2>练习不该只是一张表。<br><em>它应该带学生去一个地方。</em></h2>
+                <div class="manifesto-foot">
+                    <p>VocaQuest 把老师的词包拆成合理章节，并把每一章放进连续剧情。学生看见的是选择、探索与结果；教师掌握的是难度、进度和真实学习数据。</p>
+                    <div class="manifesto-stats">
+                        <div><strong data-count="10">0</strong><span>每关最多词数</span></div>
+                        <div><strong data-count="3">0</strong><span>自适应难度</span></div>
+                        <div><strong data-count="1">0</strong><span>词包一次生成</span></div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section characters" id="characters">
-            <div class="shell">
-                <div class="section-head">
-                    <div><p class="eyebrow">CHOOSE YOUR HERO</p><h2 class="section-title">不是一个跳动方块，而是属于玩家的主角</h2></div>
-                    <p class="section-lead">固定的高质量角色美术保证每个世界风格统一；主角的性格会影响故事视角与分支，但不会改变教师指定的学习目标。</p>
-                </div>
-                <div class="character-stage">
-                    <div class="character-art"><span class="character-number" id="character-number">HERO 02</span></div>
-                    <div class="character-copy">
-                        <span class="character-role" id="character-role">ACTION ROUTE</span>
-                        <h3 id="character-name">陈诺 · 行动派冒险家</h3>
-                        <p id="character-description">直觉敏锐，擅长在突发状况中寻找出口。她的路线更强调听音判断、限时任务和关键选择。</p>
-                        <div class="character-tabs">
-                            <button class="character-tab" type="button" data-hero="0"><b>01</b><span>林思 · 语言学侦探</span><small>观察与推理</small></button>
-                            <button class="character-tab is-active" type="button" data-hero="1"><b>02</b><span>陈诺 · 行动派冒险家</span><small>听音与决断</small></button>
-                            <button class="character-tab" type="button" data-hero="2"><b>03</b><span>苏晓 · 记忆收藏家</span><small>回忆与联结</small></button>
-                        </div>
+        <section class="map-story" id="map">
+            <div class="map-sticky">
+                <img class="map-image" src="./assets/landing/vocaquest-map.jpg" alt="包含观测台、图书馆、风暴桥与终点城堡的 2.5D 学习地图">
+                <div class="map-vignette" aria-hidden="true"></div>
+                <div class="map-topline"><span>02 / LEARNING MAP</span><span id="map-progress-label">CHAPTER 01</span></div>
+                <div class="map-story-copy">
+                    <p id="world-name">起点 · 星辰观测台</p>
+                    <h2 id="quest-title">先看见完整世界，<br>再走出自己的路线</h2>
+                    <p id="quest-copy">地图从第一天就完整展开。学生知道终点在哪里，也能看见每次练习让自己前进了多少。</p>
+                    <div class="world-tabs" aria-label="地图章节预览">
+                        <button class="world-tab is-active" type="button" data-stage="0"><span>01</span><strong>观测台</strong></button>
+                        <button class="world-tab" type="button" data-stage="1"><span>02</span><strong>字典城</strong></button>
+                        <button class="world-tab" type="button" data-stage="2"><span>03</span><strong>风暴桥</strong></button>
                     </div>
                 </div>
+                <div class="quest-nodes" aria-label="示例学习关卡">
+                    <button class="quest-node is-active" type="button" data-stage="0" aria-label="第一章"></button>
+                    <button class="quest-node" type="button" data-stage="1" aria-label="第二章"></button>
+                    <button class="quest-node" type="button" data-stage="2" aria-label="第三章"></button>
+                </div>
+                <div class="map-scroll-cue" aria-hidden="true"><span>SCROLL TO MOVE</span><i></i></div>
             </div>
         </section>
 
-        <section class="section system" id="features">
-            <div class="shell">
-                <div class="section-head">
-                    <div><p class="eyebrow">ONE CONNECTED SYSTEM</p><h2 class="section-title">游戏体验背后，是完整的学习系统</h2></div>
-                    <p class="section-lead">词汇记忆、语境填空、XP、错题与报告不再彼此割裂。学生看到冒险，教师看到可以行动的数据。</p>
+        <section class="characters" id="characters">
+            <div class="characters-head reveal">
+                <p class="section-no">03 / CHOOSE YOUR HERO</p>
+                <h2>同一个世界，<br>三种看待冒险的方式。</h2>
+            </div>
+            <div class="character-visual">
+                <img src="./assets/landing/vocaquest-heroes.jpg" alt="三位 VocaQuest 学生冒险主角">
+                <div class="character-focus" aria-hidden="true"></div>
+                <div class="character-copy">
+                    <span id="character-number">HERO 01</span>
+                    <h3 id="character-name">林思 · 语言学侦探</h3>
+                    <p id="character-description">从词义和符号里发现规律，用推理打开隐藏路线。</p>
                 </div>
-                <div class="system-grid">
-                    <article class="system-card large system-art-map feature-row"><span class="system-index">01 / STORY WORLD</span><h3>故事化 RPG 学习地图</h3><p>同一词包只生成一次世界设定，供班级共同使用。教师可以保留多个版本并选择当前发布的世界。</p><a class="system-link" href="./index.html">进入词汇冒险 →</a></article>
-                    <article class="system-card medium feature-row"><span class="system-index">02 / ADAPTIVE LEVEL</span><h3>自适应学生水平</h3><p>系统根据历史正确率、完成速度和薄弱词，持续调整基础、标准与进阶任务。</p><div class="system-meter"><div class="meter-head"><span>当前掌握率</span><strong>76%</strong></div><div class="meter-track"><div class="meter-fill"></div></div></div></article>
-                    <article class="system-card third"><span class="system-index">03 / CONTEXT QUEST</span><h3>语境填空</h3><p>不提前暴露中文答案，以语法范围、真实语境和分级提示完成迁移练习。</p><a class="system-link" href="./fillblank.html">进入语境冒险 →</a></article>
-                    <article class="system-card third feature-row"><span class="system-index">04 / TEACHER REPORT</span><h3>可导出的学习报告</h3><p>快速看清共同难词、持续未完成学生和词包难度是否合理。</p><div class="report-lines"><div class="report-line"><span>本周掌握率</span><div class="report-bar"><i style="width:78%"></i></div><b>78</b></div><div class="report-line"><span>高频错词</span><div class="report-bar"><i style="width:44%"></i></div><b>20</b></div><div class="report-line"><span>任务完成率</span><div class="report-bar"><i style="width:86%"></i></div><b>86</b></div></div></article>
-                    <article class="system-card third feature-row"><span class="system-index">05 / GROWTH LOOP</span><h3>成就、XP 与排行榜</h3><p>首领战、班级挑战与成就系统持续记录学习成长，而不是只奖励一次答对。</p><a class="system-link" href="./challenge.html">查看班级挑战 →</a></article>
+                <div class="character-tabs" aria-label="主角选择预览">
+                    <button class="character-tab is-active" type="button" data-hero="0"><small>01</small><span>林思</span></button>
+                    <button class="character-tab" type="button" data-hero="1"><small>02</small><span>陈诺</span></button>
+                    <button class="character-tab" type="button" data-hero="2"><small>03</small><span>苏晓</span></button>
                 </div>
             </div>
         </section>
 
-        <section class="section teacher" id="teacher">
-            <div class="shell teacher-layout">
-                <div class="teacher-copy"><p class="eyebrow">FOR TEACHERS</p><h2 class="section-title">教师控制内容，系统负责把学习变成冒险</h2><p>生成内容会缓存并复用，避免对相同词包重复消耗。教师始终拥有班级、难度、世界版本与报告的控制权。</p><a class="button button-primary" href="./dashboard.html">打开教师后台</a></div>
-                <div class="teacher-steps">
-                    <div class="teacher-step"><b>01</b><div><strong>上传并检查词包</strong><span>自动去重并把过长内容拆分为每关最多 10 个目标。</span></div></div>
-                    <div class="teacher-step"><b>02</b><div><strong>预览并发布故事世界</strong><span>保留多个世界版本，确认后再向学生发布，不会覆盖旧内容。</span></div></div>
-                    <div class="teacher-step"><b>03</b><div><strong>分配班级与难度任务</strong><span>使用一次性邀请码或班级邀请码，班级人数限制为 60 人。</span></div></div>
-                    <div class="teacher-step"><b>04</b><div><strong>查看报告并返回课堂</strong><span>导出班级周报、学期对比、高频错词和学生个人学习档案。</span></div></div>
-                </div>
+        <section class="features" id="features">
+            <div class="features-intro reveal">
+                <p class="section-no">04 / THE SYSTEM</p>
+                <h2>学生体验冒险。<br>系统理解学习。</h2>
+            </div>
+            <div class="feature-row reveal">
+                <span>01</span><h3>自适应学生水平</h3><p>系统根据历史正确率、完成速度和薄弱词，让基础、标准与进阶内容跟着学生变化。</p><i>ADAPT</i>
+            </div>
+            <div class="feature-row reveal">
+                <span>02</span><h3>故事化 RPG 学习地图</h3><p>词汇与句子填空共享同一个世界、剧情路线、XP 和长期成长记录。</p><i>EXPLORE</i>
+            </div>
+            <div class="feature-row reveal">
+                <span>03</span><h3>可导出的学习报告</h3><p>班级周报、共同难词、个人档案和学期对比直接回答教师真正关心的问题。</p><i>INSIGHT</i>
+            </div>
+            <div class="feature-row reveal">
+                <span>04</span><h3>成就、XP 与排行榜</h3><p>首领战、班级挑战和成就把长期练习变成学生能看见、愿意继续的成长。</p><i>GROW</i>
             </div>
         </section>
 
-        <section class="section contact" id="contact">
-            <div class="shell contact-layout">
-                <div class="contact-copy"><p class="eyebrow">CONTACT</p><h2 class="section-title">申请教师使用权限</h2><p>填写学校、班级和使用需求后，会在本机打开邮件客户端。教师账号与班级邀请码均由平台安全生成。</p></div>
-                <div class="contact-form">
-                    <div class="field"><label for="c-name">姓名</label><input id="c-name" autocomplete="name" placeholder="张老师"></div>
-                    <div class="field"><label for="c-email">邮箱</label><input id="c-email" type="email" autocomplete="email" placeholder="teacher@school.com"></div>
-                    <div class="field full"><label for="c-type">咨询类型</label><select id="c-type"><option value="">请选择</option><option value="invite">申请教师权限</option><option value="tool">使用咨询</option><option value="bug">报告问题</option><option value="feature">功能建议</option><option value="other">其他</option></select></div>
-                    <div class="field full"><label for="c-msg">内容</label><textarea id="c-msg" placeholder="请简要说明学校、班级和使用需求"></textarea></div>
-                    <button class="send" type="button" onclick="sendContact()">打开邮件并发送</button>
-                    <div class="form-msg" id="form-msg" aria-live="polite"></div>
+        <section class="teacher" id="teacher">
+            <div class="teacher-copy reveal">
+                <p class="section-no">05 / FOR TEACHERS</p>
+                <h2>一眼看见<br>班级真正发生了什么。</h2>
+                <p>不是更多图表，而是更明确的答案：谁没有完成、哪些词全班都难、本周是否提高、词包是否过难，以及哪些内容需要重新进入课堂。</p>
+                <a class="line-link" href="./dashboard.html">打开教师后台 <span>→</span></a>
+            </div>
+            <div class="report-stage reveal" aria-label="教师报告功能预览">
+                <div class="report-head"><span>VOCABULARY HEALTH</span><strong>WEEK 08</strong></div>
+                <div class="mastery"><span>全年级掌握率</span><strong><b data-count="78">0</b>%</strong></div>
+                <div class="report-chart">
+                    <div><span>7A</span><i style="--value:82%"></i><b>82</b></div>
+                    <div><span>7B</span><i style="--value:64%"></i><b>64</b></div>
+                    <div><span>7C</span><i style="--value:88%"></i><b>88</b></div>
+                    <div><span>7D</span><i style="--value:76%"></i><b>76</b></div>
                 </div>
+                <div class="report-answer"><span>需要优先关注</span><strong>7B 班 · 6 名学生持续未完成</strong></div>
+                <div class="report-answer"><span>建议重新教学</span><strong>resilient · interpret · preserve</strong></div>
+                <div class="report-footer"><span>PDF READY</span><span>TOP 20 WRONG WORDS</span><span>STUDENT ARCHIVES</span></div>
+            </div>
+        </section>
+
+        <section class="final-cta">
+            <img src="./assets/landing/vocaquest-world.jpg" alt="VocaQuest 冒险世界">
+            <div class="final-shade" aria-hidden="true"></div>
+            <div class="final-content reveal">
+                <p>THE NEXT CHAPTER IS READY</p>
+                <h2>让下一份词包，<br>从一场冒险开始。</h2>
+                <a class="round-link is-light" href="./dashboard.html"><span>START<br>QUEST</span><i aria-hidden="true">→</i></a>
             </div>
         </section>
     </main>
 
-    <footer><div class="shell footer-inner"><strong>VOCAQUEST</strong><span>Designed by Marc · Story-driven English learning</span></div></footer>
-
-    <script>
-        const hero = document.getElementById('hero');
-        const heroBackdrop = hero.querySelector('.hero-backdrop');
-        const worldPreview = hero.querySelector('.world-preview');
-        const worldName = document.getElementById('world-name');
-        document.querySelectorAll('.world-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.world-tab').forEach(item => item.classList.remove('is-active'));
-                tab.classList.add('is-active');
-                hero.classList.add('is-swapping');
-                const image = tab.dataset.image;
-                window.setTimeout(() => {
-                    heroBackdrop.style.backgroundImage = `url("${image}")`;
-                    worldPreview.style.backgroundImage = `url("${image}")`;
-                    worldName.textContent = tab.dataset.name;
-                    hero.classList.remove('is-swapping');
-                }, 180);
-            });
-        });
-
-        const questData = [
-            { count: 'CHAPTER 01 / COMPLETE', title: '进入星图边境', copy: '识别第一组核心词汇，解锁世界地图和主角档案。完成记录会保留在个人学习路径中。', words: '7 个', mode: '识义 + 记忆' },
-            { count: 'CHAPTER 02 / ACTIVE', title: '穿过失落观测站', copy: '完成本章词义与听音任务，找出星图中被隐藏的航线。选择不同答案，会开启下一章的不同入口。', words: '8 个', mode: '听音 + 识义' },
-            { count: 'CHAPTER 03 / PREVIEW', title: '寻找无声信标', copy: '使用拼写和语境线索修复失效信标。本章会根据前两章表现调整题目难度。', words: '9 个', mode: '拼写 + 语境' },
-            { count: 'CHAPTER 04 / LOCKED', title: '穿越浮空遗迹', copy: '路线选择将在这里发生分支。系统会展示后果并要求二次确认，然后写入个人冒险路线。', words: '8 个', mode: '综合任务' },
-            { count: 'CHAPTER 05 / BOSS', title: '守住世界档案', copy: '使用本阶段的高频错词进行首领战，完成后生成新的掌握率与薄弱词记录。', words: '10 个', mode: '首领战' }
-        ];
-        document.querySelectorAll('.quest-node').forEach(node => {
-            node.addEventListener('click', () => {
-                document.querySelectorAll('.quest-node').forEach(item => item.classList.remove('is-active'));
-                node.classList.add('is-active');
-                const data = questData[Number(node.dataset.stage)];
-                document.getElementById('quest-count').textContent = data.count;
-                document.getElementById('quest-title').textContent = data.title;
-                document.getElementById('quest-copy').textContent = data.copy;
-                document.getElementById('quest-words').textContent = data.words;
-                document.getElementById('quest-mode').textContent = data.mode;
-            });
-        });
-
-        const heroData = [
-            { role: 'DETECTIVE ROUTE', name: '林思 · 语言学侦探', description: '善于观察符号与语言规律。她的路线更强调词义辨析、线索组合和推理选择。', position: '0% 50%', number: 'HERO 01' },
-            { role: 'ACTION ROUTE', name: '陈诺 · 行动派冒险家', description: '直觉敏锐，擅长在突发状况中寻找出口。她的路线更强调听音判断、限时任务和关键选择。', position: '50% 50%', number: 'HERO 02' },
-            { role: 'MEMORY ROUTE', name: '苏晓 · 记忆收藏家', description: '能够把词汇、场景和往事建立联结。她的路线更强调回忆提取、语境迁移与故事细节。', position: '100% 50%', number: 'HERO 03' }
-        ];
-        const characterArt = document.querySelector('.character-art');
-        document.querySelectorAll('.character-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.character-tab').forEach(item => item.classList.remove('is-active'));
-                tab.classList.add('is-active');
-                const data = heroData[Number(tab.dataset.hero)];
-                characterArt.style.backgroundPosition = data.position;
-                document.getElementById('character-number').textContent = data.number;
-                document.getElementById('character-role').textContent = data.role;
-                document.getElementById('character-name').textContent = data.name;
-                document.getElementById('character-description').textContent = data.description;
-            });
-        });
-
-        const nav = document.querySelector('.site-nav');
-        const menuToggle = document.querySelector('.menu-toggle');
-        menuToggle.addEventListener('click', () => {
-            const open = nav.classList.toggle('is-open');
-            menuToggle.setAttribute('aria-expanded', String(open));
-            menuToggle.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
-        });
-        document.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', () => {
-            nav.classList.remove('is-open');
-            menuToggle.setAttribute('aria-expanded', 'false');
-        }));
-
-        const observedSections = ['experience', 'characters', 'features', 'teacher'].map(id => document.getElementById(id));
-        const navObserver = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                document.querySelectorAll('.nav-links a').forEach(link => link.classList.toggle('is-active', link.getAttribute('href') === `#${entry.target.id}`));
-            });
-        }, { rootMargin: '-35% 0px -55% 0px' });
-        observedSections.forEach(section => navObserver.observe(section));
-
-        function sendContact() {
-            const name = document.getElementById('c-name').value.trim();
-            const email = document.getElementById('c-email').value.trim();
-            const type = document.getElementById('c-type').value;
-            const message = document.getElementById('c-msg').value.trim();
-            const feedback = document.getElementById('form-msg');
-            if (!name || !email || !type || !message) {
-                feedback.textContent = '请完整填写姓名、邮箱、类型和内容。';
-                return;
-            }
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                feedback.textContent = '请检查邮箱格式。';
-                return;
-            }
-            const labels = { invite: '申请教师权限', tool: '使用咨询', bug: '报告问题', feature: '功能建议', other: '其他' };
-            const subject = encodeURIComponent(`[VocaQuest] ${labels[type]} - ${name}`);
-            const body = encodeURIComponent(`姓名：${name}\n回复邮箱：${email}\n类型：${labels[type]}\n\n${message}`);
-            window.open(`mailto:kinsgimth@hotmail.com?subject=${subject}&body=${body}`, '_blank');
-            feedback.textContent = '邮件内容已经准备好。';
-        }
-    </script>
+    <footer><strong>VOCAQUEST</strong><span>Story-driven adaptive English learning</span><span>Designed by Marc</span></footer>
+    <script src="./landing.js"></script>
 </body>
 </html>

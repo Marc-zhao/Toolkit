@@ -99,15 +99,15 @@ await check('landing-interactions', async () => {
   await page.waitForTimeout(250);
   const worldName = await page.locator('#world-name').innerText();
 
-  await page.locator('.quest-node').nth(3).click();
+  await page.locator('.quest-node').nth(2).click();
   const questTitle = await page.locator('#quest-title').innerText();
 
   await page.locator('.character-tab').nth(2).click();
   const characterName = await page.locator('#character-name').innerText();
 
   assert(menuOpen && menuVisible, 'Mobile navigation does not open');
-  assert(worldName === '深渊王冠', 'World selector did not update the active world');
-  assert(questTitle === '穿越浮空遗迹', 'Quest preview did not update');
+  assert(worldName === '中段 · 失落字典城', 'World selector did not update the active chapter');
+  assert(questTitle.includes('选择有后果'), 'Quest preview did not update');
   assert(characterName.includes('苏晓'), 'Character selector did not update');
   await context.close();
   return { menuOpen, menuVisible, worldName, questTitle, characterName };
@@ -120,11 +120,12 @@ await check('landing-light-theme-navigation', async () => {
   await page.locator('.menu-toggle').click();
   const details = await page.evaluate(() => ({
     navBackground: getComputedStyle(document.querySelector('.site-nav')).backgroundColor,
+    menuBackground: getComputedStyle(document.querySelector('.nav-links')).backgroundColor,
     linkColor: getComputedStyle(document.querySelector('.nav-links a')).color,
     linkVisible: getComputedStyle(document.querySelector('.nav-links')).display !== 'none'
   }));
   assert(details.linkVisible, 'Light theme mobile navigation does not open');
-  assert(details.navBackground !== details.linkColor, 'Light theme navigation lacks text contrast');
+  assert(details.menuBackground !== details.linkColor, 'Light theme navigation lacks text contrast');
   await page.screenshot({ path: `${outputDir}/landing-mobile-light.png`, fullPage: false });
   await context.close();
   return details;
