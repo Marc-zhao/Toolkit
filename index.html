@@ -2798,7 +2798,7 @@
             const canCreate = versions.length < (manager.maxVersions || 5) && !versions.some(version => version.status === 'generating');
             const cards = versions.map(version => {
                 const story = version.storyData?.story || {};
-                const image = version.storyData?.art?.mapImage || './assets/story/world-map.jpg';
+                const image = version.storyData?.art?.mapImage || './assets/story/sun-engine-map.jpg';
                 const statusText = version.status === 'ready' ? '完整' : version.status === 'partial' ? '图片待补全' : version.status === 'generating' ? '生成中' : '生成失败';
                 const previewable = ['ready', 'partial'].includes(version.status);
                 return `<article class="world-version-card ${version.isActive ? 'active' : ''}">
