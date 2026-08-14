@@ -2,6 +2,8 @@ import { chromium } from '../qa/node_modules/playwright/index.mjs';
 import fs from 'node:fs/promises';
 
 const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:8765';
+const qaTarget = process.env.QA_TARGET || 'local';
+const captureScreenshots = qaTarget === 'local';
 const baseHost = new URL(baseUrl).hostname;
 const executablePath = "../qa/.playwright/headless-shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 const outputDir = './qa-results/updates';
@@ -65,20 +67,21 @@ await check('landing-core-features', async () => {
     assert(text.includes(expected), `Homepage is missing ${expected}`);
   }
   assert(cards >= 4, 'Homepage does not show the core feature set');
-  await page.screenshot({ path: `${outputDir}/landing-desktop.png`, fullPage: true });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/landing-desktop.png`, fullPage: true });
   await page.locator('.map-sticky').scrollIntoViewIfNeeded();
   await page.locator('.world-tab').nth(1).click();
   await page.waitForTimeout(950);
-  await page.locator('.map-sticky').screenshot({ path: `${outputDir}/landing-map-desktop.png` });
+  if (captureScreenshots) await page.locator('.map-sticky').screenshot({ path: `${outputDir}/landing-map-desktop.png` });
   await page.locator('.character-stage').scrollIntoViewIfNeeded();
-  await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-desktop.png` });
+  if (captureScreenshots) await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-desktop.png` });
   await context.close();
   return { cards };
 });
 
 await check('landing-mobile-layout', async () => {
   const { page, context } = await newPage({ width: 390, height: 844 });
-  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'domcontentloaded' });
+  await page.locator('.hero').waitFor();
   const details = await page.evaluate(() => ({
     title: document.querySelector('.hero h1')?.textContent.trim(),
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -87,16 +90,17 @@ await check('landing-mobile-layout', async () => {
   assert(details.title === 'VOCAQUEST', 'Mobile homepage product title is missing');
   assert(!details.overflow, 'Mobile homepage has horizontal overflow');
   assert(details.emojiCount === 0, 'Mobile homepage still contains decorative emoji');
-  await page.screenshot({ path: `${outputDir}/landing-mobile.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/landing-mobile.png`, fullPage: false });
   await page.locator('.character-stage').scrollIntoViewIfNeeded();
-  await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-mobile.png` });
+  if (captureScreenshots) await page.locator('.character-stage').screenshot({ path: `${outputDir}/landing-characters-mobile.png` });
   await context.close();
   return details;
 });
 
 await check('landing-interactions', async () => {
   const { page, context } = await newPage({ width: 390, height: 844 });
-  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'domcontentloaded' });
+  await page.locator('.hero').waitFor();
 
   await page.locator('.menu-toggle').click();
   const menuOpen = await page.locator('.site-nav').evaluate(element => element.classList.contains('is-open'));
@@ -134,7 +138,8 @@ await check('landing-interactions', async () => {
 
 await check('landing-light-theme-navigation', async () => {
   const { page, context } = await newPage({ width: 390, height: 844 });
-  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'domcontentloaded' });
+  await page.locator('.hero').waitFor();
   await page.evaluate(() => window.VQTheme.set('light'));
   await page.locator('.menu-toggle').click();
   const details = await page.evaluate(() => ({
@@ -145,7 +150,7 @@ await check('landing-light-theme-navigation', async () => {
   }));
   assert(details.linkVisible, 'Light theme mobile navigation does not open');
   assert(details.menuBackground !== details.linkColor, 'Light theme navigation lacks text contrast');
-  await page.screenshot({ path: `${outputDir}/landing-mobile-light.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/landing-mobile-light.png`, fullPage: false });
   await context.close();
   return details;
 });
@@ -238,7 +243,7 @@ await check('hero-presentation', async () => {
   assert(details.choices === 3, 'Hero picker does not show three curated protagonists');
   assert(details.animation === 'none' && details.height >= 240, 'Hero presentation is still a jumping thumbnail');
   await page.waitForTimeout(700);
-  await page.screenshot({ path: `${outputDir}/hero-picker-desktop.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/hero-picker-desktop.png`, fullPage: false });
   await context.close();
   return details;
 });
@@ -272,9 +277,9 @@ await check('fillblank-large-map-and-confirmation', async () => {
   assert(details.touchAction.includes('pan-y'), 'Mobile map touch behavior is not configured for horizontal dragging');
   assert(details.confirmation, 'FillBlank level click does not open confirmation');
   assert(details.uniqueLeft >= details.stages, 'FillBlank stages still overlap horizontally');
-  await page.screenshot({ path: `${outputDir}/fillblank-large-mobile.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/fillblank-large-mobile.png`, fullPage: false });
   await page.evaluate(() => closeModal('modal-fb-route'));
-  await page.screenshot({ path: `${outputDir}/fillblank-map-mobile.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/fillblank-map-mobile.png`, fullPage: false });
   await context.close();
   return details;
 });
@@ -326,7 +331,7 @@ await check('battle-monster-curated-atlas', async () => {
   });
   assert(details.sprites === 1 && details.atlas, 'Battle monster did not render from the curated atlas');
   assert(details.hurt && details.attack && details.stage, 'Battle animation states are incomplete');
-  await page.screenshot({ path: `${outputDir}/battle-monster-desktop.png`, fullPage: false });
+  if (captureScreenshots) await page.screenshot({ path: `${outputDir}/battle-monster-desktop.png`, fullPage: false });
   await context.close();
   return details;
 });

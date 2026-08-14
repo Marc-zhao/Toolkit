@@ -118,30 +118,12 @@
     }
   ];
   let activeChapter = -1;
-  let activeMapLayer = 0;
   let manualChapterUntil = 0;
 
-  mapChapters.forEach(function (chapter) {
-    const preload = new Image();
-    preload.src = chapter.image;
-  });
-
-  function showMapScene(source) {
-    const current = mapImages[activeMapLayer];
-    if (current.getAttribute('src') === source) return;
-    const nextLayerIndex = activeMapLayer === 0 ? 1 : 0;
-    const next = mapImages[nextLayerIndex];
-    let activated = false;
-    function activate() {
-      if (activated) return;
-      activated = true;
-      next.classList.add('is-active');
-      current.classList.remove('is-active');
-      activeMapLayer = nextLayerIndex;
-    }
-    next.addEventListener('load', activate, { once: true });
-    next.src = source;
-    if (next.complete) requestAnimationFrame(activate);
+  function showMapScene(index) {
+    mapImages.forEach(function (image, imageIndex) {
+      image.classList.toggle('is-active', imageIndex === index);
+    });
   }
 
   function setChapter(index) {
@@ -153,7 +135,7 @@
     worldName.textContent = chapter.world;
     questTitle.innerHTML = chapter.title.replace('\n', '<br>');
     questCopy.textContent = chapter.copy;
-    showMapScene(chapter.image);
+    showMapScene(next);
     worldTabs.forEach(function (tab, tabIndex) { tab.classList.toggle('is-active', tabIndex === next); });
   }
 
