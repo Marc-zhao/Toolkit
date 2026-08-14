@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!ZHIPU_API_KEY) return res.status(503).json({ error: 'AI service is not configured' });
+  if (!ZHIPU_API_KEY) return forwardToCanonical(req, res, '/api/ai');
 
   try {
     const { messages, max_tokens = 2000, temperature = 0.7, purpose = 'content_generation' } = req.body || {};
@@ -70,6 +70,31 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: message });
   }
 };
+
+async function forwardToCanonical(req, res, path) {
+  const host = String(req.headers.host || req.headers['x-forwarded-host'] || '').toLowerCase();
+  if (host === 'vocaquest.cn' || host === 'www.vocaquest.cn') {
+    return res.status(503).json({ error: 'AI service is not configured' });
+  }
+  try {
+    const response = await fetch(`https://vocaquest.cn${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || '',
+        'X-VocaQuest-Proxy': 'backup-deployment',
+      },
+      body: JSON.stringify(req.body || {}),
+    });
+    const text = await response.text();
+    res.status(response.status);
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+    return res.send(text);
+  } catch (error) {
+    console.error('[zhipu-ai] Canonical proxy failed:', error.message);
+    return res.status(502).json({ error: 'AI service is temporarily unavailable' });
+  }
+}
 
 function normalizeMessages(messages) {
   if (!Array.isArray(messages)) return [];
