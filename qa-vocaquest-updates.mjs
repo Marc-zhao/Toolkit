@@ -1,7 +1,8 @@
 import { chromium } from '../qa/node_modules/playwright/index.mjs';
 import fs from 'node:fs/promises';
 
-const baseUrl = 'http://127.0.0.1:8765';
+const baseUrl = process.env.BASE_URL || 'http://127.0.0.1:8765';
+const baseHost = new URL(baseUrl).hostname;
 const executablePath = "../qa/.playwright/headless-shell-1200/chrome-headless-shell-mac-arm64/chrome-headless-shell";
 const outputDir = './qa-results/updates';
 await fs.mkdir(outputDir, { recursive: true });
@@ -15,7 +16,11 @@ function assert(condition, message) {
 
 async function newPage(viewport = { width: 1280, height: 900 }) {
   const context = await browser.newContext({ viewport, isMobile: viewport.width < 600 });
-  await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort('blockedbyclient'));
+  await context.route('**/*', route => {
+    const url = new URL(route.request().url());
+    if (/^https?:$/.test(url.protocol) && url.hostname !== baseHost) return route.abort('blockedbyclient');
+    return route.continue();
+  });
   await context.addInitScript(() => {
     const result = { data: [], error: null };
     const query = new Proxy({}, {
