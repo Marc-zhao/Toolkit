@@ -120,11 +120,20 @@
   let activeChapter = -1;
   let manualChapterUntil = 0;
 
+  function loadMapScene(image) {
+    if (!image || image.getAttribute('src') || !image.dataset.src) return;
+    image.src = image.dataset.src;
+  }
+
   function showMapScene(index) {
     mapImages.forEach(function (image, imageIndex) {
+      if (imageIndex === index) loadMapScene(image);
       image.classList.toggle('is-active', imageIndex === index);
     });
   }
+
+  window.setTimeout(function () { loadMapScene(mapImages[1]); }, 1200);
+  window.setTimeout(function () { loadMapScene(mapImages[2]); }, 3200);
 
   function setChapter(index) {
     const next = Math.max(0, Math.min(mapChapters.length - 1, index));
