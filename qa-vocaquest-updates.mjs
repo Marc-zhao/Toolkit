@@ -78,10 +78,54 @@ await check('landing-mobile-layout', async () => {
     overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     emojiCount: (document.body.innerText.match(/[\p{Extended_Pictographic}]/gu) || []).length
   }));
-  assert(details.title === '每个词包，都是一场新的冒险', 'Mobile homepage hero is missing');
+  assert(details.title === 'VOCAQUEST', 'Mobile homepage product title is missing');
   assert(!details.overflow, 'Mobile homepage has horizontal overflow');
   assert(details.emojiCount === 0, 'Mobile homepage still contains decorative emoji');
   await page.screenshot({ path: `${outputDir}/landing-mobile.png`, fullPage: false });
+  await context.close();
+  return details;
+});
+
+await check('landing-interactions', async () => {
+  const { page, context } = await newPage({ width: 390, height: 844 });
+  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'networkidle' });
+
+  await page.locator('.menu-toggle').click();
+  const menuOpen = await page.locator('.site-nav').evaluate(element => element.classList.contains('is-open'));
+  const menuVisible = await page.locator('.nav-links').evaluate(element => getComputedStyle(element).display !== 'none');
+  await page.locator('.menu-toggle').click();
+
+  await page.locator('.world-tab').nth(1).click();
+  await page.waitForTimeout(250);
+  const worldName = await page.locator('#world-name').innerText();
+
+  await page.locator('.quest-node').nth(3).click();
+  const questTitle = await page.locator('#quest-title').innerText();
+
+  await page.locator('.character-tab').nth(2).click();
+  const characterName = await page.locator('#character-name').innerText();
+
+  assert(menuOpen && menuVisible, 'Mobile navigation does not open');
+  assert(worldName === '深渊王冠', 'World selector did not update the active world');
+  assert(questTitle === '穿越浮空遗迹', 'Quest preview did not update');
+  assert(characterName.includes('苏晓'), 'Character selector did not update');
+  await context.close();
+  return { menuOpen, menuVisible, worldName, questTitle, characterName };
+});
+
+await check('landing-light-theme-navigation', async () => {
+  const { page, context } = await newPage({ width: 390, height: 844 });
+  await page.goto(`${baseUrl}/landing.html`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.VQTheme.set('light'));
+  await page.locator('.menu-toggle').click();
+  const details = await page.evaluate(() => ({
+    navBackground: getComputedStyle(document.querySelector('.site-nav')).backgroundColor,
+    linkColor: getComputedStyle(document.querySelector('.nav-links a')).color,
+    linkVisible: getComputedStyle(document.querySelector('.nav-links')).display !== 'none'
+  }));
+  assert(details.linkVisible, 'Light theme mobile navigation does not open');
+  assert(details.navBackground !== details.linkColor, 'Light theme navigation lacks text contrast');
+  await page.screenshot({ path: `${outputDir}/landing-mobile-light.png`, fullPage: false });
   await context.close();
   return details;
 });
@@ -94,6 +138,7 @@ for (const [name, route, openRegistration, inputId] of [
   await check(name, async () => {
     const { page, context } = await newPage();
     await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(600);
     await page.evaluate(openRegistration);
     const invite = page.locator(`#${inputId}`);
     assert(await invite.count() === 1, 'Invite input is missing');

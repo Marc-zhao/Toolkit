@@ -9,383 +9,688 @@
     <script src="./theme.js"></script>
     <style>
         :root {
-            --ink: #17233a;
-            --muted: #5d6b7f;
-            --paper: #f5f4ee;
-            --surface: #fffef9;
-            --line: #d8d8cf;
-            --forest: #176b59;
-            --forest-dark: #0d443a;
-            --gold: #c78e2a;
-            --sky: #ddecf0;
-            --serif: "Songti SC", "STSong", "Noto Serif SC", serif;
+            --night: #070b12;
+            --deep: #0b1320;
+            --panel: #111c2c;
+            --panel-soft: #162437;
+            --line: rgba(155, 192, 208, .22);
+            --line-strong: rgba(155, 218, 231, .5);
+            --text: #f7f2e6;
+            --muted: #aab6c5;
+            --cyan: #67d8e8;
+            --cyan-deep: #147f93;
+            --gold: #f1c65a;
+            --gold-deep: #9d6e13;
+            --red: #ef6b68;
+            --green: #68d39b;
             --sans: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+            --display: "Arial Narrow", "DIN Condensed", Impact, sans-serif;
+            --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
         }
 
         * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
+        html { scroll-behavior: smooth; background: var(--night); }
         body {
             margin: 0;
-            color: var(--ink);
-            background: var(--paper);
+            min-width: 320px;
+            overflow-x: hidden;
+            color: var(--text);
+            background: var(--night);
             font-family: var(--sans);
             font-size: 16px;
             line-height: 1.65;
         }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: 90;
+            pointer-events: none;
+            opacity: .2;
+            background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px);
+            background-size: 100% 4px;
+        }
         a { color: inherit; }
         button, input, textarea, select { font: inherit; }
-        .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+        button { color: inherit; }
+        .shell { width: min(1220px, calc(100% - 48px)); margin: 0 auto; }
 
+        /* Navigation */
         .site-nav {
             position: fixed;
-            z-index: 30;
+            z-index: 100;
             inset: 0 0 auto;
-            height: 72px;
+            height: 76px;
             color: #fff;
-            background: rgba(18, 33, 48, .62);
-            border-bottom: 1px solid rgba(255,255,255,.16);
-            backdrop-filter: blur(14px);
+            background: rgba(5, 10, 18, .94);
+            border-bottom: 1px solid rgba(103, 216, 232, .22);
+            box-shadow: 0 10px 34px rgba(0, 0, 0, .3);
+            backdrop-filter: blur(18px);
         }
         .nav-inner { height: 100%; display: flex; align-items: center; gap: 28px; }
-        .brand { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; font-weight: 800; letter-spacing: .08em; }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            font-family: var(--mono);
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: .16em;
+        }
         .brand-mark {
-            width: 30px;
-            aspect-ratio: 1;
+            width: 38px;
+            height: 38px;
             display: grid;
             place-items: center;
-            border: 1px solid rgba(255,255,255,.75);
-            transform: rotate(45deg);
+            color: var(--night);
+            background: var(--cyan);
+            border: 1px solid #bdf5fc;
+            box-shadow: 0 0 22px rgba(103, 216, 232, .32);
+            clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+            font-family: var(--display);
+            font-size: 17px;
+            letter-spacing: 0;
         }
-        .brand-mark::after { content: "V"; transform: rotate(-45deg); font-size: 13px; font-weight: 900; }
-        .nav-links { margin-left: auto; display: flex; align-items: center; gap: 26px; }
-        .nav-links a { color: rgba(255,255,255,.82); text-decoration: none; font-size: 14px; }
-        .nav-links a:hover { color: #fff; }
-        .nav-login {
-            padding: 9px 17px;
-            border: 1px solid rgba(255,255,255,.72);
-            border-radius: 4px;
+        .nav-links { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+        .nav-links a {
+            position: relative;
+            padding: 12px 14px;
+            color: #dbe5ee;
+            text-decoration: none;
+            font-size: 14px;
             font-weight: 700;
+            transition: color .18s ease, background .18s ease;
         }
+        .nav-links a:not(.nav-login)::after {
+            content: "";
+            position: absolute;
+            left: 14px;
+            right: 14px;
+            bottom: 6px;
+            height: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan);
+            transform: scaleX(0);
+            transition: transform .18s ease;
+        }
+        .nav-links a:hover,
+        .nav-links a.is-active { color: #fff; background: rgba(255,255,255,.045); }
+        .nav-links a:hover::after,
+        .nav-links a.is-active::after { transform: scaleX(1); }
+        .nav-login {
+            margin-left: 8px;
+            padding: 11px 19px !important;
+            color: #161006 !important;
+            background: var(--gold);
+            border: 1px solid #ffe8a2;
+            box-shadow: 0 0 22px rgba(241, 198, 90, .2);
+        }
+        .nav-login:hover { background: #ffe294 !important; transform: translateY(-1px); }
+        .menu-toggle {
+            display: none;
+            width: 44px;
+            height: 44px;
+            margin-left: auto;
+            padding: 10px;
+            border: 1px solid var(--line-strong);
+            background: rgba(255,255,255,.04);
+            cursor: pointer;
+        }
+        .menu-toggle span { display: block; height: 2px; margin: 5px 0; background: #fff; transition: transform .2s ease, opacity .2s ease; }
 
+        /* Hero */
         .hero {
             min-height: 760px;
             height: 100svh;
             position: relative;
             display: flex;
-            align-items: flex-end;
+            align-items: center;
             overflow: hidden;
-            color: #fff;
-            background: url("./assets/story/star-chart-map.jpg") center 42% / cover no-repeat;
+            isolation: isolate;
+            background: #061019;
         }
+        .hero-backdrop {
+            position: absolute;
+            inset: -3%;
+            z-index: -3;
+            background: url("./assets/story/star-chart-map.jpg") center 48% / cover no-repeat;
+            transform: scale(1.04);
+            transition: opacity .32s ease, transform 7s ease;
+        }
+        .hero.is-swapping .hero-backdrop { opacity: .28; transform: scale(1.08); }
         .hero::before {
             content: "";
             position: absolute;
             inset: 0;
+            z-index: -2;
             background:
-                linear-gradient(90deg, rgba(11, 32, 39, .86) 0%, rgba(11, 32, 39, .54) 42%, rgba(11, 32, 39, .08) 74%),
-                linear-gradient(0deg, rgba(11, 25, 36, .72) 0%, transparent 42%);
+                linear-gradient(90deg, rgba(4, 9, 17, .96) 0%, rgba(4, 9, 17, .76) 43%, rgba(4, 9, 17, .17) 75%),
+                linear-gradient(0deg, #070b12 0%, transparent 38%),
+                radial-gradient(circle at 73% 42%, transparent 0, rgba(4,9,17,.1) 32%, rgba(4,9,17,.55) 78%);
         }
-        .hero-content { position: relative; z-index: 1; padding: 150px 0 106px; max-width: 680px; }
-        .eyebrow { margin: 0 0 18px; font-size: 13px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 76px 0 auto;
+            height: 1px;
+            z-index: 1;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            opacity: .55;
+        }
+        .hero-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: minmax(0, 680px) 1fr;
+            gap: 70px;
+            align-items: center;
+            padding: 132px 0 82px;
+        }
+        .hero-copy { position: relative; z-index: 3; }
+        .hero-kicker {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 0 0 22px;
+            color: var(--cyan);
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .18em;
+        }
+        .hero-kicker::before { content: ""; width: 42px; height: 2px; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); }
         .hero h1 {
             margin: 0;
-            max-width: 650px;
-            font-family: var(--serif);
-            font-size: clamp(46px, 6vw, 78px);
-            font-weight: 800;
-            line-height: 1.12;
-            letter-spacing: 0;
-            text-wrap: balance;
+            font-family: var(--display);
+            font-size: clamp(72px, 10vw, 136px);
+            font-weight: 900;
+            line-height: .82;
+            letter-spacing: .015em;
+            text-transform: uppercase;
+            text-shadow: 0 6px 0 rgba(0,0,0,.26), 0 0 48px rgba(103,216,232,.14);
         }
-        .hero-copy { max-width: 580px; margin: 24px 0 30px; color: rgba(255,255,255,.88); font-size: 19px; line-height: 1.8; }
+        .hero-title-cn {
+            margin: 24px 0 0;
+            max-width: 620px;
+            color: #fff4d6;
+            font-size: clamp(27px, 3vw, 42px);
+            font-weight: 900;
+            line-height: 1.3;
+            letter-spacing: 0;
+        }
+        .hero-description { max-width: 600px; margin: 20px 0 30px; color: #c4d0dc; font-size: 18px; line-height: 1.8; }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }
         .button {
-            min-height: 48px;
-            padding: 0 22px;
+            min-height: 52px;
+            padding: 0 23px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            gap: 18px;
             border: 1px solid transparent;
-            border-radius: 4px;
+            border-radius: 3px;
             text-decoration: none;
-            font-weight: 800;
-            transition: transform .18s ease, background .18s ease;
+            font-weight: 900;
+            transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
         }
-        .button:hover { transform: translateY(-2px); }
-        .button-primary { color: #132a29; background: #f5d782; border-color: #f5d782; }
-        .button-secondary { color: #fff; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.62); backdrop-filter: blur(8px); }
-        .hero-facts {
-            position: absolute;
-            z-index: 2;
-            right: max(20px, calc((100vw - 1180px) / 2));
-            bottom: 34px;
-            display: flex;
-            gap: 1px;
-            background: rgba(255,255,255,.22);
+        .button::after { content: "→"; font-family: var(--mono); font-size: 18px; }
+        .button:hover { transform: translateY(-3px); }
+        .button-primary { color: #151006; background: var(--gold); border-color: #ffe6a0; box-shadow: 0 0 30px rgba(241,198,90,.22); }
+        .button-primary:hover { background: #ffe08c; box-shadow: 0 8px 34px rgba(241,198,90,.3); }
+        .button-secondary { color: #fff; background: rgba(8,17,29,.65); border-color: rgba(181,229,238,.55); backdrop-filter: blur(9px); }
+        .button-secondary:hover { border-color: var(--cyan); background: rgba(24,64,75,.65); }
+        .hero-meta { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 28px; color: #8ea0b4; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
+        .hero-meta span { display: inline-flex; align-items: center; gap: 8px; }
+        .hero-meta span::before { content: ""; width: 6px; height: 6px; background: var(--green); box-shadow: 0 0 9px var(--green); }
+
+        .world-console {
+            justify-self: end;
+            width: min(390px, 100%);
+            padding: 20px;
+            border: 1px solid rgba(168, 226, 236, .38);
+            background: rgba(5, 12, 22, .78);
+            box-shadow: 0 24px 80px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.035);
+            backdrop-filter: blur(16px);
         }
-        .hero-fact { min-width: 150px; padding: 14px 18px; background: rgba(11,32,39,.7); backdrop-filter: blur(10px); }
-        .hero-fact strong { display: block; font-family: var(--serif); font-size: 20px; }
-        .hero-fact span { color: rgba(255,255,255,.68); font-size: 12px; }
-
-        .intro { padding: 92px 0 82px; background: var(--surface); }
-        .intro-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 88px; align-items: start; }
-        .section-kicker { margin: 0 0 14px; color: var(--forest); font-size: 13px; font-weight: 800; letter-spacing: .16em; }
-        .section-title { margin: 0; font-family: var(--serif); font-size: clamp(32px, 4vw, 52px); line-height: 1.25; letter-spacing: 0; }
-        .intro-copy { margin: 4px 0 0; color: var(--muted); font-size: 18px; line-height: 1.9; }
-        .intro-copy strong { color: var(--ink); }
-
-        .journey { padding: 0 0 96px; background: var(--surface); }
-        .journey-frame {
+        .console-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+        .console-label { color: var(--cyan); font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+        .console-signal { display: flex; gap: 4px; }
+        .console-signal i { width: 4px; height: 12px; background: var(--green); opacity: .4; animation: signal 1.3s ease-in-out infinite; }
+        .console-signal i:nth-child(2) { height: 17px; animation-delay: .16s; }
+        .console-signal i:nth-child(3) { height: 22px; animation-delay: .32s; }
+        @keyframes signal { 50% { opacity: 1; box-shadow: 0 0 9px var(--green); } }
+        .world-preview {
             position: relative;
-            min-height: 620px;
+            aspect-ratio: 16 / 10;
+            margin: 18px 0;
             overflow: hidden;
-            border-radius: 6px;
-            background: url("./assets/story/sun-engine-map.jpg") center / cover no-repeat;
-            box-shadow: 0 26px 70px rgba(26,48,50,.18);
+            border: 1px solid rgba(255,255,255,.18);
+            background: url("./assets/story/star-chart-map.jpg") center / cover no-repeat;
+            transition: background-image .24s ease;
         }
-        .journey-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 42%, rgba(8,33,38,.82) 76%); }
-        .journey-copy {
+        .world-preview::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(3,8,15,.92), transparent 58%); }
+        .preview-status { position: absolute; z-index: 2; left: 16px; right: 16px; bottom: 13px; }
+        .preview-status small { display: block; color: var(--cyan); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; }
+        .preview-status strong { display: block; margin-top: 3px; font-size: 20px; }
+        .route-line { position: absolute; z-index: 2; left: 17%; right: 13%; top: 45%; height: 2px; background: repeating-linear-gradient(90deg, var(--gold) 0 8px, transparent 8px 15px); transform: rotate(-7deg); opacity: .86; }
+        .route-line::before, .route-line::after { content: ""; position: absolute; top: 50%; width: 13px; height: 13px; border: 3px solid var(--gold); border-radius: 50%; background: #142333; transform: translateY(-50%); box-shadow: 0 0 15px var(--gold); }
+        .route-line::before { left: -5px; }
+        .route-line::after { right: -5px; }
+        .world-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+        .world-tab {
+            min-height: 62px;
+            padding: 9px 8px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,.025);
+            color: var(--muted);
+            cursor: pointer;
+            text-align: left;
+            transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+        }
+        .world-tab:hover { transform: translateY(-2px); border-color: var(--line-strong); color: #fff; }
+        .world-tab.is-active { color: #fff; border-color: var(--gold); background: rgba(241,198,90,.09); box-shadow: inset 0 -2px 0 var(--gold); }
+        .world-tab span { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .08em; }
+        .world-tab strong { display: block; margin-top: 4px; font-size: 13px; }
+        .scroll-marker { position: absolute; z-index: 4; left: 50%; bottom: 22px; transform: translateX(-50%); color: #9ba9b7; font-family: var(--mono); font-size: 9px; letter-spacing: .14em; }
+        .scroll-marker::after { content: ""; display: block; width: 1px; height: 28px; margin: 7px auto 0; background: linear-gradient(var(--cyan), transparent); animation: scrollPulse 1.8s ease-in-out infinite; }
+        @keyframes scrollPulse { 50% { transform: scaleY(.55); transform-origin: top; opacity: .45; } }
+
+        /* Shared sections */
+        .section { position: relative; padding: 108px 0; }
+        .section-head { display: grid; grid-template-columns: .8fr 1.2fr; gap: 72px; align-items: end; margin-bottom: 52px; }
+        .eyebrow { margin: 0 0 12px; color: var(--cyan); font-family: var(--mono); font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+        .section-title { margin: 0; font-size: clamp(36px, 4.4vw, 60px); line-height: 1.13; font-weight: 900; letter-spacing: 0; }
+        .section-lead { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.85; }
+
+        /* Interactive journey */
+        .journey { background: #0b121d; }
+        .journey::before { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(103,216,232,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(103,216,232,.035) 1px, transparent 1px); background-size: 52px 52px; }
+        .quest-board {
+            position: relative;
+            min-height: 660px;
+            overflow: hidden;
+            border: 1px solid rgba(133,205,217,.3);
+            background: url("./assets/story/sun-engine-map.jpg") center / cover no-repeat;
+            box-shadow: 0 36px 100px rgba(0,0,0,.38);
+        }
+        .quest-board::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,9,17,.15) 0%, rgba(4,9,17,.1) 50%, rgba(4,9,17,.9) 75%, rgba(4,9,17,.97) 100%); }
+        .map-route { position: absolute; inset: 0 35% 0 0; }
+        .map-route::before { content: ""; position: absolute; left: 11%; right: 5%; top: 54%; height: 4px; background: repeating-linear-gradient(90deg, rgba(255,226,139,.9) 0 18px, transparent 18px 31px); transform: rotate(-8deg); filter: drop-shadow(0 0 7px rgba(241,198,90,.6)); }
+        .quest-node {
+            position: absolute;
+            width: 54px;
+            height: 54px;
+            border: 3px solid rgba(255,255,255,.7);
+            border-radius: 50%;
+            background: rgba(7,14,24,.9);
+            box-shadow: 0 8px 25px rgba(0,0,0,.45);
+            font-family: var(--mono);
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+        }
+        .quest-node:nth-child(1) { left: 10%; top: 58%; }
+        .quest-node:nth-child(2) { left: 28%; top: 49%; }
+        .quest-node:nth-child(3) { left: 47%; top: 53%; }
+        .quest-node:nth-child(4) { left: 65%; top: 40%; }
+        .quest-node:nth-child(5) { left: 82%; top: 35%; }
+        .quest-node:hover { transform: scale(1.12); border-color: var(--cyan); box-shadow: 0 0 25px rgba(103,216,232,.55); }
+        .quest-node.is-active { color: #161006; border-color: #fff0bd; background: var(--gold); box-shadow: 0 0 0 7px rgba(241,198,90,.17), 0 0 30px rgba(241,198,90,.75); transform: scale(1.16); }
+        .quest-node.is-complete { border-color: var(--green); color: var(--green); }
+        .quest-panel {
             position: absolute;
             z-index: 2;
-            right: 0;
             top: 0;
-            width: min(470px, 48%);
+            right: 0;
+            width: 38%;
             height: 100%;
-            padding: 58px 50px;
+            padding: 58px 46px;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            color: #fff;
+            border-left: 1px solid rgba(103,216,232,.2);
         }
-        .journey-copy h2 { margin: 0 0 18px; font-family: var(--serif); font-size: clamp(30px, 3.4vw, 46px); line-height: 1.3; }
-        .journey-copy p { margin: 0 0 24px; color: rgba(255,255,255,.8); font-size: 17px; }
-        .journey-list { display: grid; gap: 14px; }
-        .journey-item { padding-top: 14px; border-top: 1px solid rgba(255,255,255,.24); }
-        .journey-item strong { display: block; margin-bottom: 3px; }
-        .journey-item span { color: rgba(255,255,255,.66); font-size: 14px; }
+        .quest-count { color: var(--gold); font-family: var(--mono); font-size: 11px; font-weight: 900; letter-spacing: .14em; }
+        .quest-panel h3 { margin: 14px 0 12px; font-size: clamp(28px, 3vw, 42px); line-height: 1.25; }
+        .quest-panel p { margin: 0 0 24px; color: #b7c3cf; }
+        .quest-stats { display: grid; grid-template-columns: repeat(2, 1fr); border: 1px solid var(--line); }
+        .quest-stat { padding: 15px; }
+        .quest-stat + .quest-stat { border-left: 1px solid var(--line); }
+        .quest-stat strong { display: block; color: #fff; font-size: 19px; }
+        .quest-stat span { color: #8191a2; font-size: 12px; }
+        .quest-tip { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--cyan); font-size: 13px; }
 
-        .features { padding: 100px 0; background: #e9eee8; }
-        .features-head { max-width: 710px; margin-bottom: 52px; }
-        .feature-list { border-top: 1px solid #bfc9c1; }
-        .feature-row {
-            display: grid;
-            grid-template-columns: 76px 270px 1fr;
-            gap: 28px;
-            align-items: baseline;
-            padding: 30px 0;
-            border-bottom: 1px solid #bfc9c1;
-        }
-        .feature-index { color: var(--forest); font-weight: 800; letter-spacing: .12em; }
-        .feature-row h3 { margin: 0; font-family: var(--serif); font-size: 24px; }
-        .feature-row p { margin: 0; color: var(--muted); font-size: 16px; }
+        /* Characters */
+        .characters { background: #efe8d7; color: #17202a; }
+        .characters .eyebrow { color: #167c8c; }
+        .characters .section-lead { color: #596470; }
+        .character-stage { display: grid; grid-template-columns: 1.12fr .88fr; min-height: 570px; border: 1px solid #c8bda5; background: #f9f4e8; box-shadow: 0 30px 80px rgba(38,30,20,.13); }
+        .character-art { position: relative; min-height: 570px; overflow: hidden; background-image: url("./assets/story/heroes.jpg"); background-size: 300% 100%; background-position: 50% 50%; background-repeat: no-repeat; transition: background-position .35s ease; }
+        .character-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 60%, rgba(249,244,232,.22)); }
+        .character-number { position: absolute; z-index: 2; top: 22px; left: 24px; padding: 8px 12px; color: #fff; background: rgba(10,18,25,.76); font-family: var(--mono); font-size: 11px; letter-spacing: .1em; }
+        .character-copy { padding: 58px 50px; display: flex; flex-direction: column; justify-content: center; }
+        .character-role { color: #167c8c; font-family: var(--mono); font-size: 11px; font-weight: 900; letter-spacing: .15em; }
+        .character-copy h3 { margin: 13px 0 12px; font-size: clamp(34px, 4vw, 52px); line-height: 1.2; }
+        .character-copy > p { margin: 0; color: #596470; font-size: 17px; }
+        .character-tabs { display: grid; gap: 8px; margin-top: 30px; }
+        .character-tab { padding: 14px 16px; display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; border: 1px solid #d0c6b1; background: rgba(255,255,255,.34); color: #52606c; text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+        .character-tab:hover { transform: translateX(4px); border-color: #167c8c; }
+        .character-tab.is-active { color: #17202a; border-color: #167c8c; background: #fffdf7; box-shadow: inset 4px 0 0 #167c8c; }
+        .character-tab b { font-family: var(--mono); color: #167c8c; }
+        .character-tab span { font-weight: 800; }
+        .character-tab small { color: #7b858e; }
 
-        .tools { padding: 100px 0; background: var(--paper); }
-        .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 46px; }
-        .tool-panel {
-            min-height: 340px;
-            position: relative;
-            overflow: hidden;
-            padding: 34px;
-            border: 1px solid var(--line);
-            border-radius: 6px;
-            background: var(--surface);
-            text-decoration: none;
-        }
-        .tool-panel::before { content: ""; position: absolute; inset: auto 0 0; height: 7px; background: var(--forest); transition: height .25s ease; opacity: .92; }
-        .tool-panel:hover::before { height: 12px; }
-        .tool-panel h3 { margin: 28px 0 12px; font-family: var(--serif); font-size: 30px; }
-        .tool-panel p { max-width: 520px; margin: 0; color: var(--muted); }
-        .tool-label { color: var(--forest); font-size: 12px; font-weight: 900; letter-spacing: .16em; }
-        .tool-arrow { position: absolute; right: 30px; bottom: 28px; font-size: 25px; }
-        .tool-panel.is-fill::before { background: #35698a; }
-        .tool-panel.is-fill .tool-label { color: #35698a; }
-        .support-tools { grid-column: 1 / -1; min-height: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; padding: 0; }
-        .support-item { padding: 26px 30px; border-right: 1px solid var(--line); }
-        .support-item:last-child { border-right: 0; }
-        .support-item strong { display: block; margin-bottom: 6px; font-family: var(--serif); font-size: 20px; }
-        .support-item span { color: var(--muted); font-size: 14px; }
+        /* Product system */
+        .system { background: #0f1825; }
+        .system-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+        .system-card { position: relative; overflow: hidden; min-height: 300px; padding: 30px; border: 1px solid var(--line); background: var(--panel); transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease; }
+        .system-card:hover { transform: translateY(-5px); border-color: var(--line-strong); box-shadow: 0 22px 55px rgba(0,0,0,.25); }
+        .system-card.large { grid-column: span 7; }
+        .system-card.medium { grid-column: span 5; }
+        .system-card.third { grid-column: span 4; min-height: 250px; }
+        .system-index { color: var(--cyan); font-family: var(--mono); font-size: 10px; font-weight: 900; letter-spacing: .14em; }
+        .system-card h3 { margin: 17px 0 10px; font-size: 26px; }
+        .system-card p { max-width: 560px; margin: 0; color: var(--muted); }
+        .system-art-map { padding-right: 46%; background: linear-gradient(90deg, var(--panel) 0 52%, transparent), url("./assets/story/abyss-crown-map.jpg") right center / 54% 100% no-repeat; }
+        .system-meter { margin-top: 30px; }
+        .meter-head { display: flex; justify-content: space-between; color: #c4d0db; font-size: 12px; }
+        .meter-track { height: 8px; margin-top: 8px; background: #070c14; }
+        .meter-fill { width: 76%; height: 100%; background: linear-gradient(90deg, var(--cyan-deep), var(--cyan)); box-shadow: 0 0 16px rgba(103,216,232,.38); }
+        .report-lines { margin-top: 27px; display: grid; gap: 12px; }
+        .report-line { display: grid; grid-template-columns: 92px 1fr 38px; gap: 10px; align-items: center; color: #b7c3cf; font-size: 12px; }
+        .report-bar { height: 6px; background: #070c14; }
+        .report-bar i { display: block; height: 100%; background: var(--gold); }
+        .report-line:nth-child(2) .report-bar i { background: var(--red); }
+        .report-line:nth-child(3) .report-bar i { background: var(--green); }
+        .system-link { position: absolute; right: 24px; bottom: 22px; color: var(--cyan); font-family: var(--mono); font-size: 11px; text-decoration: none; }
 
-        .teacher { padding: 96px 0; color: #fff; background: var(--forest-dark); }
-        .teacher-grid { display: grid; grid-template-columns: .78fr 1.22fr; gap: 90px; align-items: start; }
-        .teacher .section-kicker { color: #a7d2bf; }
-        .teacher .section-title { color: #fff; }
-        .teacher p { color: rgba(255,255,255,.7); }
-        .teacher-steps { counter-reset: teacher; border-top: 1px solid rgba(255,255,255,.24); }
-        .teacher-step { counter-increment: teacher; position: relative; padding: 24px 0 24px 52px; border-bottom: 1px solid rgba(255,255,255,.24); }
-        .teacher-step::before { content: "0" counter(teacher); position: absolute; left: 0; top: 25px; color: #f5d782; font-weight: 800; }
-        .teacher-step strong { display: block; margin-bottom: 5px; }
-        .teacher-step span { color: rgba(255,255,255,.65); font-size: 14px; }
+        /* Teacher */
+        .teacher { background: #171d1a; border-top: 1px solid rgba(104,211,155,.2); border-bottom: 1px solid rgba(104,211,155,.2); }
+        .teacher-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 76px; align-items: start; }
+        .teacher-copy { position: sticky; top: 118px; }
+        .teacher-copy p { color: var(--muted); font-size: 17px; }
+        .teacher-steps { border-top: 1px solid rgba(255,255,255,.16); }
+        .teacher-step { display: grid; grid-template-columns: 54px 1fr; gap: 20px; padding: 27px 0; border-bottom: 1px solid rgba(255,255,255,.16); }
+        .teacher-step b { color: var(--gold); font-family: var(--mono); }
+        .teacher-step strong { display: block; margin-bottom: 6px; font-size: 19px; }
+        .teacher-step span { color: var(--muted); }
 
-        .contact { padding: 90px 0; background: var(--surface); }
-        .contact-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; }
+        /* Contact */
+        .contact { background: #ece7da; color: #17202a; }
+        .contact .eyebrow { color: #167c8c; }
+        .contact-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 80px; }
+        .contact-copy p { color: #5d6872; font-size: 17px; }
         .contact-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-        .field { display: grid; gap: 6px; }
+        .field { display: grid; gap: 7px; }
         .field.full { grid-column: 1 / -1; }
-        .field label { color: var(--muted); font-size: 13px; }
-        .field input, .field textarea, .field select { width: 100%; border: 1px solid var(--line); border-radius: 4px; padding: 12px 13px; background: #fff; color: var(--ink); }
-        .field textarea { min-height: 116px; resize: vertical; }
-        .send { grid-column: 1 / -1; border: 0; border-radius: 4px; padding: 14px 20px; color: #fff; background: var(--forest); font-weight: 800; cursor: pointer; }
-        .form-msg { grid-column: 1 / -1; min-height: 22px; color: var(--forest); font-size: 14px; }
+        .field label { color: #59636c; font-size: 13px; font-weight: 700; }
+        .field input, .field textarea, .field select { width: 100%; border: 1px solid #bfb6a3; border-radius: 2px; padding: 13px 14px; background: #fffdf7; color: #17202a; outline: none; }
+        .field input:focus, .field textarea:focus, .field select:focus { border-color: #167c8c; box-shadow: 0 0 0 3px rgba(22,124,140,.12); }
+        .field textarea { min-height: 118px; resize: vertical; }
+        .send { grid-column: 1 / -1; min-height: 50px; border: 1px solid #176f7c; border-radius: 2px; color: #fff; background: #176f7c; font-weight: 900; cursor: pointer; transition: background .18s ease, transform .18s ease; }
+        .send:hover { transform: translateY(-2px); background: #115864; }
+        .form-msg { grid-column: 1 / -1; min-height: 24px; color: #176f7c; font-size: 14px; }
 
-        footer { padding: 26px 0; background: #142a2b; color: rgba(255,255,255,.62); font-size: 13px; }
+        footer { padding: 30px 0; background: #050910; color: #8695a5; border-top: 1px solid rgba(103,216,232,.16); }
         .footer-inner { display: flex; justify-content: space-between; gap: 20px; }
-        :focus-visible { outline: 3px solid #f5d782; outline-offset: 3px; }
+        .footer-inner strong { color: #fff; font-family: var(--mono); letter-spacing: .14em; }
+        :focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
 
-        @media (max-width: 800px) {
-            .shell { width: min(100% - 28px, 1180px); }
-            .site-nav { height: 64px; }
-            .nav-links a:not(.nav-login) { display: none; }
-            .hero { min-height: 720px; align-items: center; background-position: 42% center; }
-            .hero::before { background: linear-gradient(90deg, rgba(9,31,36,.82), rgba(9,31,36,.34)), linear-gradient(0deg, rgba(9,31,36,.74), transparent 55%); }
-            .hero-content { padding: 112px 0 180px; }
-            .hero h1 { font-size: clamp(42px, 13vw, 62px); }
-            .hero-copy { font-size: 17px; }
-            .hero-facts { left: 14px; right: 14px; bottom: 18px; display: grid; grid-template-columns: repeat(3, 1fr); }
-            .hero-fact { min-width: 0; padding: 11px 10px; }
-            .hero-fact strong { font-size: 15px; }
-            .hero-fact span { font-size: 10px; }
-            .intro-grid, .teacher-grid, .contact-grid { grid-template-columns: 1fr; gap: 30px; }
-            .intro { padding: 68px 0 58px; }
-            .journey { padding-bottom: 70px; }
-            .journey-frame { min-height: 660px; background-position: 42% center; }
-            .journey-frame::after { background: linear-gradient(0deg, rgba(8,33,38,.92) 0%, rgba(8,33,38,.2) 65%); }
-            .journey-copy { top: auto; bottom: 0; width: 100%; height: auto; padding: 34px 24px; }
-            .feature-row { grid-template-columns: 48px 1fr; gap: 14px; }
-            .feature-row p { grid-column: 2; }
-            .tool-grid { grid-template-columns: 1fr; }
-            .support-tools { grid-column: auto; grid-template-columns: 1fr; }
-            .support-item { border-right: 0; border-bottom: 1px solid var(--line); }
-            .support-item:last-child { border-bottom: 0; }
+        html[data-theme="light"] {
+            --panel: #fffdf6;
+            --panel-soft: #f4efe3;
+            --line: rgba(28, 75, 85, .2);
+            --line-strong: rgba(22, 124, 140, .5);
+            --text: #172431;
+            --muted: #5b6874;
+            --cyan: #137f91;
+            --cyan-deep: #0b6574;
+            --gold: #b27d17;
+            --gold-deep: #80580d;
+            --red: #be4949;
+            --green: #22815b;
+        }
+        html[data-theme="light"] body { color: var(--text); background: #eee9dd; }
+        html[data-theme="light"] .site-nav {
+            color: #172431;
+            background: rgba(255, 252, 244, .97) !important;
+            border-bottom-color: rgba(22,124,140,.3);
+            box-shadow: 0 10px 30px rgba(45,43,35,.14);
+        }
+        html[data-theme="light"] .brand { color: #172431; }
+        html[data-theme="light"] .brand-mark { color: #fff; background: #137f91; border-color: #0b6574; }
+        html[data-theme="light"] .nav-links a { color: #334352; }
+        html[data-theme="light"] .nav-links a:hover,
+        html[data-theme="light"] .nav-links a.is-active { color: #0b5967; background: rgba(19,127,145,.08); }
+        html[data-theme="light"] .nav-login { color: #fff !important; background: #167889; border-color: #0e6170; box-shadow: none; }
+        html[data-theme="light"] .nav-login:hover { color: #fff !important; background: #0d5e6c !important; }
+        html[data-theme="light"] .menu-toggle { border-color: rgba(19,127,145,.5); background: rgba(19,127,145,.05); }
+        html[data-theme="light"] .menu-toggle span { background: #172431; }
+        html[data-theme="light"] .journey { color: #172431; background: #e7eceb; }
+        html[data-theme="light"] .journey .section-lead { color: #55646f; }
+        html[data-theme="light"] .system { color: #172431; background: #dfe7e8; }
+        html[data-theme="light"] .system .section-lead,
+        html[data-theme="light"] .system-card p { color: #5b6874; }
+        html[data-theme="light"] .system-card { box-shadow: 0 16px 42px rgba(35,56,61,.08); }
+        html[data-theme="light"] .system-meter .meter-track,
+        html[data-theme="light"] .report-bar { background: #d8dfdc; }
+        html[data-theme="light"] .system-link { color: #0b6574; }
+        html[data-theme="light"] .teacher { color: #fff; }
+        html[data-theme="light"] .teacher .section-title,
+        html[data-theme="light"] .teacher strong { color: #fff; }
+        html[data-theme="light"] footer { color: #91a0ad; }
+
+        @media (max-width: 980px) {
+            .hero-grid { grid-template-columns: 1fr; gap: 34px; }
+            .world-console { justify-self: start; width: min(520px, 100%); }
+            .hero { height: auto; min-height: 900px; }
+            .hero::before { background: linear-gradient(90deg, rgba(4,9,17,.93), rgba(4,9,17,.48)), linear-gradient(0deg, #070b12 0%, transparent 45%); }
+            .section-head, .teacher-layout, .contact-layout { grid-template-columns: 1fr; gap: 30px; }
+            .quest-board { min-height: 780px; }
+            .quest-board::before { background: linear-gradient(0deg, rgba(4,9,17,.97) 0 45%, rgba(4,9,17,.08) 70%); }
+            .map-route { inset: 0 0 40%; }
+            .quest-panel { top: auto; bottom: 0; width: 100%; height: 46%; padding: 35px 30px; border-left: 0; border-top: 1px solid rgba(103,216,232,.2); }
+            .character-stage { grid-template-columns: 1fr; }
+            .character-art { min-height: 520px; }
+            .system-card.large, .system-card.medium { grid-column: span 12; }
+            .system-card.third { grid-column: span 6; }
+            .teacher-copy { position: static; }
+        }
+
+        @media (max-width: 760px) {
+            .shell { width: min(100% - 28px, 1220px); }
+            .site-nav { height: 66px; }
+            .brand { font-size: 13px; }
+            .brand-mark { width: 34px; height: 34px; }
+            .menu-toggle { display: block; }
+            .nav-links {
+                position: absolute;
+                top: 66px;
+                left: 0;
+                right: 0;
+                display: none;
+                padding: 12px 14px 18px;
+                background: rgba(5,10,18,.98);
+                border-bottom: 1px solid var(--line-strong);
+                box-shadow: 0 20px 40px rgba(0,0,0,.4);
+            }
+            .site-nav.is-open .nav-links { display: grid; }
+            html[data-theme="light"] .site-nav.is-open .nav-links { background: rgba(255,252,244,.99); }
+            .site-nav.is-open .menu-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+            .site-nav.is-open .menu-toggle span:nth-child(2) { opacity: 0; }
+            .site-nav.is-open .menu-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+            .nav-links a { padding: 13px 14px; border-bottom: 1px solid rgba(255,255,255,.07); }
+            .nav-login { margin: 8px 0 0; text-align: center; }
+            .hero { min-height: 920px; }
+            .hero-grid { padding: 112px 0 74px; }
+            .hero h1 { font-size: clamp(58px, 18vw, 86px); }
+            .hero-title-cn { font-size: 28px; }
+            .hero-description { font-size: 16px; }
+            .button { width: 100%; }
+            .world-console { padding: 14px; }
+            .world-tabs { grid-template-columns: 1fr; }
+            .world-tab { min-height: 52px; display: grid; grid-template-columns: 62px 1fr; align-items: center; }
+            .world-tab strong { margin: 0; }
+            .scroll-marker { display: none; }
+            .section { padding: 78px 0; }
+            .section-head { margin-bottom: 34px; }
+            .section-title { font-size: 38px; }
+            .section-lead { font-size: 16px; }
+            .quest-board { min-height: 680px; }
+            .map-route { inset: 0 0 47%; }
+            .quest-node { width: 44px; height: 44px; font-size: 12px; }
+            .quest-panel { height: 49%; padding: 27px 20px; }
+            .quest-panel h3 { font-size: 27px; margin: 9px 0; }
+            .quest-panel p { font-size: 14px; margin-bottom: 15px; }
+            .character-art { min-height: 430px; }
+            .character-copy { padding: 34px 22px; }
+            .character-tab { grid-template-columns: 28px 1fr; }
+            .character-tab small { grid-column: 2; }
+            .system-card.large, .system-card.medium, .system-card.third { grid-column: span 12; }
+            .system-art-map { padding-right: 30px; padding-bottom: 210px; background: linear-gradient(0deg, transparent 0 42%, var(--panel) 73%), url("./assets/story/abyss-crown-map.jpg") center bottom / 100% 58% no-repeat; }
             .contact-form { grid-template-columns: 1fr; }
             .field.full, .send, .form-msg { grid-column: auto; }
             .footer-inner { flex-direction: column; }
         }
-        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+        }
     </style>
 </head>
 <body>
     <nav class="site-nav" aria-label="主导航">
         <div class="shell nav-inner">
-            <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span><span>VOCAQUEST</span></a>
+            <a class="brand" href="#top" aria-label="VocaQuest 首页"><span class="brand-mark" aria-hidden="true">VQ</span><span>VOCAQUEST</span></a>
+            <button class="menu-toggle" type="button" aria-label="打开导航菜单" aria-expanded="false"><span></span><span></span><span></span></button>
             <div class="nav-links">
-                <a href="#experience">学习体验</a>
-                <a href="#features">平台能力</a>
-                <a href="#teacher">教师使用</a>
+                <a href="#experience">冒险地图</a>
+                <a href="#characters">主角系统</a>
+                <a href="#features">学习系统</a>
+                <a href="#teacher">教师后台</a>
                 <a class="nav-login" href="./dashboard.html">进入平台</a>
             </div>
         </div>
     </nav>
 
     <main id="top">
-        <section class="hero">
-            <div class="shell">
-                <div class="hero-content">
-                    <p class="eyebrow">Story-driven adaptive learning</p>
-                    <h1>每个词包，都是一场新的冒险</h1>
-                    <p class="hero-copy">老师上传教学内容，VocaQuest 将它组织成适合不同学生水平的任务、剧情分支与完整学习地图。学生不是完成一张练习单，而是在推进自己的故事。</p>
+        <section class="hero" id="hero">
+            <div class="hero-backdrop" aria-hidden="true"></div>
+            <div class="shell hero-grid">
+                <div class="hero-copy">
+                    <p class="hero-kicker">STORY-DRIVEN ENGLISH LEARNING</p>
+                    <h1>VOCAQUEST</h1>
+                    <p class="hero-title-cn">让每个词包，成为一场真正的冒险</p>
+                    <p class="hero-description">老师上传教学内容，系统建立完整世界、角色与剧情路线。学生根据自己的水平进入不同任务，在推进故事的同时掌握词汇与语境。</p>
                     <div class="hero-actions">
-                        <a class="button button-primary" href="./dashboard.html">开始使用</a>
-                        <a class="button button-secondary" href="#experience">查看学习体验</a>
+                        <a class="button button-primary" href="./dashboard.html">进入冒险</a>
+                        <a class="button button-secondary" href="#experience">查看世界地图</a>
+                    </div>
+                    <div class="hero-meta" aria-label="平台核心能力">
+                        <span>自适应难度</span><span>词包专属世界</span><span>教师学习报告</span>
+                    </div>
+                </div>
+
+                <aside class="world-console" aria-label="世界地图选择器">
+                    <div class="console-head">
+                        <span class="console-label">WORLD ARCHIVE / 03</span>
+                        <span class="console-signal" aria-hidden="true"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="world-preview">
+                        <span class="route-line" aria-hidden="true"></span>
+                        <div class="preview-status"><small>ACTIVE WORLD</small><strong id="world-name">星图边境</strong></div>
+                    </div>
+                    <div class="world-tabs">
+                        <button class="world-tab is-active" type="button" data-image="./assets/story/star-chart-map.jpg" data-name="星图边境"><span>WORLD 01</span><strong>星图边境</strong></button>
+                        <button class="world-tab" type="button" data-image="./assets/story/abyss-crown-map.jpg" data-name="深渊王冠"><span>WORLD 02</span><strong>深渊王冠</strong></button>
+                        <button class="world-tab" type="button" data-image="./assets/story/sun-engine-map.jpg" data-name="太阳引擎"><span>WORLD 03</span><strong>太阳引擎</strong></button>
+                    </div>
+                </aside>
+            </div>
+            <div class="scroll-marker">SCROLL TO EXPLORE</div>
+        </section>
+
+        <section class="section journey" id="experience">
+            <div class="shell">
+                <div class="section-head">
+                    <div><p class="eyebrow">THE ADVENTURE MAP</p><h2 class="section-title">每一步学习，都在地图上留下进度</h2></div>
+                    <p class="section-lead">一份词包会按照合理数量拆成章节。学生可以看见完整世界，选择角色和剧情支线，但每一次路线决定都会经过确认，并写入自己的冒险档案。</p>
+                </div>
+                <div class="quest-board">
+                    <div class="map-route" aria-label="示例学习路线">
+                        <button class="quest-node is-complete" type="button" data-stage="0">01</button>
+                        <button class="quest-node is-active" type="button" data-stage="1">02</button>
+                        <button class="quest-node" type="button" data-stage="2">03</button>
+                        <button class="quest-node" type="button" data-stage="3">04</button>
+                        <button class="quest-node" type="button" data-stage="4">05</button>
+                    </div>
+                    <div class="quest-panel">
+                        <span class="quest-count" id="quest-count">CHAPTER 02 / ACTIVE</span>
+                        <h3 id="quest-title">穿过失落观测站</h3>
+                        <p id="quest-copy">完成本章词义与听音任务，找出星图中被隐藏的航线。选择不同答案，会开启下一章的不同入口。</p>
+                        <div class="quest-stats">
+                            <div class="quest-stat"><strong id="quest-words">8 个</strong><span>本章学习目标</span></div>
+                            <div class="quest-stat"><strong id="quest-mode">听音 + 识义</strong><span>当前任务组合</span></div>
+                        </div>
+                        <div class="quest-tip">点击地图节点，预览不同章节状态</div>
                     </div>
                 </div>
             </div>
-            <div class="hero-facts" aria-label="平台特点">
-                <div class="hero-fact"><strong>三档难度</strong><span>随学生水平变化</span></div>
-                <div class="hero-fact"><strong>完整世界</strong><span>主线与剧情支线</span></div>
-                <div class="hero-fact"><strong>教师报告</strong><span>班级与个人档案</span></div>
-            </div>
         </section>
 
-        <section class="intro" id="experience">
-            <div class="shell intro-grid">
-                <div>
-                    <p class="section-kicker">A LEARNING WORLD, NOT A WORKSHEET</p>
-                    <h2 class="section-title">把练习放进一个值得探索的世界</h2>
-                </div>
-                <p class="intro-copy">同一份词包会被拆成合理长度的章节。学生选择主角、完成词汇或语境任务、决定剧情走向，并在地图上看见自己的位置。<strong>故事服务于学习节奏，学习结果也会改变后续路线。</strong></p>
-            </div>
-        </section>
-
-        <section class="journey">
+        <section class="section characters" id="characters">
             <div class="shell">
-                <div class="journey-frame">
-                    <div class="journey-copy">
-                        <p class="section-kicker">ONE PACK, MANY PATHS</p>
-                        <h2>一张完整地图，清楚看见每次进步</h2>
-                        <p>地图从开始就完整可见，但只有达到当前位置的关卡可以挑战。路线选择会在确认后写入个人冒险档案。</p>
-                        <div class="journey-list">
-                            <div class="journey-item"><strong>合理拆分关卡</strong><span>每关不超过 10 个学习目标</span></div>
-                            <div class="journey-item"><strong>不同路线，不同练习组合</strong><span>词义、听音、拼写与语境任务动态变化</span></div>
-                            <div class="journey-item"><strong>世界可以复用</strong><span>教师保存多个版本并选择学生当前看到的世界</span></div>
+                <div class="section-head">
+                    <div><p class="eyebrow">CHOOSE YOUR HERO</p><h2 class="section-title">不是一个跳动方块，而是属于玩家的主角</h2></div>
+                    <p class="section-lead">固定的高质量角色美术保证每个世界风格统一；主角的性格会影响故事视角与分支，但不会改变教师指定的学习目标。</p>
+                </div>
+                <div class="character-stage">
+                    <div class="character-art"><span class="character-number" id="character-number">HERO 02</span></div>
+                    <div class="character-copy">
+                        <span class="character-role" id="character-role">ACTION ROUTE</span>
+                        <h3 id="character-name">陈诺 · 行动派冒险家</h3>
+                        <p id="character-description">直觉敏锐，擅长在突发状况中寻找出口。她的路线更强调听音判断、限时任务和关键选择。</p>
+                        <div class="character-tabs">
+                            <button class="character-tab" type="button" data-hero="0"><b>01</b><span>林思 · 语言学侦探</span><small>观察与推理</small></button>
+                            <button class="character-tab is-active" type="button" data-hero="1"><b>02</b><span>陈诺 · 行动派冒险家</span><small>听音与决断</small></button>
+                            <button class="character-tab" type="button" data-hero="2"><b>03</b><span>苏晓 · 记忆收藏家</span><small>回忆与联结</small></button>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="features" id="features">
+        <section class="section system" id="features">
             <div class="shell">
-                <div class="features-head">
-                    <p class="section-kicker">BUILT FOR REAL CLASSROOMS</p>
-                    <h2 class="section-title">让教师看清问题，让学生愿意继续</h2>
+                <div class="section-head">
+                    <div><p class="eyebrow">ONE CONNECTED SYSTEM</p><h2 class="section-title">游戏体验背后，是完整的学习系统</h2></div>
+                    <p class="section-lead">词汇记忆、语境填空、XP、错题与报告不再彼此割裂。学生看到冒险，教师看到可以行动的数据。</p>
                 </div>
-                <div class="feature-list">
-                    <div class="feature-row"><span class="feature-index">01</span><h3>自适应学生水平</h3><p>根据历史正确率、完成速度和薄弱词变化学生等级，同一词包复用基础、标准与进阶内容。</p></div>
-                    <div class="feature-row"><span class="feature-index">02</span><h3>故事化 RPG 学习地图</h3><p>词汇记忆和句子填空共享词包、故事地图、XP 与成长记录，不再是两个割裂的工具。</p></div>
-                    <div class="feature-row"><span class="feature-index">03</span><h3>可导出的学习报告</h3><p>班级周报、学期对比、高频错词、难度分布和学生个人档案可直接生成并导出 PDF。</p></div>
-                    <div class="feature-row"><span class="feature-index">04</span><h3>成就、XP 与排行榜</h3><p>学习经验、成就、首领战和班级挑战共同记录长期成长，而不是只奖励一次答对。</p></div>
+                <div class="system-grid">
+                    <article class="system-card large system-art-map feature-row"><span class="system-index">01 / STORY WORLD</span><h3>故事化 RPG 学习地图</h3><p>同一词包只生成一次世界设定，供班级共同使用。教师可以保留多个版本并选择当前发布的世界。</p><a class="system-link" href="./index.html">进入词汇冒险 →</a></article>
+                    <article class="system-card medium feature-row"><span class="system-index">02 / ADAPTIVE LEVEL</span><h3>自适应学生水平</h3><p>系统根据历史正确率、完成速度和薄弱词，持续调整基础、标准与进阶任务。</p><div class="system-meter"><div class="meter-head"><span>当前掌握率</span><strong>76%</strong></div><div class="meter-track"><div class="meter-fill"></div></div></div></article>
+                    <article class="system-card third"><span class="system-index">03 / CONTEXT QUEST</span><h3>语境填空</h3><p>不提前暴露中文答案，以语法范围、真实语境和分级提示完成迁移练习。</p><a class="system-link" href="./fillblank.html">进入语境冒险 →</a></article>
+                    <article class="system-card third feature-row"><span class="system-index">04 / TEACHER REPORT</span><h3>可导出的学习报告</h3><p>快速看清共同难词、持续未完成学生和词包难度是否合理。</p><div class="report-lines"><div class="report-line"><span>本周掌握率</span><div class="report-bar"><i style="width:78%"></i></div><b>78</b></div><div class="report-line"><span>高频错词</span><div class="report-bar"><i style="width:44%"></i></div><b>20</b></div><div class="report-line"><span>任务完成率</span><div class="report-bar"><i style="width:86%"></i></div><b>86</b></div></div></article>
+                    <article class="system-card third feature-row"><span class="system-index">05 / GROWTH LOOP</span><h3>成就、XP 与排行榜</h3><p>首领战、班级挑战与成就系统持续记录学习成长，而不是只奖励一次答对。</p><a class="system-link" href="./challenge.html">查看班级挑战 →</a></article>
                 </div>
             </div>
         </section>
 
-        <section class="tools">
-            <div class="shell">
-                <p class="section-kicker">THE LEARNING SYSTEM</p>
-                <h2 class="section-title">两种练习，一条连续成长路线</h2>
-                <div class="tool-grid">
-                    <a class="tool-panel" href="./index.html">
-                        <span class="tool-label">VOCABULARY QUEST</span>
-                        <h3>词汇冒险</h3>
-                        <p>从识义、听音到拼写与综合战斗，以章节方式完成老师布置的词包。</p>
-                        <span class="tool-arrow" aria-hidden="true">→</span>
-                    </a>
-                    <a class="tool-panel is-fill" href="./fillblank.html">
-                        <span class="tool-label">CONTEXT QUEST</span>
-                        <h3>语境填空</h3>
-                        <p>在不提前暴露中文答案的前提下，使用真实语境、语法范围与难度提示完成练习。</p>
-                        <span class="tool-arrow" aria-hidden="true">→</span>
-                    </a>
-                    <div class="tool-panel support-tools">
-                        <div class="support-item"><strong>每周首领战</strong><span>集中复习本周持续出错的内容</span></div>
-                        <div class="support-item"><strong>班级挑战</strong><span>以共同目标建立班级学习节奏</span></div>
-                        <div class="support-item"><strong>学习档案</strong><span>记录掌握率、难词与阶段变化</span></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="teacher" id="teacher">
-            <div class="shell teacher-grid">
-                <div>
-                    <p class="section-kicker">FOR TEACHERS</p>
-                    <h2 class="section-title">从上传词包到看懂班级，只需一个后台</h2>
-                    <p>内容只生成一次并供同词包复用，减少重复调用。教师始终保留对班级、世界版本和任务难度的控制。</p>
-                </div>
+        <section class="section teacher" id="teacher">
+            <div class="shell teacher-layout">
+                <div class="teacher-copy"><p class="eyebrow">FOR TEACHERS</p><h2 class="section-title">教师控制内容，系统负责把学习变成冒险</h2><p>生成内容会缓存并复用，避免对相同词包重复消耗。教师始终拥有班级、难度、世界版本与报告的控制权。</p><a class="button button-primary" href="./dashboard.html">打开教师后台</a></div>
                 <div class="teacher-steps">
-                    <div class="teacher-step"><strong>上传并检查词包</strong><span>系统自动去重、拆分章节并准备三档练习。</span></div>
-                    <div class="teacher-step"><strong>选择学生看到的世界</strong><span>保留多个故事版本，预览后再切换，不覆盖旧内容。</span></div>
-                    <div class="teacher-step"><strong>分配班级并跟踪进度</strong><span>使用班级邀请码加入，查看完成率、共同难词和未完成学生。</span></div>
+                    <div class="teacher-step"><b>01</b><div><strong>上传并检查词包</strong><span>自动去重并把过长内容拆分为每关最多 10 个目标。</span></div></div>
+                    <div class="teacher-step"><b>02</b><div><strong>预览并发布故事世界</strong><span>保留多个世界版本，确认后再向学生发布，不会覆盖旧内容。</span></div></div>
+                    <div class="teacher-step"><b>03</b><div><strong>分配班级与难度任务</strong><span>使用一次性邀请码或班级邀请码，班级人数限制为 60 人。</span></div></div>
+                    <div class="teacher-step"><b>04</b><div><strong>查看报告并返回课堂</strong><span>导出班级周报、学期对比、高频错词和学生个人学习档案。</span></div></div>
                 </div>
             </div>
         </section>
 
-        <section class="contact" id="contact">
-            <div class="shell contact-grid">
-                <div>
-                    <p class="section-kicker">CONTACT</p>
-                    <h2 class="section-title">申请教师使用权限</h2>
-                    <p class="intro-copy">填写信息后会打开你的邮件客户端。教师账号与班级邀请码均由平台安全生成。</p>
-                </div>
+        <section class="section contact" id="contact">
+            <div class="shell contact-layout">
+                <div class="contact-copy"><p class="eyebrow">CONTACT</p><h2 class="section-title">申请教师使用权限</h2><p>填写学校、班级和使用需求后，会在本机打开邮件客户端。教师账号与班级邀请码均由平台安全生成。</p></div>
                 <div class="contact-form">
                     <div class="field"><label for="c-name">姓名</label><input id="c-name" autocomplete="name" placeholder="张老师"></div>
                     <div class="field"><label for="c-email">邮箱</label><input id="c-email" type="email" autocomplete="email" placeholder="teacher@school.com"></div>
@@ -401,6 +706,85 @@
     <footer><div class="shell footer-inner"><strong>VOCAQUEST</strong><span>Designed by Marc · Story-driven English learning</span></div></footer>
 
     <script>
+        const hero = document.getElementById('hero');
+        const heroBackdrop = hero.querySelector('.hero-backdrop');
+        const worldPreview = hero.querySelector('.world-preview');
+        const worldName = document.getElementById('world-name');
+        document.querySelectorAll('.world-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.world-tab').forEach(item => item.classList.remove('is-active'));
+                tab.classList.add('is-active');
+                hero.classList.add('is-swapping');
+                const image = tab.dataset.image;
+                window.setTimeout(() => {
+                    heroBackdrop.style.backgroundImage = `url("${image}")`;
+                    worldPreview.style.backgroundImage = `url("${image}")`;
+                    worldName.textContent = tab.dataset.name;
+                    hero.classList.remove('is-swapping');
+                }, 180);
+            });
+        });
+
+        const questData = [
+            { count: 'CHAPTER 01 / COMPLETE', title: '进入星图边境', copy: '识别第一组核心词汇，解锁世界地图和主角档案。完成记录会保留在个人学习路径中。', words: '7 个', mode: '识义 + 记忆' },
+            { count: 'CHAPTER 02 / ACTIVE', title: '穿过失落观测站', copy: '完成本章词义与听音任务，找出星图中被隐藏的航线。选择不同答案，会开启下一章的不同入口。', words: '8 个', mode: '听音 + 识义' },
+            { count: 'CHAPTER 03 / PREVIEW', title: '寻找无声信标', copy: '使用拼写和语境线索修复失效信标。本章会根据前两章表现调整题目难度。', words: '9 个', mode: '拼写 + 语境' },
+            { count: 'CHAPTER 04 / LOCKED', title: '穿越浮空遗迹', copy: '路线选择将在这里发生分支。系统会展示后果并要求二次确认，然后写入个人冒险路线。', words: '8 个', mode: '综合任务' },
+            { count: 'CHAPTER 05 / BOSS', title: '守住世界档案', copy: '使用本阶段的高频错词进行首领战，完成后生成新的掌握率与薄弱词记录。', words: '10 个', mode: '首领战' }
+        ];
+        document.querySelectorAll('.quest-node').forEach(node => {
+            node.addEventListener('click', () => {
+                document.querySelectorAll('.quest-node').forEach(item => item.classList.remove('is-active'));
+                node.classList.add('is-active');
+                const data = questData[Number(node.dataset.stage)];
+                document.getElementById('quest-count').textContent = data.count;
+                document.getElementById('quest-title').textContent = data.title;
+                document.getElementById('quest-copy').textContent = data.copy;
+                document.getElementById('quest-words').textContent = data.words;
+                document.getElementById('quest-mode').textContent = data.mode;
+            });
+        });
+
+        const heroData = [
+            { role: 'DETECTIVE ROUTE', name: '林思 · 语言学侦探', description: '善于观察符号与语言规律。她的路线更强调词义辨析、线索组合和推理选择。', position: '0% 50%', number: 'HERO 01' },
+            { role: 'ACTION ROUTE', name: '陈诺 · 行动派冒险家', description: '直觉敏锐，擅长在突发状况中寻找出口。她的路线更强调听音判断、限时任务和关键选择。', position: '50% 50%', number: 'HERO 02' },
+            { role: 'MEMORY ROUTE', name: '苏晓 · 记忆收藏家', description: '能够把词汇、场景和往事建立联结。她的路线更强调回忆提取、语境迁移与故事细节。', position: '100% 50%', number: 'HERO 03' }
+        ];
+        const characterArt = document.querySelector('.character-art');
+        document.querySelectorAll('.character-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.character-tab').forEach(item => item.classList.remove('is-active'));
+                tab.classList.add('is-active');
+                const data = heroData[Number(tab.dataset.hero)];
+                characterArt.style.backgroundPosition = data.position;
+                document.getElementById('character-number').textContent = data.number;
+                document.getElementById('character-role').textContent = data.role;
+                document.getElementById('character-name').textContent = data.name;
+                document.getElementById('character-description').textContent = data.description;
+            });
+        });
+
+        const nav = document.querySelector('.site-nav');
+        const menuToggle = document.querySelector('.menu-toggle');
+        menuToggle.addEventListener('click', () => {
+            const open = nav.classList.toggle('is-open');
+            menuToggle.setAttribute('aria-expanded', String(open));
+            menuToggle.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+        });
+        document.querySelectorAll('.nav-links a').forEach(link => link.addEventListener('click', () => {
+            nav.classList.remove('is-open');
+            menuToggle.setAttribute('aria-expanded', 'false');
+        }));
+
+        const observedSections = ['experience', 'characters', 'features', 'teacher'].map(id => document.getElementById(id));
+        const navObserver = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                document.querySelectorAll('.nav-links a').forEach(link => link.classList.toggle('is-active', link.getAttribute('href') === `#${entry.target.id}`));
+            });
+        }, { rootMargin: '-35% 0px -55% 0px' });
+        observedSections.forEach(section => navObserver.observe(section));
+
         function sendContact() {
             const name = document.getElementById('c-name').value.trim();
             const email = document.getElementById('c-email').value.trim();
