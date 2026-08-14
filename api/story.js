@@ -4,7 +4,7 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || process.env.Zhipu;
 const ZHIPU_CHAT_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const ZHIPU_IMAGE_URL = 'https://open.bigmodel.cn/api/paas/v4/images/generations';
 const ZHIPU_IMAGE_MODEL = process.env.ZHIPU_IMAGE_MODEL || 'cogview-3-flash';
-const ZHIPU_WATERMARK_ENABLED = process.env.ZHIPU_WATERMARK_ENABLED !== 'false';
+const ZHIPU_WATERMARK_ENABLED = false;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://dosseusntiuzmldpwpow.supabase.co';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'sb_publishable__BwexSIOwKIJfBVnQyqgJA_mg_jxMMc';
 
@@ -36,13 +36,17 @@ module.exports = async function handler(req, res) {
     if (words.length < 4) return res.status(400).json({ error: 'The word pack needs at least four valid words' });
 
     const signature = packSignature(words);
+    const chapterCount = Math.max(1, Math.ceil(words.length / 10));
+    const storyBeatCount = Math.min(chapterCount, 48);
     const existingStories = await getExistingStoryContext(pack.id, signature, authorization);
     activePackId = pack.id;
     activeSignature = signature;
     if (
       pack.story_data?.status === 'partial'
       && pack.story_data?.signature === signature
-      && pack.story_data?.story?.beats?.length === 12
+      && pack.story_data?.version >= 4
+      && pack.story_data?.chapterCount === chapterCount
+      && pack.story_data?.story?.beats?.length === storyBeatCount
     ) {
       activeFallbackStory = pack.story_data;
     }
@@ -78,15 +82,17 @@ module.exports = async function handler(req, res) {
           heroes: activeFallbackStory.heroes,
           art: activeFallbackStory.art,
         }
-      : await generateStory(pack, words, signature, existingStories);
+      : await generateStory(pack, words, signature, existingStories, storyBeatCount);
     const imageResult = await generateAndStoreArt(pack, generated, signature, authorization);
     const finalMapImage = imageResult.mapImage || generated.art.mapImage || '';
     const finalHeroImage = imageResult.heroImage || generated.art.heroImage || '';
     const artComplete = Boolean(finalMapImage && finalHeroImage);
     const storyData = {
-      version: 3,
+      version: 4,
       status: artComplete ? 'ready' : 'partial',
       signature,
+      chapterCount,
+      maxWordsPerChapter: 10,
       generatedAt: new Date().toISOString(),
       generator: {
         textModel: 'glm-4-air',
@@ -235,7 +241,7 @@ function existingStoryPrompt(existingStories) {
   ).join('\n');
 }
 
-async function generateStory(pack, words, signature, existingStories = []) {
+async function generateStory(pack, words, signature, existingStories = [], chapterCount = 12) {
   const samples = sampleWords(words).map(word => `${word.w}=${word.m}${word.pos ? `(${word.pos})` : ''}`).join('；');
   const world = selectStoryWorld(signature, existingStories);
   const system = `你是资深青少年冒险游戏编剧和英语课程设计师。输出严格 JSON 对象，不要 Markdown。
@@ -245,30 +251,30 @@ async function generateStory(pack, words, signature, existingStories = []) {
 单词练习是游戏机制，不要把“单词、词义、语法、语言、符号谜题”写成世界观里的魔法或密码。
 必须返回：
 {
- "story":{"id":"ai-${signature.slice(0, 12)}","title":"","short":"","premise":"","palette":["#深色","#中色","#亮色","#强调色"],"beats":[12项],"endings":{"a":"","b":""}},
+ "story":{"id":"ai-${signature.slice(0, 12)}","title":"","short":"","premise":"","palette":["#深色","#中色","#亮色","#强调色"],"beats":[${chapterCount}项],"endings":{"a":"","b":""}},
  "heroes":[3项],
  "art":{"routeNames":["",""],"mapPrompt":"","heroPrompt":"","terrainTags":[6项]}
 }
 每个 beat 格式：
 {"title":"","text":"","a":["支线标题","行动选择","通关结果"],"b":["支线标题","调查选择","通关结果"]}
-第一章也必须有 a、b；title 和支线标题 4-14 个汉字，其余字段 12-45 个汉字。必须恰好输出 12 个 beat，保持连续因果、两条路线和真正不同的结局。
+第一章也必须有 a、b；title 和支线标题 4-14 个汉字，其余字段 8-32 个汉字。必须恰好输出 ${chapterCount} 个 beat，保持连续因果、两条路线和真正不同的结局。
 heroes 固定 id 为 aria、noah、sora，每项格式：
 {"id":"aria","name":"中文名 · 职业","trait":"","detail":"","lineA":"","lineB":""}
 三名角色必须属于这个世界，外观、能力和叙事视角明显不同。
 标题、章节和人物不得出现“词汇、单词、英语、学习、语言密码”等教学标签；必须先从词义中提炼至少三个具体意象，再把它们变成真实的地点、势力、谜团和危险。
-mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美术，地图要有至少 12 个地标和两条分支路线，图片内不得有文字。
+mapPrompt 与 heroPrompt 用中文详细描述同一套原创复古 RPG 2.5D 美术，地图要有两条分支路线和足够地标，图片内不得有文字、标签、logo或水印。
 每章的 title、a[0]、b[0] 必须是具体事件或地点，禁止“行动路线 10、调查路线 10、第十关”这类占位名称。`;
   const user = `词包名称：${String(pack.name).slice(0, 100)}
 词数：${words.length}
 代表词汇：${samples}
-请先判断这批词的主题、时代感和情绪，再生成与它高度相关、不可与其他词包互换的世界、人物和 12 章故事。
+请先判断这批词的主题、时代感和情绪，再生成与它高度相关、不可与其他词包互换的世界、人物和 ${chapterCount} 章故事。
 以下是系统中已有故事。新故事不得复用它们的核心场景、开端、地点顺序、人物功能、关键抉择或结局结构：
 ${existingStoryPrompt(existingStories)}`;
 
   let lastError = null;
   for (let attempt = 0; attempt < 3; attempt++) {
     const retryNote = attempt
-      ? `\n上一次输出未通过校验：${cleanText(lastError?.message, 160)}。本次必须修复该问题，恰好返回 12 个完整 beat，不得省略任何数组项或使用占位词。`
+      ? `\n上一次输出未通过校验：${cleanText(lastError?.message, 160)}。本次必须修复该问题，恰好返回 ${chapterCount} 个完整 beat，不得省略任何数组项或使用占位词。`
       : '';
     const response = await fetchWithTimeout(ZHIPU_CHAT_URL, {
       method: 'POST',
@@ -279,7 +285,7 @@ ${existingStoryPrompt(existingStories)}`;
       body: JSON.stringify({
         model: 'glm-4-air',
         messages: [{ role: 'system', content: system }, { role: 'user', content: user + retryNote }],
-        max_tokens: 6500,
+        max_tokens: Math.min(12000, 2600 + chapterCount * 190),
         temperature: attempt ? 0.78 : 0.86,
         stream: false,
         response_format: { type: 'json_object' },
@@ -296,7 +302,7 @@ ${existingStoryPrompt(existingStories)}`;
     }
     try {
       const content = JSON.parse(text).choices?.[0]?.message?.content || '';
-      return validateGeneratedStory(parseJsonObject(content), signature, existingStories);
+      return validateGeneratedStory(parseJsonObject(content), signature, existingStories, chapterCount);
     } catch (error) {
       lastError = error;
       if (attempt === 0) {
@@ -320,10 +326,10 @@ function parseJsonObject(raw) {
   }
 }
 
-function validateGeneratedStory(value, signature, existingStories = []) {
+function validateGeneratedStory(value, signature, existingStories = [], chapterCount = 12) {
   const story = value?.story;
-  if (!story || !Array.isArray(story.beats) || story.beats.length !== 12) {
-    throw new Error('AI returned an incomplete 12-chapter story');
+  if (!story || !Array.isArray(story.beats) || story.beats.length !== chapterCount) {
+    throw new Error(`AI returned an incomplete ${chapterCount}-chapter story`);
   }
   story.id = `ai-${signature.slice(0, 12)}`;
   story.title = cleanText(story.title, 100);

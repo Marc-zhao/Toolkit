@@ -20,12 +20,7 @@ function reportHash(value) {
 }
 
 function reportChapterCount(wordCount) {
-  if (wordCount <= 8) return Math.max(1, Math.min(wordCount, 4));
-  if (wordCount <= 15) return 5;
-  if (wordCount <= 24) return 6;
-  if (wordCount <= 36) return 8;
-  if (wordCount <= 54) return 10;
-  return 12;
+  return Math.max(1, Math.ceil((Number(wordCount) || 0) / 10));
 }
 
 function reportWords(pack) {
@@ -386,7 +381,7 @@ function renderTeacherReport(report) {
     ${report.filter.type === 'semester_compare' ? `<section class="report-section"><h3>学期区间对比</h3><p>当前区间正确率 <strong>${reportPercent(report.currentAccuracy)}</strong>，对比区间（${report.previousStart} 至 ${report.previousEnd}）为 <strong>${reportPercent(report.previousAccuracy)}</strong>，变化 <strong>${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</strong>。</p></section>` : ''}
     <footer style="margin-top:24px;padding-top:10px;border-top:1px solid #d8e0e8;font-size:10px;color:#718096">VocaQuest 教学数据报告 · 统计结论来自所选班级与日期区间内的真实学习记录。记录较少时应结合课堂观察判断。</footer>
   </article>
-  <div class="report-actions" style="margin-top:10px"><button class="btn btn-sm btn-gold" onclick="printTeacherReport()">导出班级周报 PDF</button><button class="btn btn-sm btn-gray" onclick="loadTeacherReportCache()">查看历史报告</button></div>`;
+  <div class="report-actions" style="margin-top:10px"><button class="btn btn-sm btn-gold" onclick="printTeacherReport()">导出当前报告 PDF</button><button class="btn btn-sm btn-gray" onclick="loadTeacherReportCache()">查看历史报告</button></div>`;
 }
 
 function renderStudentProfileSection(report) {
@@ -409,14 +404,17 @@ function reportToolLabel(value) {
 function printTeacherReport() {
   const paper = document.getElementById('teacher-report-paper');
   if (!paper) return toast('请先生成报告', 'err');
-  const popup = window.open('', '_blank', 'noopener,noreferrer');
+  const popup = window.open('', '_blank');
   if (!popup) return toast('浏览器阻止了打印窗口，请允许弹窗', 'err');
+  try { popup.opener = null; } catch (error) {}
   popup.document.write(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>VocaQuest 教学报告</title><style>
     @page{size:A4;margin:12mm}body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#172033;margin:0}.report-paper{line-height:1.55}.report-brand{display:flex;justify-content:space-between;border-bottom:3px solid #008caf;padding-bottom:12px;margin-bottom:16px}.report-logo{font-weight:900;color:#008caf;letter-spacing:2px}.report-logo span{display:block;font-size:8px;color:#607086;margin-top:5px}.report-title{font-size:22px;font-weight:800}.report-subtitle,.report-answer span{font-size:11px;color:#68768a}.report-badge{display:inline-block;padding:3px 7px;border:1px solid #aeb9c8;margin:3px;font-size:10px}.report-answer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:14px 0}.report-answer{padding:9px;border-left:4px solid #008caf;background:#f3f7fa}.report-answer.warn{border-color:#db8b13}.report-answer.danger{border-color:#c8445d}.report-answer strong{display:block;font-size:10px;color:#536178}.report-answer b{display:block;font-size:15px}.report-section{break-inside:avoid;margin-top:17px}.report-section h3{font-size:14px;border-bottom:1px solid #d9e0e8;padding-bottom:5px}.report-table{width:100%;border-collapse:collapse;font-size:10px}.report-table th,.report-table td{padding:6px;border-bottom:1px solid #e2e7ed;text-align:left}.report-table th{background:#f4f7fa}.report-bar-row{display:grid;grid-template-columns:90px 1fr 40px;gap:7px;align-items:center;font-size:10px;margin:5px 0}.report-bar{height:8px;background:#e5eaf0}.report-bar i{display:block;height:100%}.report-empty{padding:12px;background:#f5f7fa;color:#718096}@media print{button{display:none}}
   </style></head><body>${paper.outerHTML}</body></html>`);
   popup.document.close();
-  popup.focus();
-  setTimeout(() => popup.print(), 250);
+  let printed=false;
+  const runPrint=()=>{if(printed)return;printed=true;popup.focus();popup.print();};
+  popup.addEventListener('load',runPrint,{once:true});
+  setTimeout(()=>{try{runPrint();}catch(error){}},700);
 }
 
 async function loadTeacherReportCache() {

@@ -534,8 +534,11 @@
 
         .world-map-viewport {
             width: 100%;
-            overflow: hidden;
+            overflow-x: auto;
+            overflow-y: hidden;
             overscroll-behavior-inline: contain;
+            touch-action: pan-y pinch-zoom;
+            -webkit-overflow-scrolling: touch;
             scrollbar-color: var(--border) var(--bg);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -558,6 +561,7 @@
             background-size: 124% auto;
             background-position: center 45%;
         }
+        .vq-art-mark-cover{position:absolute;right:0;bottom:0;z-index:8;width:86px;height:28px;background:rgba(4,9,16,.94);pointer-events:none}
 
         .world-map-vignette {
             position: absolute;
@@ -780,7 +784,6 @@
                 -webkit-overflow-scrolling: touch;
             }
             .world-map-viewport.dragging { cursor: grabbing; user-select: none; }
-            .world-map { width: 880px !important; min-width: 880px; }
             .world-node { width: 38px; }
             .world-map-titleplate span { display: none; }
             .world-node-card { width: 150px; }
@@ -884,9 +887,11 @@
             background-position-y: center;
         }
         .hero-choice-avatar.vq-generated-hero-art {
+            position:relative;
             background-size: 300% 112%;
             background-position-y: top;
         }
+        .hero-choice-avatar.vq-generated-hero-art::after{content:"";position:absolute;right:0;bottom:0;width:72px;height:24px;background:var(--panel);pointer-events:none}
         .hero-choice-copy { display: block; padding: 13px; }
         .hero-choice strong { display: block; margin-bottom: 5px; color: var(--gold); font-size: 14px; }
         .hero-choice-copy > span { display: block; color: var(--dim); font-size: 11px; line-height: 1.6; }
@@ -2259,7 +2264,7 @@
         }
         function getTitle(lv) { return getTitleObj(lv).title; }
 
-        const G = { userId: '', name: '', classId: '', selPack: null, pack: null, prog: null, lvIdx: 0, lvWords: [], stages: [], stgIdx: 0, qs: [], qIdx: 0, hp: 5, maxHp: 5, mhp: 0, mhpMax: 0, score: 0, streak: 0, maxStreak: 0, correct: 0, total: 0, levels: [], wrongWords: [], isReview: false, activeMapNode: '', activeMapMode: 'balanced', mapGraph: null };
+        const G = { userId: '', name: '', classId: '', selPack: null, pack: null, prog: null, lvIdx: 0, lvWords: [], stages: [], stgIdx: 0, qs: [], qIdx: 0, hp: 5, maxHp: 5, mhp: 0, mhpMax: 0, score: 0, streak: 0, maxStreak: 0, correct: 0, total: 0, levels: [], wrongWords: [], isReview: false, activeMapNode: '', activeMapMode: 'balanced', mapGraph: null, ability:null };
 
         let audioCtx = null;
         function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -2327,6 +2332,8 @@
             if (uid) {
                 const { data: profile } = await vqClient.from('profiles').select('*, classes(name)').eq('id', uid).maybeSingle();
                 G.userId = uid; G.name = profile?.full_name || localStorage.getItem('vq_unm'); G.classId = profile?.class_id;
+                const {data:ability}=await vqClient.rpc('refresh_vq_student_level');
+                if(ability)G.ability=ability;
 
                 let classHtml = '';
                 if (G.classId) {
@@ -2370,10 +2377,7 @@
                     <div class="ig"><label>真实姓名</label><input class="inp" id="s-nm" placeholder="你的名字"></div>
                     <div class="ig"><label>注册邮箱</label><input class="inp" id="s-em" type="email" placeholder="email@example.com"></div>
                     <div class="ig"><label>密码</label><input class="inp" id="s-pd" type="password" minlength="8" autocomplete="new-password" placeholder="至少8位"></div>
-                    <div class="ig"><label style="color:var(--gold);">学生邀请码</label><input class="inp" id="s-inv" placeholder="输入邀请码" style="border-color:var(--gold);"></div>
-                    <div class="ig"><label style="color:var(--gold);">选择班级 (选定后不可更改)</label>
-                        <select class="inp" id="s-cl" style="border-color:var(--gold);"><option value="">-- 必选 --</option>${classes?.map(cl => `<option value="${cl.id}">${escH(cl.name)}</option>`).join('')}</select>
-                    </div>
+                    <div class="ig"><label style="color:var(--gold);">学生邀请码或班级邀请码</label><input class="inp" id="s-inv" placeholder="VQS-… 或 VQC-…" style="border-color:var(--gold);" onblur="previewVqInvite()"><div id="s-invite-hint" style="font-size:12px;color:var(--dim);line-height:1.7;margin-top:6px">班级码会自动加入对应班级；单次码注册后可自行选择一次班级。</div></div>
                     <div style="display:flex;gap:10px;flex-wrap:wrap;">
                         <button class="btn btn-gray"  style="flex:1;min-width:120px;" onclick="renderLogin('login')">← 返回登录</button>
                         <button class="btn btn-cyan"  style="flex:1;min-width:120px;" onclick="studentAuth('up')">确认注册</button>
@@ -2395,16 +2399,16 @@
         async function studentAuth(type) {
             try {
                 const em = document.getElementById('s-em').value.trim(), pd = document.getElementById('s-pd').value;
-                const nm = document.getElementById('s-nm')?.value.trim(), cl = document.getElementById('s-cl')?.value;
+                const nm = document.getElementById('s-nm')?.value.trim();
                 if (!em || !pd) return toast('填写邮箱和密码', 'err');
 
                 if (type === 'up') {
                     if (pd.length < 8) return toast('密码至少8位', 'err');
-                    if (!nm || !cl) return toast('姓名和班级必须填写/选择', 'err');
+                    if (!nm) return toast('请填写姓名', 'err');
                     const inv = document.getElementById('s-inv')?.value?.trim();
                     if (!inv) return toast('请填写学生邀请码', 'err');
-                    const { data: validCode, error: inviteError } = await vqClient.rpc('validate_vq_invite', {p_code:inv,p_role:'student'});
-                    if (inviteError || !validCode) return toast('邀请码无效、已停用或达到上限', 'err');
+                    const details=await previewVqInvite();
+                    if (!details) return toast('邀请码无效、已使用、已过期或班级已满', 'err');
                 }
 
                 toast('验证中...', 'ok');
@@ -2413,7 +2417,7 @@
                     ? await vqClient.auth.signUp({
                         email: em,
                         password: pd,
-                        options: { data: { display_name: nm, vq_role: 'student', vq_invite: inv, vq_class_id: cl } }
+                        options: { data: { display_name: nm, vq_role: 'student', vq_invite: inv } }
                     })
                     : await vqClient.auth.signInWithPassword({ email: em, password: pd });
 
@@ -2438,14 +2442,24 @@
             } catch (e) { console.error(e); toast('网络错误', 'err'); }
         }
 
+        async function previewVqInvite(){
+            const code=document.getElementById('s-inv')?.value.trim(),hint=document.getElementById('s-invite-hint');
+            if(!code)return null;
+            if(hint)hint.textContent='正在验证邀请码…';
+            const {data,error}=await vqClient.rpc('get_vq_invite_details',{p_code:code,p_role:'student'});
+            if(error||!data?.valid){if(hint){hint.textContent='邀请码无效、已使用、已过期或班级已满';hint.style.color='var(--red)';}return null;}
+            if(hint){hint.textContent=data.kind==='class'?`注册后直接加入「${data.class_name}」，不可更改。`:'注册后可选择一次班级。';hint.style.color=data.kind==='class'?'var(--cyan)':'var(--gold)';}
+            return data;
+        }
+
         async function confirmJoinClass() {
             const cid = document.getElementById('join-class-sel').value;
             if (!cid) return toast('请先选择班级', 'err');
             if (!confirm('⚠️ 确认加入该班级？加入后无法自行更改！')) return;
 
             toast('正在绑定...', 'ok');
-            const { error } = await vqClient.from('profiles').update({ class_id: cid }).eq('id',G.userId);
-            if (error) { console.error(error); return toast('绑定失败，请检查数据库权限', 'err'); }
+            const { data,error } = await vqClient.rpc('join_vq_class_once',{p_class_id:cid});
+            if (error||!data?.joined) { console.error(error); return toast(error?.message||'绑定失败', 'err'); }
 
             toast('加入班级成功！', 'ok');
             await renderLogin();
@@ -2779,8 +2793,8 @@
         async function createClass() {
             const nm = prompt('请输入新班级名称 (例如: 2026届1班):');
             if (!nm) return;
-            const tid = (await vqClient.auth.getUser()).data.user.id;
-            await vqClient.from('classes').insert({ name: nm, teacher_id: tid });
+            const {error}=await vqClient.rpc('create_vq_class',{p_name:nm});
+            if(error)return toast('班级创建失败：'+error.message,'err');
             toast('班级创建成功');
             await switchTeacherTab('class');
         }

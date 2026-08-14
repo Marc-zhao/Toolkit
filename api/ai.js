@@ -27,7 +27,7 @@ module.exports = async function handler(req, res) {
     if (!quota.ok) return res.status(quota.status).json({ error: quota.error });
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7800);
+    const timer = setTimeout(() => controller.abort(), 30000);
     let data;
     try {
       const response = await fetch(ZHIPU_CHAT_URL, {
@@ -65,7 +65,7 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (err) {
-    const message = err.name === 'AbortError' ? 'AI request timed out' : err.message;
+    const message = err.name === 'AbortError' ? 'AI 生成超过 30 秒，请重试；已有题库不会被删除' : err.message;
     console.error('[zhipu-ai] Error:', message);
     return res.status(500).json({ error: message });
   }

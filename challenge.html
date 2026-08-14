@@ -568,13 +568,13 @@ async function startMatchmaking(toolId){
   // 获取题目（从fillblank题库随机取，或vocaquest词库）
   // 从word_packs取词汇生成题目（不依赖AI，直接用现有词包）
   let questions=[];
-  
+
   // 先试试fillblank_questions（已有AI生成的题）
   const {data:fbqs}=await db.from('fillblank_questions').select('*').limit(100);
   if(fbqs?.length>=5){
     questions=shuffleArr(fbqs).slice(0,20);
   }
-  
+
   // 没有题目就从word_packs构建题目
   if(questions.length<5){
     const {data:packs}=await db.from('word_packs').select('words,name').limit(5);
@@ -587,7 +587,7 @@ async function startMatchmaking(toolId){
         if(word&&meaning) allWords.push({word,meaning});
       });
     });
-    
+
     if(allWords.length>=4){
       const shuffled=shuffleArr(allWords);
       questions=shuffled.slice(0,20).map((w,i)=>{
@@ -605,7 +605,7 @@ async function startMatchmaking(toolId){
       });
     }
   }
-  
+
   if(!questions.length){
     questions=generateDemoQuestions();
   }

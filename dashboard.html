@@ -130,7 +130,7 @@ label{display:block;font-size:13px;color:var(--dim);margin-bottom:6px}
 .lb-info{flex:1}
 .lb-name{font-size:14px;font-weight:600}
 .lb-sub{font-size:11px;color:var(--dim);margin-top:2px}
-.lb-score{font-family:var(--px);font-size:11px;color:var(--gold);text-align:right}
+.lb-score{font-family:var(--px);font-size:11px;color:var(--gold);text-align:right;min-width:92px;white-space:nowrap}
 /* LEARNING ROUTE */
 .learning-route{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:18px}
 .learning-route-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
@@ -533,14 +533,11 @@ function renderLogin(mode='login'){
       <div class="ig"><label>真实姓名</label><input class="inp" id="r-nm" placeholder="你的名字"></div>
       <div class="ig"><label>注册邮箱</label><input class="inp" id="r-em" type="email" placeholder="email@example.com"></div>
       <div class="ig"><label>设置密码</label><input class="inp" id="r-pd" type="password" minlength="8" autocomplete="new-password" placeholder="至少8位"></div>
-      <div class="ig"><label style="color:var(--gold)">学生邀请码</label><input class="inp" id="r-inv" placeholder="输入邀请码" style="border-color:var(--gold)"></div>
-      <div class="ig"><label style="color:var(--gold)">选择班级（选定后不可更改）</label>
-        <select class="inp" id="r-cl" style="border-color:var(--gold)"><option value="">加载中…</option></select></div>
+      <div class="ig"><label style="color:var(--gold)">学生邀请码或班级邀请码</label><input class="inp" id="r-inv" placeholder="VQS-… 或 VQC-…" style="border-color:var(--gold)" onblur="previewStudentInvite('r-inv','r-invite-hint')"><div id="r-invite-hint" style="font-size:12px;color:var(--dim);line-height:1.7;margin-top:6px">班级码会直接加入对应班级；单次学生码注册后可自行选择一次班级。</div></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-gray" style="flex:1;min-width:100px" onclick="renderLogin('login')">← 返回</button>
         <button class="btn btn-cyan" style="flex:1;min-width:100px" onclick="doAuth('up')">确认注册</button>
       </div>`;
-    loadClasses('r-cl');
   } else if(mode==='teacher'){
     title.textContent='TEACHER LOGIN';
     body.innerHTML=`
@@ -582,6 +579,18 @@ async function loadClasses(selId){
   sel.innerHTML='<option value="">-- 请选择班级 --</option>'+data.map(c=>`<option value="${c.id}">${escH(c.name)}</option>`).join('');
 }
 
+async function previewStudentInvite(inputId,hintId){
+  const code=document.getElementById(inputId)?.value.trim();
+  const hint=document.getElementById(hintId);
+  if(!code||!hint)return null;
+  hint.textContent='正在验证邀请码…';
+  const {data,error}=await db.rpc('get_vq_invite_details',{p_code:code,p_role:'student'});
+  if(error||!data?.valid){hint.textContent='邀请码无效、已使用、已过期或班级已满';hint.style.color='var(--red)';return null;}
+  hint.textContent=data.kind==='class'?`班级邀请码：注册后将直接加入「${data.class_name}」，不可更改。`:'单次学生邀请码：注册后可在 Dashboard 选择一次班级。';
+  hint.style.color=data.kind==='class'?'var(--cyan)':'var(--gold)';
+  return data;
+}
+
 async function doAuth(type){
   const em=document.getElementById(type==='in'?'l-em':'r-em')?.value.trim();
   const pd=document.getElementById(type==='in'?'l-pd':'r-pd')?.value;
@@ -589,17 +598,16 @@ async function doAuth(type){
   if(type==='up'){
     if(pd.length<8) return toast('密码至少8位','err');
     const nm=document.getElementById('r-nm')?.value.trim();
-    const cl=document.getElementById('r-cl')?.value;
     const inv=document.getElementById('r-inv')?.value.trim();
-    if(!nm||!cl) return toast('姓名和班级必填','err');
+    if(!nm) return toast('请填写姓名','err');
     if(!inv) return toast('请填写学生邀请码','err');
-    const {data:validCode,error:inviteError}=await db.rpc('validate_vq_invite',{p_code:inv,p_role:'student'});
-    if(inviteError||!validCode) return toast('邀请码无效、已停用或达到上限','err');
+    const invite=await previewStudentInvite('r-inv','r-invite-hint');
+    if(!invite) return toast('邀请码无效、已使用、已过期或班级已满','err');
     toast('注册中…');
     const {data:res,error}=await db.auth.signUp({
       email:em,
       password:pd,
-      options:{data:{display_name:nm,vq_role:'student',vq_invite:inv,vq_class_id:cl}}
+      options:{data:{display_name:nm,vq_role:'student',vq_invite:inv}}
     });
     if(error) return toast(error.message,'err');
     if(res.session) await db.auth.signOut();
@@ -669,7 +677,7 @@ async function enterDashboard(profile){
   document.getElementById('nav-initials').textContent=G.name.slice(0,1).toUpperCase();
   document.getElementById('nav-name').textContent=G.name;
   document.getElementById('wb-name').textContent=G.name;
-  document.getElementById('wb-meta').textContent=G.isTeacher?'教师账号 · 全平台管理权限':`班级：${G.className}`;
+  document.getElementById('wb-meta').textContent=G.isTeacher?'教师账号 · 全平台管理权限':(G.classId?`班级：${G.className}`:'尚未选择班级');
   if(G.isTeacher){
     document.getElementById('teacher-zone').style.display='block';
     document.getElementById('student-study-zone').style.display='none';
@@ -679,10 +687,44 @@ async function enterDashboard(profile){
     document.getElementById('student-study-zone').style.display='block';
     document.getElementById('learning-route').style.display='block';
   }
-  await Promise.all([loadXP(),loadAchievements(),loadNotifications(),checkBoss()]);
+  await Promise.all([loadXP(),loadAchievements(),loadNotifications(),checkBoss(),G.isTeacher?Promise.resolve():loadAdaptiveProfile()]);
   if(G.isTeacher) switchDashTeacherTab('classes');
-  else switchStudentTab('errors');
+  else {
+    switchStudentTab('errors');
+    if(!G.classId) setTimeout(openOneTimeClassPicker,180);
+  }
   loadLeaderboard('total');
+}
+
+async function loadAdaptiveProfile(){
+  const {data,error}=await db.rpc('refresh_vq_student_level');
+  if(error||!data)return;
+  G.ability=data;
+  const labels={foundation:'基础巩固',standard:'稳步进阶',advanced:'高阶挑战'};
+  const meta=document.getElementById('wb-meta');
+  if(meta)meta.textContent+=` · 自适应等级：${labels[data.level]||'稳步进阶'} (${Math.round(data.score||0)})`;
+}
+
+async function openOneTimeClassPicker(){
+  let modal=document.getElementById('modal-class-once');
+  if(!modal){
+    document.body.insertAdjacentHTML('beforeend',`<div class="modal-bg" id="modal-class-once"><div class="modal" style="max-width:500px"><div class="modal-title">选择班级</div><div style="font-size:13px;color:var(--dim);line-height:1.8;margin-bottom:12px">你的单次邀请码没有预分配班级。班级只能选择一次，确认后无法更改；每班最多 60 人。</div><select class="inp" id="one-time-class-select"><option value="">正在加载班级…</option></select><div style="display:flex;gap:9px;margin-top:14px"><button class="btn btn-cyan" style="flex:1" onclick="joinOneTimeClass()">确认加入</button><button class="btn btn-gray" style="flex:1" onclick="closeModal('modal-class-once')">稍后选择</button></div></div></div>`);
+    modal=document.getElementById('modal-class-once');
+  }
+  const {data}=await db.from('classes').select('id,name').order('name');
+  const select=document.getElementById('one-time-class-select');
+  select.innerHTML='<option value="">-- 请选择班级 --</option>'+((data||[]).map(item=>`<option value="${item.id}">${escH(item.name)}</option>`).join(''));
+  openModal('modal-class-once');
+}
+
+async function joinOneTimeClass(){
+  const classId=document.getElementById('one-time-class-select')?.value;
+  if(!classId)return toast('请选择班级','err');
+  const {data,error}=await db.rpc('join_vq_class_once',{p_class_id:classId});
+  if(error||!data?.joined)return toast(error?.message||'加入班级失败','err');
+  G.classId=data.class_id;G.className=data.class_name;
+  document.getElementById('wb-meta').textContent=`班级：${G.className}${G.ability?` · 自适应等级：${({foundation:'基础巩固',standard:'稳步进阶',advanced:'高阶挑战'})[G.ability.level]}`:''}`;
+  closeModal('modal-class-once');toast(`已加入「${G.className}」，班级现已锁定`);
 }
 
 async function loadXP(){
@@ -923,14 +965,14 @@ async function loadLeaderboard(tab){
   let xpMap={};
   if(tab==='total'||tab==='vocaquest'){
     const {data:vq}=await db.from('student_progress').select('user_id,prog_data');
-    (vq||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(r.prog_data?.xp||0)});
+    (vq||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(Number(r.prog_data?.xp)||0)});
     if(tab==='total'){
       const {data:fb}=await db.from('fillblank_stage_results').select('user_id,xp_earned');
-      (fb||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(r.xp_earned||0)});
+      (fb||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(Number(r.xp_earned)||0)});
     }
   } else if(tab==='fillblank'){
     const {data:fb}=await db.from('fillblank_stage_results').select('user_id,xp_earned');
-    (fb||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(r.xp_earned||0)});
+    (fb||[]).forEach(r=>{xpMap[r.user_id]=(xpMap[r.user_id]||0)+(Number(r.xp_earned)||0)});
   }
 
   if(tab!=='class'){
@@ -1121,10 +1163,11 @@ async function switchDashTeacherTab(tab){
 }
 
 async function renderDashClasses(cont){
-  const [{data:classes,error:classError},{data:packs,error:packError},{data:invites}]=await Promise.all([
+  const [{data:classes,error:classError},{data:packs,error:packError},{data:invites},{data:classInvites}]=await Promise.all([
     db.from('classes').select('id,name,created_at').eq('teacher_id',G.userId).order('created_at',{ascending:false}),
     db.from('word_packs').select('id,name,icon,words').order('created_at',{ascending:true}),
-    db.from('invite_codes').select('code').eq('role','student').eq('is_active',true).order('created_at',{ascending:false}).limit(1)
+    db.from('invite_codes').select('code,expires_at,created_at').eq('role','student').eq('invite_kind','student_single').eq('is_active',true).order('created_at',{ascending:false}).limit(8),
+    db.from('class_invites').select('class_id,code,is_active')
   ]);
   if(classError||packError){
     cont.innerHTML='<div style="text-align:center;color:var(--red);padding:20px">班级数据载入失败，请刷新后重试。</div>';
@@ -1149,17 +1192,17 @@ async function renderDashClasses(cont){
     if(!assignedByClass[item.class_id]) assignedByClass[item.class_id]=new Set();
     assignedByClass[item.class_id].add(item.pack_id);
   });
-  const invite=invites?.[0]?.code||'暂无可用学生邀请码';
+  const classInviteMap=Object.fromEntries((classInvites||[]).map(item=>[item.class_id,item.code]));
   document.getElementById('wb-meta').textContent=`教师账号 · ${classes?.length||0} 个班级 · ${students.length} 名学生`;
 
   cont.innerHTML=`
     <div id="teacher-invite-admin"></div>
     <div class="teacher-invite">
       <div>
-        <div class="assignment-label" style="margin-bottom:5px">学生注册邀请码</div>
-        <code>${escH(invite)}</code>
+        <div class="assignment-label" style="margin-bottom:5px">学生单次邀请码 · 使用一次后失效</div>
+        <code>${invites?.length?escH(invites.map(item=>item.code).join(' · ')):'暂无有效单次邀请码'}</code>
       </div>
-      ${invites?.length?`<button class="btn btn-xs btn-cyan" onclick="copyStudentInvite('${escH(escQ(invite))}')">复制</button>`:''}
+      <button class="btn btn-xs btn-cyan" id="create-student-invite" onclick="createStudentInvite()">生成新码</button>
     </div>
     <div class="class-create-row">
       <input class="inp" id="dash-class-name" maxlength="60" placeholder="输入班级名称，如：2026 届 1 班" onkeydown="if(event.key==='Enter')createDashClass()">
@@ -1172,10 +1215,11 @@ async function renderDashClasses(cont){
           <div class="teacher-class-head">
             <div>
               <div class="teacher-class-name">🏫 ${escH(item.name)}</div>
-              <div class="teacher-class-meta">${studentCounts[item.id]||0} 名学生 · ${current.size} 个词包任务</div>
+              <div class="teacher-class-meta">${studentCounts[item.id]||0}/60 名学生 · ${current.size} 个词包任务</div>
             </div>
             <button class="btn btn-xs btn-gray" onclick="viewDashClassProgress('${escH(escQ(item.id))}','${escH(escQ(item.name))}')">查看学生进度</button>
           </div>
+          <div class="teacher-invite" style="margin:10px 0 14px"><div><div class="assignment-label">班级邀请码 · 注册后自动加入本班</div><code>${escH(classInviteMap[item.id]||'生成中…')}</code></div>${classInviteMap[item.id]?`<button class="btn btn-xs btn-cyan" onclick="copyStudentInvite('${escH(escQ(classInviteMap[item.id]))}')">复制</button>`:''}</div>
           <div class="assignment-label">分配给这个班级的词包 · 勾选后立即生效</div>
           <div class="assignment-list">
             ${(packs||[]).map(pack=>`<label class="assignment-item">
@@ -1190,10 +1234,19 @@ async function renderDashClasses(cont){
       }).join(''):`<div class="teacher-class-card" style="text-align:center;padding:24px">
         <div style="font-size:30px;margin-bottom:8px">🏫</div>
         <div style="font-weight:700;margin-bottom:5px">还没有班级</div>
-        <div style="font-size:12px;color:var(--dim);line-height:1.7">在上方输入班级名称即可创建。首个词包会自动分配，学生注册时就能选择这个班级。</div>
+        <div style="font-size:12px;color:var(--dim);line-height:1.7">在上方输入班级名称即可创建。系统会自动生成该班专属邀请码，最多可加入 60 名学生。</div>
       </div>`}
     </div>`;
   if(G.isTeacher) await renderTeacherInviteAdmin(document.getElementById('teacher-invite-admin'));
+}
+
+async function createStudentInvite(){
+  const button=document.getElementById('create-student-invite');
+  if(button){button.disabled=true;button.textContent='生成中…';}
+  const {data,error}=await db.rpc('create_vq_student_invite',{p_valid_days:14});
+  if(error){if(button){button.disabled=false;button.textContent='生成新码';}return toast('生成失败：'+(error.message||'请稍后重试'),'err');}
+  toast(`已生成一次性学生邀请码：${data}`);
+  await renderDashClasses(document.getElementById('dash-teacher-content'));
 }
 
 async function createDashClass(){
@@ -1203,8 +1256,8 @@ async function createDashClass(){
   if(name.length<2) return toast('班级名称至少需要 2 个字','err');
   button.disabled=true;
   button.textContent='创建中…';
-  const {data:created,error}=await db.from('classes')
-    .insert({name,teacher_id:G.userId}).select('id').single();
+  const {data:rows,error}=await db.rpc('create_vq_class',{p_name:name});
+  const created=Array.isArray(rows)?rows[0]:rows;
   if(error){
     button.disabled=false;
     button.textContent='+ 创建班级';

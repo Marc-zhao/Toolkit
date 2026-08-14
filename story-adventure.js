@@ -141,7 +141,7 @@ function storyAssetUrl(value, fallback = '') {
 
 function generatedStoryData(pack = G.pack) {
     const data = pack?.story_data;
-    if (!['ready', 'partial'].includes(data?.status) || !data?.story || data.story.beats?.length !== 12) return null;
+    if (!['ready', 'partial'].includes(data?.status) || !data?.story || !Array.isArray(data.story.beats) || !data.story.beats.length) return null;
     return data;
 }
 
@@ -162,33 +162,40 @@ function heroCatalog(pack = G.pack) {
     }));
 }
 
-function storyArt(story, pack = G.pack) {
+function storyArt(story, pack = G.pack, chapterCount = 12) {
     const custom = generatedStoryData(pack);
     const fallback = VQ_STORY_ART[story?.id]
         || VQ_STORY_ART[Object.keys(VQ_STORY_ART)[vqHash(custom?.signature || story?.id || pack?.id) % 3]];
-    if (!custom || story?.id !== custom.story.id) return fallback;
-    const generatedRoutes = buildGeneratedRoutes(custom.signature);
+    const needsDynamicRoute = chapterCount !== 12;
+    if ((!custom || story?.id !== custom.story.id) && !needsDynamicRoute) return fallback;
+    const generatedRoutes = buildGeneratedRoutes(custom?.signature || `${pack?.id}:${story?.id}`, chapterCount);
+    const width = Math.max(1600, 420 + Math.max(1, chapterCount) * 132);
     return {
         ...fallback,
-        generated: true,
-        image: storyAssetUrl(custom.art?.mapImage, fallback.image),
-        heroImage: storyAssetUrl(custom.art?.heroImage, './assets/story/heroes.jpg'),
+        generated: Boolean(custom),
+        image: storyAssetUrl(custom?.art?.mapImage, fallback.image),
+        heroImage: storyAssetUrl(custom?.art?.heroImage, fallback.heroImage || './assets/story/heroes.jpg'),
+        width,
+        camp: [105, 760],
+        extras: { context: [width - 330, 770], review: [width - 190, 815], boss: [width - 95, 700] },
         routes: generatedRoutes,
         routeNames: [
-            custom.art?.routeNames?.[0] || '行动路线',
-            custom.art?.routeNames?.[1] || '调查路线'
+            custom?.art?.routeNames?.[0] || fallback.routeNames?.[0] || '行动路线',
+            custom?.art?.routeNames?.[1] || fallback.routeNames?.[1] || '调查路线'
         ]
     };
 }
 
-function buildGeneratedRoutes(signature) {
+function buildGeneratedRoutes(signature, chapterCount = 12) {
     const seed = vqHash(signature || 'story');
     const jitter = (index, salt, range) => ((vqHash(`${seed}:${index}:${salt}`) % (range * 2 + 1)) - range);
     const routeA = [];
     const routeB = [];
-    for (let index = 0; index < 12; index++) {
-        const progress = index / 11;
-        const x = 205 + progress * 1270;
+    const count = Math.max(1, chapterCount);
+    const width = Math.max(1600, 420 + count * 132);
+    for (let index = 0; index < count; index++) {
+        const progress = count <= 1 ? 0 : index / (count - 1);
+        const x = 205 + progress * (width - 705);
         const sharedY = 755 - progress * 610;
         const spread = Math.sin(progress * Math.PI) * 155;
         routeA.push([
@@ -201,7 +208,7 @@ function buildGeneratedRoutes(signature) {
         ]);
     }
     routeA[0] = routeB[0] = [210, 760];
-    routeA[11] = routeB[11] = [1480, 130];
+    routeA[count - 1] = routeB[count - 1] = [width - 500, 130];
     return { a: routeA, b: routeB };
 }
 
@@ -238,12 +245,7 @@ function storyById(storyId, pack = G.pack) {
 }
 
 function storyChapterCount(wordCount) {
-    if (wordCount <= 8) return Math.min(wordCount, 4);
-    if (wordCount <= 15) return 5;
-    if (wordCount <= 24) return 6;
-    if (wordCount <= 36) return 8;
-    if (wordCount <= 54) return 10;
-    return 12;
+    return Math.max(1, Math.ceil(Math.max(0, Number(wordCount) || 0) / 10));
 }
 
 function buildStoryLevels(words) {
@@ -261,18 +263,21 @@ function buildStoryLevels(words) {
     return levels;
 }
 
-function storyBeatIndex(chapterIndex, chapterCount = G.levels.length) {
-    if (chapterCount <= 1) return 0;
-    return Math.round(chapterIndex * 11 / (chapterCount - 1));
+function storyBeatIndex(chapterIndex, chapterCount = G.levels.length, beatCount = 12) {
+    if (chapterCount <= 1 || beatCount <= 1) return 0;
+    return Math.min(beatCount - 1, Math.round(chapterIndex * (beatCount - 1) / (chapterCount - 1)));
 }
 
 function getStoryBeat(chapterIndex, branch = 'a', story = storyForPack()) {
-    const beat = story.beats[storyBeatIndex(chapterIndex)] || story.beats[0];
+    const beatIndex = storyBeatIndex(chapterIndex, G.levels.length, story.beats.length);
+    const beat = story.beats[beatIndex] || story.beats[0];
     const route = chapterIndex === 0 ? null : (beat[branch] || beat.a);
+    const repeated = G.levels.length > story.beats.length;
+    const segment = repeated ? ` · 第${chapterIndex + 1}段` : '';
     return {
         ...beat,
         branch,
-        routeTitle: route?.[0] || beat.title,
+        routeTitle: `${route?.[0] || beat.title}${segment}`,
         routePrompt: route?.[1] || beat.text,
         outcome: route?.[2] || beat.text
     };
@@ -423,13 +428,18 @@ async function chooseHero(heroId) {
 }
 
 function storyModeFor(branch, chapterIndex, heroId) {
+    const ability = G.ability?.level || 'standard';
     if (chapterIndex === 0) {
+        if (ability === 'foundation') return 'memory';
         return heroId === 'noah' ? 'spelling' : (heroId === 'sora' ? 'sound' : 'balanced');
     }
     const routeModes = branch === 'a'
         ? ['balanced', 'spelling', 'memory']
         : ['sound', 'memory', 'balanced'];
-    return routeModes[(chapterIndex - 1) % routeModes.length];
+    const mode = routeModes[(chapterIndex - 1) % routeModes.length];
+    if (ability === 'foundation' && mode === 'balanced') return 'memory';
+    if (ability === 'advanced' && mode === 'memory') return chapterIndex % 2 ? 'spelling' : 'balanced';
+    return mode;
 }
 
 function modeLabel(mode) {
@@ -441,14 +451,14 @@ function buildLearningMap() {
     const completed = state.completed;
     const reviewWords = getReviewWords();
     const chapterCount = G.levels.length;
-    const width = 1600;
+    const story = storyById(state.storyId);
+    const art = storyArt(story, G.pack, chapterCount);
+    const width = art.width || 1600;
     const height = 900;
     const nodes = [];
     const links = [];
-    const story = storyById(state.storyId);
-    const art = storyArt(story);
     const nodeState = (id, available) => completed[id] ? 'done' : (available ? 'available' : 'locked');
-    const pointFor = (branch, index) => art.routes[branch][storyBeatIndex(index, chapterCount)];
+    const pointFor = (branch, index) => art.routes[branch][index] || art.routes[branch][art.routes[branch].length - 1];
 
     nodes.push({
         id: 'camp', type: 'camp', x: art.camp[0], y: art.camp[1], icon: '◆',
@@ -643,9 +653,11 @@ function renderJourneyPanel() {
     const hero = heroForState(state);
     const world = document.getElementById('journey-track');
     world.classList.toggle('vq-generated-map-art', Boolean(graph.art.generated));
-    world.style.width = '100%';
-    world.style.height = 'auto';
-    world.style.aspectRatio = `${width} / ${height}`;
+    world.style.width = `${width}px`;
+    world.style.height = `${height}px`;
+    world.style.aspectRatio = 'auto';
+    world.style.backgroundSize = width > 1800 ? 'auto 100%' : 'cover';
+    world.style.backgroundRepeat = width > 1800 ? 'repeat-x' : 'no-repeat';
     world.style.backgroundImage = `linear-gradient(180deg, rgba(3, 8, 16, .02), rgba(3, 8, 16, .2)), url('${graph.art.image}')`;
     world.innerHTML = `
         <div class="world-map-titleplate">
@@ -654,6 +666,7 @@ function renderJourneyPanel() {
             <span>B · ${escH(graph.art.routeNames[1])}</span>
         </div>
         <div class="world-map-vignette" aria-hidden="true"></div>
+        ${graph.art.generated ? '<div class="vq-art-mark-cover" aria-hidden="true"></div>' : ''}
         <svg class="world-map-lines" viewBox="0 0 ${width} ${height}" aria-hidden="true">
             ${links.map(link => `<path class="world-map-line ${lineClass(link)}" d="${curve(link)}"></path>`).join('')}
         </svg>
@@ -661,7 +674,7 @@ function renderJourneyPanel() {
             <button class="world-node ${node.state} ${node.recommended ? 'recommended' : ''} ${node.branch ? `route-${node.branch}` : ''} ${state.currentNode === node.id ? 'current' : ''}"
                 style="left:${(node.x / width * 100).toFixed(3)}%;top:${(node.y / height * 100).toFixed(3)}%;" type="button"
                 ${['locked', 'missed'].includes(node.state) ? 'disabled' : ''}
-                onclick="startMapNode('${node.id}')"
+                onclick="requestMapNode('${node.id}')"
                 aria-label="${escH(node.name)}，${escH(node.meta)}">
                 <span class="world-node-state">${icon(node)}</span>
                 <span class="world-node-icon">${node.icon}</span>
@@ -703,7 +716,7 @@ function renderJourneyPanel() {
             ? `本章采用“${modeLabel(recommended.mode)}”，完成后将触发新的故事画面与剧情选择。`
             : '主线故事已完成，继续完成词包的终章挑战。';
         action.textContent = `前往${recommended.name}`;
-        action.onclick = () => startMapNode(recommended.id);
+        action.onclick = () => requestMapNode(recommended.id);
     } else {
         title.textContent = '这次冒险已经完成';
         copy.textContent = state.ending || '你仍可回顾已完成章节，或从学生中心选择新的词包冒险。';
@@ -724,6 +737,26 @@ function renderJourneyPanel() {
 }
 
 let pendingStoryBranch = null;
+let pendingMapNodeId = null;
+
+function requestMapNode(nodeId) {
+    const graph = G.mapGraph || buildLearningMap();
+    const node = graph.nodes.find(item => item.id === nodeId);
+    if (!node || ['locked', 'missed'].includes(node.state)) return toast('这个地点还没有解锁', 'err');
+    if (!ensureMapState().hero) return openHeroPicker();
+    if (node.type === 'camp') return renderJourneyPanel();
+    if (node.state === 'choice') return requestStoryBranch(node.level - 1, node.branch, true);
+    pendingStoryBranch = null;
+    pendingMapNodeId = node.id;
+    document.querySelector('#m-route-confirm .panel-title').textContent = '确认进入关卡';
+    document.getElementById('route-confirm-title').textContent = node.name;
+    document.getElementById('route-confirm-copy').textContent = node.type === 'chapter'
+        ? '确认后将进入本章练习。你可以先关闭窗口，继续拖动地图查看其他已解锁地点。'
+        : '确认后将进入这个挑战。当前地图进度会自动保存。';
+    document.getElementById('route-confirm-meta').textContent = node.meta;
+    document.querySelector('#m-route-confirm .btn-purple').textContent = '确认进入';
+    openModal('m-route-confirm');
+}
 
 function requestStoryBranch(completedChapter, branch, startImmediately = true) {
     const state = ensureMapState();
@@ -738,20 +771,30 @@ function requestStoryBranch(completedChapter, branch, startImmediately = true) {
     const story = storyById(state.storyId);
     const beat = getStoryBeat(completedChapter + 1, branch, story);
     const mode = storyModeFor(branch, completedChapter + 1, state.hero);
+    pendingMapNodeId = null;
     pendingStoryBranch = { completedChapter, branch, startImmediately };
+    document.querySelector('#m-route-confirm .panel-title').textContent = '确认剧情路线';
     document.getElementById('route-confirm-title').textContent = `${branch.toUpperCase()} · ${beat.routeTitle}`;
     document.getElementById('route-confirm-copy').textContent = beat.routePrompt;
     document.getElementById('route-confirm-meta').textContent =
         `下一章：${modeLabel(mode)} · ${G.levels[completedChapter + 1].words.length} 个词`;
+    document.querySelector('#m-route-confirm .btn-purple').textContent = '确认选择并进入';
     openModal('m-route-confirm');
 }
 
 function cancelStoryBranch() {
     pendingStoryBranch = null;
+    pendingMapNodeId = null;
     closeModal('m-route-confirm');
 }
 
 async function confirmStoryBranch() {
+    if (pendingMapNodeId) {
+        const nodeId = pendingMapNodeId;
+        pendingMapNodeId = null;
+        closeModal('m-route-confirm');
+        return startMapNode(nodeId);
+    }
     const pending = pendingStoryBranch;
     if (!pending) return closeModal('m-route-confirm');
     pendingStoryBranch = null;
@@ -876,7 +919,7 @@ function previewTeacherMap(packId) {
     document.getElementById('teacher-map-preview-summary').innerHTML =
         `<strong style="color:var(--text);">${escH(pack.name)}</strong> 将进入
         <strong style="color:var(--gold);">《${escH(story.short)}》</strong>，并按 ${words.length} 个词生成
-        <strong style="color:var(--gold);">${levels.length}</strong> 个故事章节。每章词量由故事长度自动均分，
+        <strong style="color:var(--gold);">${levels.length}</strong> 个故事章节。每章最多 10 个词，章节数随词量自动增加，
         学生先选择主角，再在每次通关后决定 A/B 剧情路线；这份内容由全体学生共用，不会重复生成。`;
     document.getElementById('teacher-map-preview-body').innerHTML = `
         <div style="padding:12px;border:1px solid var(--border);margin-bottom:12px;background:var(--bg);font-size:12px;line-height:1.8;">

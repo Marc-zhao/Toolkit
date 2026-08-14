@@ -26,7 +26,7 @@
 
   function storyData() {
     const data = activePack().story_data;
-    return ['ready', 'partial'].includes(data?.status) && data?.story?.beats?.length === 12 ? data : null;
+    return ['ready', 'partial'].includes(data?.status) && data?.story?.beats?.length > 0 ? data : null;
   }
 
   function currentStory() {
@@ -117,7 +117,7 @@
 
   function beatFor(stage, branch = 'a') {
     const story = currentStory();
-    const index = G.totalStages <= 1 ? 0 : Math.round((stage - 1) * 11 / (G.totalStages - 1));
+    const index = G.totalStages <= 1 ? 0 : Math.round((stage - 1) * Math.max(0, story.beats.length - 1) / (G.totalStages - 1));
     const beat = story.beats[index] || story.beats[0];
     const route = stage === 1 ? null : (beat[branch] || beat.a);
     return {
@@ -139,7 +139,7 @@
 
   function positions(stage, branch) {
     const progress = G.totalStages <= 1 ? 0 : (stage - 1) / (G.totalStages - 1);
-    const x = 95 + progress * 930;
+    const x = 95 + (stage - 1) * 116;
     const wave = Math.sin(progress * Math.PI * 2.2) * 55;
     const split = stage === 1 ? 0 : (branch === 'a' ? -112 : 112);
     return [Math.round(x), Math.round(285 + split + wave)];
@@ -161,7 +161,7 @@
         const beat = beatFor(stage, branch);
         const point = positions(stage, branch);
         const disabled = ['locked', 'missed'].includes(status);
-        nodes.push(`<button class="fb-node ${status} route-${branch}" style="left:${point[0] / 11}%;top:${point[1] / 5.3}%"
+        nodes.push(`<button class="fb-node ${status} route-${branch}" style="left:${point[0]}px;top:${point[1]}px"
           type="button" ${disabled ? 'disabled' : ''} onclick="openFillblankNode(${stage},'${branch}')">
           ${status === 'done' ? '✓' : stage}
           <span class="fb-node-card"><strong>${escH(beat.title)}</strong><span>第 ${stage} 关 · ${Math.min(5, Math.max(0, G.words.length - (stage - 1) * 5))} 词</span></span>
@@ -170,7 +170,7 @@
     }
     const currentBranch = state.choices[Math.max(1, state.currentStage) - 1] || 'a';
     const currentPoint = positions(Math.max(1, Math.min(G.totalStages, state.currentStage)), currentBranch);
-    const hero = state.hero ? `<span class="fb-map-hero hero-${state.hero}" style="left:${currentPoint[0] / 11}%;top:${currentPoint[1] / 5.3}%;background-image:url('${heroArt()}')"></span>` : '';
+    const hero = state.hero ? `<span class="fb-map-hero hero-${state.hero}" style="left:${currentPoint[0]}px;top:${currentPoint[1]}px;background-image:url('${heroArt()}')"></span>` : '';
     return nodes.join('') + hero;
   }
 
@@ -181,6 +181,7 @@
     const story = currentStory();
     const done = state.completed.length;
     const nextStage = Math.min(G.totalStages, Math.max(1, done + 1));
+    const mapWidth = Math.max(1100, 210 + Math.max(1, G.totalStages) * 116);
     const needsChoice = nextStage > 1 && state.completed.includes(nextStage - 1) && !state.choices[nextStage - 1];
     body.innerHTML = `<div class="fb-story-shell">
       <div class="fb-story-head">
@@ -193,9 +194,10 @@
       </div>
       <div class="fb-map-legend"><span style="color:var(--cyan)"><i></i>可挑战</span><span style="color:var(--purple)"><i></i>待选择</span><span style="color:var(--green)"><i></i>已完成</span><span><i></i>未抵达</span></div>
       <div class="fb-map-viewport" id="fb-map-viewport" aria-label="句子填空完整学习地图">
-        <div class="fb-world-map" id="fb-world-map" style="background-image:url('${mapArt()}')">
+        <div class="fb-world-map" id="fb-world-map" style="width:${mapWidth}px;min-width:${mapWidth}px;background-image:url('${mapArt()}');background-size:${mapWidth>1500?'auto 100%':'cover'};background-repeat:${mapWidth>1500?'repeat-x':'no-repeat'}">
           <div class="fb-map-plate">${escH(story.short || '语境远征')}<br>完成句子挑战，推进故事路线</div>
-          <svg class="fb-map-line" viewBox="0 0 1100 530" aria-hidden="true">
+          ${storyData() ? '<div class="fb-art-mark-cover" aria-hidden="true"></div>' : ''}
+          <svg class="fb-map-line" viewBox="0 0 ${mapWidth} 530" aria-hidden="true">
             <path class="${done ? 'done' : ''}" d="${routePath('a')}"></path>
             <path class="${needsChoice ? 'choice' : ''}" d="${routePath('b')}"></path>
           </svg>
@@ -279,16 +281,15 @@
     if (['locked', 'missed'].includes(status)) return toast('这条路线还没有解锁', 'err');
     if (!state.hero) return openFillblankHeroPicker();
     if (status === 'done') return showStageDetail(stage);
-    if (stage > 1 && !state.choices[stage - 1]) {
-      const beat = beatFor(stage, branch);
-      pendingChoice = { stage, branch };
-      document.getElementById('fb-route-title').textContent = `${branch.toUpperCase()} · ${beat.title}`;
-      document.getElementById('fb-route-copy').textContent = beat.prompt;
-      document.getElementById('fb-route-meta').textContent = `第 ${stage} 关 · 句子选词、语境理解与拼写`;
-      openModal('modal-fb-route');
-      return;
-    }
-    baseStartStage(stage);
+    const beat = beatFor(stage, branch);
+    const locksRoute = stage > 1 && !state.choices[stage - 1];
+    pendingChoice = { stage, branch, locksRoute };
+    document.querySelector('#modal-fb-route .modal-title').textContent = locksRoute ? '确认剧情路线' : '确认进入关卡';
+    document.getElementById('fb-route-title').textContent = `${stage > 1 ? `${branch.toUpperCase()} · ` : ''}${beat.title}`;
+    document.getElementById('fb-route-copy').textContent = locksRoute ? beat.prompt : '确认后将进入本关练习；你也可以先继续拖动地图查看其他地点。';
+    document.getElementById('fb-route-meta').textContent = `第 ${stage} 关 · 句子选词、语境理解与拼写`;
+    document.querySelector('#modal-fb-route .btn-purple').textContent = locksRoute ? '确认路线并进入' : '确认进入';
+    openModal('modal-fb-route');
   };
 
   window.cancelFillblankRoute = function () {
@@ -298,9 +299,9 @@
 
   window.confirmFillblankRoute = async function () {
     if (!pendingChoice) return closeModal('modal-fb-route');
-    const { stage, branch } = pendingChoice;
+    const { stage, branch, locksRoute } = pendingChoice;
     pendingChoice = null;
-    G.fbMapState.choices[stage - 1] = branch;
+    if (locksRoute) G.fbMapState.choices[stage - 1] = branch;
     G.fbMapState.currentStage = stage;
     G.fbMapState.history.push({ event: 'route', stage, branch, at: new Date().toISOString() });
     await saveMapProgress();
