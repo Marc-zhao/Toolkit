@@ -7,8 +7,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="./theme.css">
+<link rel="stylesheet" href="./battle-monsters.css">
 <link rel="stylesheet" href="./fillblank-map.css">
 <script src="./theme.js"></script>
+<script src="./battle-monsters.js"></script>
 <style>
 :root{
   --bg:#060612;--panel:#0f0f22;--border:#252548;
@@ -268,12 +270,12 @@ select{width:100%;background:#040410;border:2px solid var(--border);color:var(--
 
   <!-- 题目区 -->
   <div class="q-area" id="q-area">
-    <div id="step-badge" class="step-badge s1">STEP 1 · 看中文选英文</div>
+    <div id="step-badge" class="step-badge s1">STEP 1 · 语境选词</div>
 
-    <!-- 语境提示（只给中文，不显示英文单词！）-->
+    <!-- 作答前只提供英文语境，中文解释留到答错反馈和复习。 -->
     <div class="ctx-box">
-      <div class="ctx-lbl">💡 中文语境提示</div>
-      <div class="ctx-text" id="ctx-text">…</div>
+      <div class="ctx-lbl">◇ CONTEXT CHECK</div>
+      <div class="ctx-text" id="ctx-text">阅读英文句子，判断空格处需要表达的含义。</div>
     </div>
 
     <!-- 英文句子 -->
@@ -533,6 +535,14 @@ function buildLocalQuestions(targetWords,difficulty=1,count){
   return Array.from({length:requested},(_,index)=>{
     const target=targets[index%targets.length];
     const meaning=target.m||'目标词汇';
+    const pos=String(target.pos||'').toLowerCase();
+    const sentence=pos.startsWith('v')
+      ? 'Before the deadline, the group decided to ____ the final plan carefully.'
+      : pos.startsWith('adj')
+        ? 'Everyone agreed that the result was surprisingly ____ under pressure.'
+        : pos.startsWith('adv')
+          ? 'The speaker explained the final instruction ____ so everyone could follow.'
+          : 'The team placed the ____ beside the main entrance before the meeting began.';
     const distractors=shuffle(pool.filter(item=>item.w.toLowerCase()!==target.w.toLowerCase()))
       .map(item=>item.w)
       .slice(0,3);
@@ -544,11 +554,11 @@ function buildLocalQuestions(targetWords,difficulty=1,count){
     return{
       word:target.w,
       meaning,
-      sentence:`The word ____ matches the meaning "${meaning}".`,
-      translation:`请选择与“${meaning}”对应的单词。`,
+      sentence,
+      translation:'',
       answer:target.w,
       options:shuffle([target.w,...distractors.slice(0,3)]),
-      steps:[`中文意思：${meaning}`,`首字母：${target.w.charAt(0).toUpperCase()}`,`单词长度：${target.w.length}`],
+      steps:[`结合完整英文句子判断词性`, `首字母：${target.w.charAt(0).toUpperCase()}`, `单词长度：${target.w.length}`],
       grammar_point:'词义辨析与拼写',
       difficulty
     };
@@ -856,7 +866,8 @@ async function startAssignedMode(questions){
   // 显示特殊的战场标题
   go('s-battle');
   const mon=MONSTERS[Math.floor(Math.random()*MONSTERS.length)];
-  $('mon-em').textContent=mon.e;
+  if(window.VQBattleMonster)VQBattleMonster.mount($('mon-em'),{index:Math.floor(Math.random()*MONSTERS.length),stage:1,name:mon.n});
+  else $('mon-em').textContent=mon.e;
   $('mon-name').textContent=`${mon.n} · 老师推送的专项练习`;
   G.mhpMax=questions.length*3;G.mhp=G.mhpMax;
   updateMonHp();updatePlayerHp();
@@ -869,7 +880,8 @@ async function startAssignedMode(questions){
 // ── 初始化战场 ──
 function initBattle(){
   const mon=MONSTERS[(G.stageNum-1)%MONSTERS.length];
-  $('mon-em').textContent=mon.e;
+  if(window.VQBattleMonster)VQBattleMonster.mount($('mon-em'),{index:G.stageNum-1,stage:(G.stageNum-1)%4,name:mon.n});
+  else $('mon-em').textContent=mon.e;
   // Bug2：显示当前阶段
   const phaseLabel=G.phase===1?'逐词练习':'混合巩固';
   $('mon-name').textContent=`${mon.n} · 关卡${G.stageNum} · ${phaseLabel}`;
@@ -911,14 +923,11 @@ function renderQ(){
   updateDots();
   // 步骤显示
   const badge=$('step-badge');
-  const stepNames=['','STEP 1 · 看中文选英文','STEP 2 · 看英文选英文','STEP 3 · 拼写单词'];
+  const stepNames=['','STEP 1 · 语境选词','STEP 2 · 再次判断','STEP 3 · 语境拼写'];
   const stepCls=['','s1','s2','s3'];
   badge.className='step-badge '+(G.phase===2?'s1':stepCls[G.gameStep]);
   badge.textContent=G.phase===2?'混合巩固 · 选词':stepNames[G.gameStep];
-  // 语境提示：只显示中文翻译，不显示英文单词
-  // 中文翻译里的____替换成【中文释义】，让学生看得懂
-  const cnTranslation=(q.translation||'').replace(/____/g,`【${q.meaning||'?'}】`);
-  $('ctx-text').textContent=cnTranslation;
+  $('ctx-text').textContent='阅读英文句子，结合上下文、搭配和语法判断答案。';
   // 句子（朗读时跳过____，不读出下划线）
   const fullSent=(q.sentence||'').replace(/____/g,' ');
   renderBlankSentence($('sent-en'),q.sentence,'blank');
@@ -928,26 +937,24 @@ function renderQ(){
   $('hint-box').style.display='none';
   $('opts').style.opacity='1';
   if(G.gameStep===1){
-    $('sent-hint').textContent='STEP 1 · 根据中文语境，选择正确的英文词语';
-    // Step1中文翻译已经显示【释义】，让学生清楚要填什么
+    $('sent-hint').textContent='STEP 1 · 阅读英文语境，选择最合适的词语';
     $('opts').style.display='grid';
     $('spell-box').style.display='none';
     renderOpts(q,true); // Step1：显示选项
   }else if(G.gameStep===2){
-    $('sent-hint').textContent='STEP 2 · 再看一遍英文句子，再次选出正确答案';
-    // Step2不显示中文翻译，改成语法提示
-    $('ctx-text').textContent=q.grammar_point?`语法提示：${q.grammar_point}`:'—';
+    $('sent-hint').textContent='STEP 2 · 根据搭配和语法再次判断';
+    $('ctx-text').textContent=q.grammar_point?`语法范围：${q.grammar_point}`:'注意空格前后的词性、时态和固定搭配。';
     $('opts').style.display='grid';
     $('spell-box').style.display='none';
     renderOpts(q,false); // Step2：重新shuffle
   }else{
-    $('sent-hint').textContent='STEP 3 · 根据中文释义，拼写出对应的英文单词';
+    $('sent-hint').textContent='STEP 3 · 根据英文语境拼写缺失单词';
     $('opts').style.display='none';
     $('spell-box').style.display='flex';
     $('spell-fb').textContent='';
     $('spell-inp').value='';
-    $('spell-prompt').textContent='';
-    $('spell-prompt').append('"');const em=document.createElement('em');em.textContent=q.meaning||'';$('spell-prompt').append(em,'" → 请拼写英文单词');
+    const firstLetter=G.adaptiveDifficulty===1&&q.answer?`，首字母 ${String(q.answer).charAt(0).toUpperCase()}`:'';
+    $('spell-prompt').textContent=`补全上方英文句子${firstLetter}`;
     setTimeout(()=>$('spell-inp').focus(),120);
   }
   $('streak-el').textContent=G.streak>=2?`🔥 ${G.streak}连击`:'';
@@ -979,6 +986,7 @@ function pickAnswer(sel,ans,btnEl,q){
     $('score-el').textContent='SCORE: '+G.score;
     $('streak-el').textContent=G.streak>=2?`🔥 ${G.streak}连击`:'';
     flashScreen('ok');playSfx('correct');popDmg(G.gameStep===1?5:5);
+    if(window.VQBattleMonster)VQBattleMonster.hurt($('mon-em'));
     G.mhp=Math.max(0,G.mhp-1);updateMonHp();
     recAns(q,sel,true);
     if(G.phase===2){
@@ -996,6 +1004,7 @@ function pickAnswer(sel,ans,btnEl,q){
   }else{
     G.streak=0;G.hp=Math.max(0,G.hp-1);
     updatePlayerHp();flashScreen('err');playSfx('wrong');
+    if(window.VQBattleMonster)VQBattleMonster.attack($('mon-em'));
     $('streak-el').textContent='';
     G.stageErrors.push({...q,selectedAnswer:sel,errorType:'step'+G.gameStep});
     recAns(q,sel,false);
@@ -1018,6 +1027,7 @@ function checkSpell(){
     G.score+=10;$('score-el').textContent='SCORE: '+G.score;
     $('streak-el').textContent=G.streak>=2?`🔥 ${G.streak}连击`:'';
     flashScreen('ok');popDmg(10);G.mhp=Math.max(0,G.mhp-1);updateMonHp();
+    if(window.VQBattleMonster)VQBattleMonster.hurt($('mon-em'));
     recAns(q,val,true);
     playAudio(q.word||val);
     setTimeout(()=>{G.gameStep=1;G.qIdx++;renderQ();},900);
@@ -1027,6 +1037,7 @@ function checkSpell(){
   }else{
     fb.textContent=`✗ 正确答案：${q.answer}`;fb.style.color='var(--err)';playSfx('wrong');
     G.streak=0;G.hp=Math.max(0,G.hp-1);updatePlayerHp();flashScreen('err');
+    if(window.VQBattleMonster)VQBattleMonster.attack($('mon-em'));
     G.stageErrors.push({...q,selectedAnswer:val,errorType:'spell'});
     recAns(q,val,false);
     setTimeout(()=>{G.gameStep=1;G.qIdx++;renderQ();},1400);
@@ -1107,7 +1118,8 @@ async function endBattle(){
     // 怪物变形（Phase2用不同怪物）
     const monIdx=(G.stageNum-1+Math.floor(MONSTERS.length/2))%MONSTERS.length;
     const mon=MONSTERS[monIdx];
-    $('mon-em').textContent=mon.e;
+    if(window.VQBattleMonster)VQBattleMonster.mount($('mon-em'),{index:monIdx,stage:3,name:mon.n});
+    else $('mon-em').textContent=mon.e;
     $('mon-name').textContent=`${mon.n} · 混合巩固（选词）`;
     G.mhpMax=G.questions.length;G.mhp=G.mhpMax;
     updateMonHp();updateDots();

@@ -1,0 +1,101 @@
+.mon-area.vq-battle-stage {
+    position: relative;
+    min-height: 190px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    isolation: isolate;
+    perspective: 760px;
+    border-block: 1px solid rgba(111, 190, 255, .12);
+    background:
+        radial-gradient(ellipse at 50% 72%, rgba(76, 172, 255, .2), transparent 34%),
+        linear-gradient(180deg, rgba(4, 11, 25, .12), rgba(3, 7, 17, .7));
+}
+
+.mon-area.vq-battle-stage::before {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    width: min(640px, 100%);
+    height: 150px;
+    bottom: -100px;
+    border: 1px solid rgba(113, 203, 255, .25);
+    border-radius: 50%;
+    background: repeating-radial-gradient(ellipse at center, rgba(78, 187, 255, .08) 0 2px, transparent 3px 19px);
+    transform: rotateX(64deg);
+    box-shadow: 0 -30px 90px rgba(51, 140, 255, .1);
+}
+
+.mon-area.vq-battle-stage::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    opacity: .42;
+    background:
+        radial-gradient(circle at 18% 38%, rgba(110, 211, 255, .7) 0 1px, transparent 2px),
+        radial-gradient(circle at 78% 28%, rgba(255, 226, 126, .72) 0 1px, transparent 2px),
+        radial-gradient(circle at 65% 66%, rgba(171, 119, 255, .72) 0 1px, transparent 2px);
+    background-size: 92px 88px, 137px 121px, 113px 104px;
+    animation: vqBattleDust 9s linear infinite;
+}
+
+.vq-monster {
+    --monster-accent: #58d9ff;
+    --monster-glow: rgba(88, 217, 255, .52);
+    position: relative;
+    width: clamp(154px, 28vw, 224px);
+    height: clamp(140px, 24vw, 190px);
+    display: grid;
+    place-items: center;
+    transform-origin: 50% 82%;
+    filter: drop-shadow(0 14px 14px rgba(0, 0, 0, .58));
+    animation: vqMonsterIdle 3.2s ease-in-out infinite;
+    will-change: transform, filter;
+}
+
+.vq-monster svg { width: 100%; height: 100%; overflow: visible; }
+.vq-monster .vq-shadow { transform-origin: center; animation: vqMonsterShadow 3.2s ease-in-out infinite; }
+.vq-monster .vq-core { transform-box: fill-box; transform-origin: center; animation: vqMonsterBreathe 2.2s ease-in-out infinite; }
+.vq-monster .vq-eye { animation: vqMonsterBlink 4.6s steps(1) infinite; }
+.vq-monster .vq-glow { filter: drop-shadow(0 0 7px var(--monster-glow)); }
+.vq-monster .vq-spark { transform-box: fill-box; transform-origin: center; animation: vqMonsterSpark 2.4s ease-in-out infinite; }
+.vq-monster .vq-spark:nth-child(2n) { animation-delay: -1.1s; }
+.vq-monster .vq-spark:nth-child(3n) { animation-delay: -.5s; }
+
+.vq-monster.is-hurt { animation: vqMonsterHurt .48s ease both; }
+.vq-monster.is-attacking { animation: vqMonsterAttack .7s cubic-bezier(.2,.7,.2,1) both; }
+.vq-monster.is-enraged { filter: drop-shadow(0 14px 14px rgba(0,0,0,.58)) drop-shadow(0 0 16px rgba(255,68,68,.44)); }
+.vq-monster.is-defeated { animation: vqMonsterDefeat .82s cubic-bezier(.4,0,.7,1) both; }
+
+.vq-battle-impact {
+    position: absolute;
+    z-index: 4;
+    width: 86px;
+    height: 86px;
+    border-radius: 50%;
+    pointer-events: none;
+    border: 3px solid rgba(255, 242, 167, .95);
+    box-shadow: 0 0 24px #ffdc5d, inset 0 0 20px rgba(255,255,255,.85);
+    animation: vqBattleImpact .45s ease-out both;
+}
+
+@keyframes vqMonsterIdle { 0%,100%{transform:translateY(2px) rotate(-.6deg)} 50%{transform:translateY(-8px) rotate(.6deg)} }
+@keyframes vqMonsterShadow { 0%,100%{transform:scaleX(1);opacity:.42} 50%{transform:scaleX(.82);opacity:.26} }
+@keyframes vqMonsterBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.035,.975)} }
+@keyframes vqMonsterBlink { 0%,47%,50%,100%{transform:scaleY(1)} 48%,49%{transform:scaleY(.08)} }
+@keyframes vqMonsterSpark { 0%,100%{opacity:.2;transform:translateY(5px) scale(.7)} 50%{opacity:1;transform:translateY(-5px) scale(1.15)} }
+@keyframes vqMonsterHurt { 0%{transform:translate(0,0);filter:brightness(1)} 18%{transform:translate(-18px,2px) rotate(-7deg);filter:brightness(3) saturate(.2)} 43%{transform:translate(14px,-2px) rotate(5deg)} 68%{transform:translate(-7px,1px) rotate(-2deg)} 100%{transform:translate(0,0);filter:brightness(1)} }
+@keyframes vqMonsterAttack { 0%{transform:translate(0,0) scale(1)} 38%{transform:translate(0,-8px) scale(.9,1.08)} 64%{transform:translate(-24px,15px) scale(1.14,.92)} 100%{transform:translate(0,0) scale(1)} }
+@keyframes vqMonsterDefeat { 0%{opacity:1;transform:translateY(0) rotate(0) scale(1)} 42%{opacity:1;transform:translateY(-9px) rotate(-5deg) scale(1.08)} 100%{opacity:0;transform:translateY(52px) rotate(12deg) scale(.35);filter:grayscale(1) brightness(2)} }
+@keyframes vqBattleImpact { 0%{opacity:0;transform:scale(.2)} 35%{opacity:1} 100%{opacity:0;transform:scale(1.55)} }
+@keyframes vqBattleDust { to { background-position: 92px -88px, -137px -121px, 113px -104px; } }
+
+@media (max-width: 600px) {
+    .mon-area.vq-battle-stage { min-height: 164px; }
+    .vq-monster { width: 160px; height: 146px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vq-monster, .vq-monster *, .mon-area.vq-battle-stage::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+}

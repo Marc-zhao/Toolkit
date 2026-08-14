@@ -903,9 +903,10 @@ function renderStoryResult(win) {
     }).join('');
 }
 
-function previewTeacherMap(packId) {
-    const pack = (window._teacherPacks || []).find(item => item.id === packId);
-    if (!pack) return toast('没有找到这个词包', 'err');
+function previewTeacherMap(packId, storyOverride = null, versionMeta = null) {
+    const storedPack = (window._teacherPacks || []).find(item => item.id === packId);
+    if (!storedPack) return toast('没有找到这个词包', 'err');
+    const pack = storyOverride ? { ...storedPack, story_data: storyOverride } : storedPack;
     if (!generatedStoryData(pack)) {
         generatePackStory(packId);
         return;
@@ -916,6 +917,7 @@ function previewTeacherMap(packId) {
     const custom = generatedStoryData(pack);
     const heroes = Object.values(heroCatalog(pack));
     const artReady = Boolean(custom?.art?.mapImage && custom?.art?.heroImage);
+    document.getElementById('teacher-map-preview-title').textContent = versionMeta ? `世界 ${versionMeta.versionNo} 预览` : '词包学习地图预览';
     document.getElementById('teacher-map-preview-summary').innerHTML =
         `<strong style="color:var(--text);">${escH(pack.name)}</strong> 将进入
         <strong style="color:var(--gold);">《${escH(story.short)}》</strong>，并按 ${words.length} 个词生成
@@ -948,8 +950,11 @@ function previewTeacherMap(packId) {
             <span class="btn btn-xs btn-gold" style="cursor:default;">♛ 命运守卫战</span>
         </div>
         ${custom && !artReady
-            ? `<button class="btn btn-gold" style="width:100%;margin-top:12px;" onclick="generatePackStory('${escQ(pack.id)}', true)">重新生成缺失的地图与人物图</button>`
+            ? `<button class="btn btn-gold" style="width:100%;margin-top:12px;" onclick="generatePackStory('${escQ(pack.id)}',true,false,'${escQ(versionMeta?.id || custom.worldVersionId || '')}')">重新生成缺失的地图与人物图</button>`
             : ''}`;
+    document.getElementById('teacher-map-preview-actions').innerHTML = versionMeta
+        ? `${!versionMeta.isActive ? `<button class="btn btn-green" style="flex:1;" onclick="selectTeacherWorld('${escQ(pack.id)}','${escQ(versionMeta.id)}')">设为学生世界</button>` : ''}<button class="btn btn-cyan" style="flex:1;" onclick="openWorldManager('${escQ(pack.id)}')">返回版本库</button>`
+        : `<button class="btn btn-cyan" style="width:100%;" onclick="closeModal('m-map-preview')">关闭</button>`;
     openModal('m-map-preview');
 }
 

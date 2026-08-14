@@ -11,7 +11,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link rel="stylesheet" href="./theme.css">
+    <link rel="stylesheet" href="./battle-monsters.css">
     <script src="./theme.js"></script>
+    <script src="./battle-monsters.js"></script>
     <style>
         /* ══════════════ 100% 继承 index-claude原版.html CSS ══════════════ */
         * {
@@ -551,6 +553,8 @@
             width: 100%;
             aspect-ratio: 16 / 9;
             isolation: isolate;
+            overflow: hidden;
+            transform-style: preserve-3d;
             background-color: #07111f;
             background-size: cover;
             background-position: center;
@@ -571,6 +575,19 @@
                 radial-gradient(circle at 50% 46%, transparent 58%, rgba(1, 5, 12, .35) 100%),
                 linear-gradient(180deg, rgba(1, 5, 12, .16), transparent 18%, transparent 78%, rgba(1, 5, 12, .38));
             pointer-events: none;
+        }
+
+        .world-map-vignette::before {
+            content: '';
+            position: absolute;
+            inset: 50% -8% -24%;
+            background:
+                repeating-linear-gradient(90deg, transparent 0 72px, rgba(156, 220, 255, .08) 73px 74px),
+                repeating-linear-gradient(0deg, transparent 0 44px, rgba(156, 220, 255, .07) 45px 46px);
+            transform: perspective(420px) rotateX(63deg) scale(1.15);
+            transform-origin: center bottom;
+            mask-image: linear-gradient(transparent, rgba(0,0,0,.62));
+            opacity: .48;
         }
 
         .world-map-titleplate {
@@ -597,7 +614,7 @@
             inset: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            z-index: 3;
             pointer-events: none;
             overflow: visible;
             filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .85));
@@ -628,10 +645,31 @@
             color: #fff6d2;
             text-align: center;
             cursor: pointer;
-            z-index: 4;
-            box-shadow: 0 4px 0 rgba(0, 0, 0, .5), 0 7px 16px rgba(0, 0, 0, .42);
+            z-index: 5;
+            box-shadow: 0 6px 0 #111824, 0 10px 0 rgba(0, 0, 0, .48), 0 16px 22px rgba(0, 0, 0, .52);
             transition: transform .16s ease, border-color .16s ease, opacity .16s ease, box-shadow .16s ease;
         }
+
+        .world-node::after {
+            content: '';
+            position: absolute;
+            z-index: -1;
+            left: 50%;
+            top: 74%;
+            width: 132%;
+            height: 52%;
+            transform: translateX(-50%) rotateX(62deg);
+            border: 1px solid rgba(191, 225, 255, .42);
+            border-radius: 50%;
+            background: radial-gradient(ellipse, rgba(67, 125, 174, .48), rgba(4, 10, 18, .72) 70%);
+            box-shadow: 0 8px 15px rgba(0,0,0,.58);
+            pointer-events: none;
+        }
+
+        .world-node.available::after { border-color: rgba(105, 213, 255, .72); }
+        .world-node.choice::after { border-color: rgba(216, 164, 255, .78); }
+        .world-node.recommended::after { border-color: rgba(255, 226, 142, .9); box-shadow: 0 7px 18px rgba(255, 204, 85, .28); }
+        .world-node.done::after { border-color: rgba(131, 230, 163, .75); }
 
         .world-node:hover:not(:disabled),
         .world-node:focus-visible { transform: translate(-50%, -58%) scale(1.08); z-index: 10; }
@@ -710,17 +748,20 @@
 
         .world-player {
             position: absolute;
-            right: -24px;
-            bottom: -16px;
-            width: 38px;
-            height: 38px;
+            right: -34px;
+            bottom: -28px;
+            width: 48px;
+            height: 62px;
             border: 2px solid #ffe28e;
-            border-radius: 50%;
+            border-radius: 48% 48% 34% 34%;
             background-color: #19130a;
             background-size: 330% auto;
             background-position-y: 18%;
             box-shadow: 0 0 0 3px rgba(255, 226, 142, .28), 0 5px 12px rgba(0, 0, 0, .65);
+            animation: worldHeroStep 1.6s ease-in-out infinite;
         }
+
+        @keyframes worldHeroStep { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
 
         .hero-art {
             display: block;
@@ -852,6 +893,20 @@
         .teacher-map-stage .story-main { border-color: rgba(255, 215, 0, .4); color: var(--gold); }
         .teacher-map-stage .story-a { border-color: rgba(0, 212, 255, .4); color: var(--cyan); }
         .teacher-map-stage .story-b { border-color: rgba(181, 123, 238, .4); color: var(--purple); }
+        .world-version-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px; }
+        .world-version-card { overflow:hidden;border:1px solid var(--border);border-radius:6px;background:var(--bg); }
+        .world-version-card.active { border-color:var(--green);box-shadow:0 0 0 2px rgba(78,255,145,.12); }
+        .world-version-cover { position:relative;height:126px;background:#07111f center/cover no-repeat; }
+        .world-version-cover::after { content:'';position:absolute;inset:0;background:linear-gradient(transparent 35%,rgba(3,8,16,.88)); }
+        .world-version-badge { position:absolute;z-index:2;top:9px;left:9px;padding:5px 7px;border:1px solid rgba(255,255,255,.45);background:rgba(4,9,17,.82);font-family:var(--px);font-size:6px;color:#fff; }
+        .world-version-active { position:absolute;z-index:2;right:9px;top:9px;padding:5px 7px;background:#0d5733;color:#caffdf;font-size:11px;font-weight:700; }
+        .world-version-title { position:absolute;z-index:2;right:10px;bottom:9px;left:10px;color:#fff7d6;font-weight:800;text-shadow:0 2px 7px #000; }
+        .world-version-body { padding:11px; }
+        .world-version-meta { min-height:38px;color:var(--dim);font-size:12px;line-height:1.6; }
+        .world-version-actions { display:flex;gap:7px;margin-top:9px; }
+        .world-version-actions .btn { flex:1; }
+        .world-version-toolbar { display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:13px;padding:11px;border-left:3px solid var(--gold);background:rgba(255,215,0,.05); }
+        @media(max-width:600px){.world-version-toolbar{align-items:stretch;flex-direction:column}.world-version-toolbar .btn{width:100%}.world-version-grid{grid-template-columns:1fr}}
 
         .hero-choice-grid {
             display: grid;
@@ -2094,10 +2149,23 @@
 
     <div class="modal-bg" id="m-map-preview">
         <div class="panel" style="max-width:680px;">
-            <div class="panel-title" style="color:var(--cyan);border-color:var(--cyan);">词包学习地图预览</div>
+            <div class="panel-title" id="teacher-map-preview-title" style="color:var(--cyan);border-color:var(--cyan);">词包学习地图预览</div>
             <div id="teacher-map-preview-summary" style="font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:14px;"></div>
             <div class="teacher-map-preview" id="teacher-map-preview-body"></div>
-            <button class="btn btn-cyan" style="width:100%;margin-top:16px;" onclick="closeModal('m-map-preview')">确认</button>
+            <div id="teacher-map-preview-actions" style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;">
+                <button class="btn btn-cyan" style="flex:1;" onclick="closeModal('m-map-preview')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="m-world-generate-confirm">
+        <div class="panel" style="max-width:480px;">
+            <div class="panel-title" style="color:var(--gold);border-color:var(--gold);">生成候选世界</div>
+            <p style="font-size:13px;color:var(--dim);line-height:1.8;margin-bottom:18px;">新世界会调用一次文字与图片生成额度，并作为候选版本保存。当前学生世界不会改变，直到老师手动选择。</p>
+            <div style="display:flex;gap:9px;">
+                <button class="btn btn-gold" style="flex:1;" id="world-generate-confirm-btn">确认生成</button>
+                <button class="btn btn-gray" style="flex:1;" onclick="closeModal('m-world-generate-confirm')">取消</button>
+            </div>
         </div>
     </div>
 
@@ -2609,7 +2677,7 @@
                             </div>
                             <div class="pack-btns">
                                 ${storyStatus.canPreview
-                                    ? `<button class="btn btn-xs btn-cyan" onclick="event.stopPropagation();previewTeacherMap('${escQ(p.id)}')">预览专属世界</button>`
+                                    ? `<button class="btn btn-xs btn-cyan" onclick="event.stopPropagation();openWorldManager('${escQ(p.id)}')">管理世界</button>`
                                     : `<button class="btn btn-xs btn-gold" ${storyStatus.key === 'generating' ? 'disabled' : ''} onclick="event.stopPropagation();generatePackStory('${escQ(p.id)}')">${storyStatus.key === 'generating' ? '生成中' : '生成专属世界'}</button>`}
                                 <button class="btn btn-xs btn-gray" onclick="event.stopPropagation();deletePack('${p.id}')">删除</button>
                                 <span style="color:var(--dim);font-size:16px;padding:0 6px;">▼</span>
@@ -2647,18 +2715,20 @@
         }
 
         function showStoryGeneration(pack) {
+            document.getElementById('teacher-map-preview-title').textContent = '正在构建新世界';
             document.getElementById('teacher-map-preview-summary').innerHTML =
-                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 正在首次生成专属世界。生成完成后会保存到词包，所有学生共用，不会重复收费。`;
+                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 正在生成并永久保存一个世界版本。相同词包会共用版本库，不会为每名学生重复生成。`;
             document.getElementById('teacher-map-preview-body').innerHTML = `
                 <div class="story-generation-steps">
                     <div class="story-generation-step"><strong>1. 分析词包主题</strong>从 ${pack.words.length} 个词中识别主题、时代、场景与情绪。</div>
-                    <div class="story-generation-step"><strong>2. 编写完整冒险</strong>生成 12 章连续故事、三位主角、A/B 支线和两个结局。</div>
+                    <div class="story-generation-step"><strong>2. 编写完整冒险</strong>按每章最多 10 个词生成 ${Math.max(1, Math.ceil(pack.words.length / 10))} 章连续故事、三位主角、A/B 支线和两个结局。</div>
                     <div class="story-generation-step"><strong>3. 绘制游戏素材</strong>生成这个词包独有的 2.5D 地图和人物立绘，并永久保存。</div>
                 </div>`;
+            document.getElementById('teacher-map-preview-actions').innerHTML = '<button class="btn btn-gray" style="width:100%;" disabled>生成完成前请保持页面打开</button>';
             openModal('m-map-preview');
         }
 
-        async function generatePackStory(packId, retry = false) {
+        async function generatePackStory(packId, retry = false, createNew = false, retryVersionId = null) {
             let pack = (window._teacherPacks || []).find(item => item.id === packId);
             if (!pack) {
                 const { data } = await vqClient.from('word_packs').select('*').eq('id', packId).maybeSingle();
@@ -2675,25 +2745,104 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${session.access_token}`
                     },
-                    body: JSON.stringify({ packId, retry })
+                    body: JSON.stringify({
+                        packId,
+                        createNew,
+                        retryVersionId: retryVersionId || (retry ? pack.story_data?.worldVersionId || null : null)
+                    })
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(result.error || '专属世界生成失败');
-                pack.story_data = result.storyData;
+                if (result.isActive || !pack.story_data?.story) pack.story_data = result.storyData;
                 const existingIndex = (window._teacherPacks || []).findIndex(item => item.id === packId);
                 if (existingIndex >= 0) window._teacherPacks[existingIndex] = { ...pack };
-                toast(result.cached ? '已读取这个词包现有的专属世界' : '专属世界生成完成', 'ok');
+                toast(result.cached ? '已读取现有世界' : (result.isActive ? '专属世界生成并启用完成' : '候选世界已保存，请预览后选择'), 'ok');
                 await switchTeacherTab('pack');
-                previewTeacherMap(packId);
+                await openWorldManager(packId);
             } catch (error) {
                 console.error('Story generation:', error);
                 document.getElementById('teacher-map-preview-summary').innerHTML =
                     `<strong style="color:var(--red);">生成没有完成</strong> · ${escH(error.message)}`;
                 document.getElementById('teacher-map-preview-body').innerHTML =
-                    `<button class="btn btn-gold" style="width:100%;" onclick="generatePackStory('${escQ(packId)}', true)">重新生成专属世界</button>`;
+                    `<div style="font-size:13px;color:var(--dim);line-height:1.7;">当前正在使用的世界没有被覆盖。你可以回到版本库重试失败版本。</div>`;
+                document.getElementById('teacher-map-preview-actions').innerHTML =
+                    `<button class="btn btn-cyan" style="width:100%;" onclick="openWorldManager('${escQ(packId)}')">返回世界版本库</button>`;
                 toast(error.message, 'err');
                 await switchTeacherTab('pack');
             }
+        }
+
+        async function openWorldManager(packId) {
+            const pack = (window._teacherPacks || []).find(item => item.id === packId);
+            if (!pack) return toast('没有找到这个词包', 'err');
+            document.getElementById('teacher-map-preview-title').textContent = '世界版本库';
+            document.getElementById('teacher-map-preview-summary').innerHTML = `<strong style="color:var(--text);">${escH(pack.name)}</strong> · 正在读取已保存世界…`;
+            document.getElementById('teacher-map-preview-body').innerHTML = '<div style="padding:24px;text-align:center;color:var(--cyan);">读取中…</div>';
+            document.getElementById('teacher-map-preview-actions').innerHTML = '<button class="btn btn-gray" style="width:100%;" onclick="closeModal(\'m-map-preview\')">关闭</button>';
+            openModal('m-map-preview');
+            const { data, error } = await vqClient.rpc('list_vq_story_versions', { p_pack_id: packId });
+            if (error) {
+                document.getElementById('teacher-map-preview-body').innerHTML = `<div style="color:var(--red);">${escH(error.message)}</div>`;
+                return;
+            }
+            window._worldVersionManager = { packId, ...(data || {}), versions: data?.versions || [] };
+            renderWorldManager(pack);
+        }
+
+        function renderWorldManager(pack) {
+            const manager = window._worldVersionManager || { versions: [], maxVersions: 5 };
+            const versions = manager.versions || [];
+            const readyCount = versions.filter(version => ['ready', 'partial'].includes(version.status)).length;
+            document.getElementById('teacher-map-preview-summary').innerHTML =
+                `<strong style="color:var(--text);">${escH(pack.name)}</strong> 已保存 ${versions.length}/${manager.maxVersions || 5} 个世界。学生只会看到标记为“正在使用”的版本；切换版本不会调用 AI。`;
+            const canCreate = versions.length < (manager.maxVersions || 5) && !versions.some(version => version.status === 'generating');
+            const cards = versions.map(version => {
+                const story = version.storyData?.story || {};
+                const image = version.storyData?.art?.mapImage || './assets/story/world-map.jpg';
+                const statusText = version.status === 'ready' ? '完整' : version.status === 'partial' ? '图片待补全' : version.status === 'generating' ? '生成中' : '生成失败';
+                const previewable = ['ready', 'partial'].includes(version.status);
+                return `<article class="world-version-card ${version.isActive ? 'active' : ''}">
+                    <div class="world-version-cover" style="background-image:url('${escQ(image)}')">
+                        <span class="world-version-badge">WORLD ${version.versionNo}</span>
+                        ${version.isActive ? '<span class="world-version-active">学生正在使用</span>' : ''}
+                        <div class="world-version-title">${escH(story.title || `候选世界 ${version.versionNo}`)}</div>
+                    </div>
+                    <div class="world-version-body">
+                        <div class="world-version-meta">${statusText} · ${escH(story.short || '等待世界资料')}<br>${version.createdAt ? new Date(version.createdAt).toLocaleDateString('zh-CN') : ''}</div>
+                        <div class="world-version-actions">
+                            ${previewable ? `<button class="btn btn-xs btn-cyan" onclick="previewWorldVersion('${escQ(pack.id)}','${escQ(version.id)}')">预览</button>` : ''}
+                            ${previewable && !version.isActive ? `<button class="btn btn-xs btn-green" onclick="selectTeacherWorld('${escQ(pack.id)}','${escQ(version.id)}')">设为学生世界</button>` : ''}
+                            ${version.status === 'failed' || version.status === 'partial' ? `<button class="btn btn-xs btn-gold" onclick="generatePackStory('${escQ(pack.id)}',true,false,'${escQ(version.id)}')">重试</button>` : ''}
+                        </div>
+                    </div>
+                </article>`;
+            }).join('');
+            document.getElementById('teacher-map-preview-body').innerHTML = `
+                <div class="world-version-toolbar"><div><strong style="color:var(--gold);">${readyCount} 个可用世界</strong><br><span style="font-size:12px;color:var(--dim);">首个世界和所有旧版本都会保留。</span></div>
+                <button class="btn btn-sm btn-gold" ${canCreate ? '' : 'disabled'} onclick="confirmNewWorld('${escQ(pack.id)}')">+ 生成候选世界</button></div>
+                <div class="world-version-grid">${cards || '<div style="padding:20px;color:var(--dim);">还没有已保存世界。</div>'}</div>`;
+            document.getElementById('teacher-map-preview-actions').innerHTML = '<button class="btn btn-gray" style="width:100%;" onclick="closeModal(\'m-map-preview\')">关闭</button>';
+        }
+
+        function confirmNewWorld(packId) {
+            const button = document.getElementById('world-generate-confirm-btn');
+            button.onclick = () => { closeModal('m-world-generate-confirm'); generatePackStory(packId, false, true); };
+            openModal('m-world-generate-confirm');
+        }
+
+        function previewWorldVersion(packId, versionId) {
+            const version = (window._worldVersionManager?.versions || []).find(item => item.id === versionId);
+            if (!version) return toast('没有找到这个世界版本', 'err');
+            previewTeacherMap(packId, version.storyData, version);
+        }
+
+        async function selectTeacherWorld(packId, versionId) {
+            const { data, error } = await vqClient.rpc('select_vq_story_version', { p_pack_id: packId, p_version_id: versionId });
+            if (error || !data?.selected) return toast(error?.message || '世界切换失败', 'err');
+            const pack = (window._teacherPacks || []).find(item => item.id === packId);
+            if (pack) pack.story_data = data.storyData;
+            toast('学生世界已切换，未产生 AI 费用', 'ok');
+            await openWorldManager(packId);
         }
 
         function previewTeacherMap(packId) {
@@ -3118,7 +3267,6 @@
             G.stages = [shuffle(s0), shuffle(s1), shuffle(s2), shuffle(s3)];
             G.stgIdx = 0; G.qs = G.stages[0]; G.qIdx = 0;
             document.getElementById('m-label').textContent = '复习';
-            document.getElementById('mon-em').className = 'mon-emoji float-anim';
             updateMonsterViewReview(); updatePHp(); renderDots(); updateScore(); go('s-battle'); showQ();
         }
         function updateMonsterViewReview() {
@@ -3126,9 +3274,9 @@
             const form = forms[G.stgIdx] || forms[3];
             G.mhpMax = 20 + G.stgIdx * 5; G.mhp = G.mhpMax;
             const emEl = document.getElementById('mon-em');
-            emEl.textContent = form.e; document.getElementById('mon-name').textContent = form.n;
-            emEl.style.fontSize = `${60 + (G.stgIdx * 15)}px`;
-            emEl.style.filter = 'none';
+            document.getElementById('mon-name').textContent = form.n;
+            if (window.VQBattleMonster) VQBattleMonster.mount(emEl, { index: 7, stage: G.stgIdx, name: form.n });
+            else emEl.textContent = form.e;
             updateMonHp();
         }
         function mapVersionForPack() {
@@ -3584,7 +3732,6 @@
 
             const modeNames = { memory: '记忆', sound: '听辨', spelling: '拼写', balanced: `LV.${li + 1}` };
             document.getElementById('m-label').textContent = modeNames[mode] || `LV.${li + 1}`;
-            document.getElementById('mon-em').className = 'mon-emoji float-anim';
             updateMonsterView(); updatePHp(); renderDots(); updateScore(); go('s-battle'); showQ();
         }
 
@@ -3593,9 +3740,14 @@
             const mon = MONSTERS[G.lvIdx % MONSTERS.length], form = mon.stages[G.stgIdx];
             G.mhpMax = mon.hpBase + (G.stgIdx * 10); G.mhp = G.mhpMax;
             const emEl = document.getElementById('mon-em');
-            emEl.textContent = form.e; document.getElementById('mon-name').textContent = form.n;
-            emEl.style.fontSize = `${60 + (G.stgIdx * 20)}px`;
-            emEl.style.filter = G.stgIdx > 1 ? `drop-shadow(0 0 ${G.stgIdx * 10}px var(--red))` : 'none';
+            document.getElementById('mon-name').textContent = form.n;
+            if (window.VQBattleMonster) {
+                VQBattleMonster.mount(emEl, { index: G.lvIdx, stage: G.stgIdx, name: form.n });
+                VQBattleMonster.enrage(emEl, G.stgIdx > 1);
+            } else {
+                emEl.textContent = form.e;
+                emEl.style.fontSize = `${60 + (G.stgIdx * 20)}px`;
+            }
             updateMonHp();
         }
 
@@ -3689,6 +3841,7 @@
         function onWrong() {
             recordMapSkill(false);
             G.total++; G.streak = 0; G.hp--; updatePHp(); playSfx('lose'); flashFX('err'); document.getElementById('streak-el').innerHTML = '';
+            if (window.VQBattleMonster) VQBattleMonster.attack(document.getElementById('mon-em'));
             // 记录错题：1次 → 不太熟悉，2次+ → 需要复习，并立即保存到云端
             const q = G.qs[G.qIdx];
             if (q && !G.isReview) {
@@ -3965,7 +4118,12 @@
         function renderDots() { const c = document.getElementById('sdots'); c.innerHTML = ''; G.stages.forEach((_, i) => { const d = document.createElement('div'); d.className = 'sdot ' + (i < G.stgIdx ? 'done' : i === G.stgIdx ? 'cur' : ''); c.appendChild(d); }); }
         function updateScore() { document.getElementById('score-el').textContent = 'SCORE: ' + G.score; }
         function flashFX(type) { const el = document.getElementById('flash-el'); el.className = 'flash ' + (type === 'ok' ? 'ok-flash' : 'err-flash'); setTimeout(() => el.className = 'flash', 500); }
-        function animMon() { const el = document.getElementById('mon-em'); el.classList.remove('float-anim', 'hurt-anim'); void el.offsetWidth; el.classList.add('hurt-anim'); setTimeout(() => { el.classList.remove('hurt-anim'); el.classList.add('float-anim'); }, 550); }
+        function animMon() {
+            const el = document.getElementById('mon-em');
+            if (window.VQBattleMonster) { VQBattleMonster.hurt(el); return; }
+            el.classList.remove('float-anim', 'hurt-anim'); void el.offsetWidth; el.classList.add('hurt-anim');
+            setTimeout(() => { el.classList.remove('hurt-anim'); el.classList.add('float-anim'); }, 550);
+        }
         function spawnDmg(val, type) { const el = document.createElement('div'); el.className = `dmgnum ${type}`; el.textContent = `-${val}`; const m = document.getElementById('mon-em').getBoundingClientRect(); el.style.left = (m.left + m.width / 2 - 16) + 'px'; el.style.top = m.top + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 1000); }
         function escH(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
         function escQ(s){return String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[\r\n]/g,' ')}

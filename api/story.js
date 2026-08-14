@@ -23,6 +23,7 @@ module.exports = async function handler(req, res) {
 
   let activePackId = '';
   let activeSignature = '';
+  let activeVersionId = '';
   let activeFallbackStory = null;
   try {
     const packId = String(req.body?.packId || '').trim();
@@ -38,10 +39,20 @@ module.exports = async function handler(req, res) {
     const signature = packSignature(words);
     const chapterCount = Math.max(1, Math.ceil(words.length / 10));
     const storyBeatCount = Math.min(chapterCount, 48);
-    const existingStories = await getExistingStoryContext(pack.id, signature, authorization);
+    const createNew = req.body?.createNew === true;
+    const retryVersionId = /^[a-f0-9-]{36}$/i.test(String(req.body?.retryVersionId || ''))
+      ? String(req.body.retryVersionId)
+      : null;
+    const [otherStories, versionLibrary] = await Promise.all([
+      getExistingStoryContext(pack.id, signature, authorization),
+      getStoryVersionLibrary(pack.id, authorization),
+    ]);
+    const existingStories = [...versionLibrary, ...otherStories].slice(0, 16);
     activePackId = pack.id;
     activeSignature = signature;
     if (
+      !createNew
+      &&
       pack.story_data?.status === 'partial'
       && pack.story_data?.signature === signature
       && pack.story_data?.version >= 4
@@ -50,29 +61,38 @@ module.exports = async function handler(req, res) {
     ) {
       activeFallbackStory = pack.story_data;
     }
-    const claim = await callRpc('claim_vq_story_generation', {
+    const claim = await callRpc('claim_vq_story_version', {
       p_pack_id: pack.id,
       p_signature: signature,
-      p_retry: req.body?.retry === true,
+      p_create_new: createNew,
+      p_retry_version_id: retryVersionId,
     }, authorization);
 
     if (claim?.cached && claim.story_data) {
-      return res.status(200).json({ cached: true, storyData: claim.story_data });
+      return res.status(200).json({ cached: true, storyData: claim.story_data, versionId: claim.versionId, versionNo: claim.versionNo, isActive: true });
     }
     if (!claim?.claimed) {
       const status = claim?.reason === 'generating' ? 409 : (claim?.reason === 'forbidden' ? 403 : 400);
+      const message = claim?.reason === 'generating'
+        ? '这个词包的世界正在生成，请稍后刷新'
+        : (claim?.reason === 'limit_reached' ? '每个词包最多保存 5 个世界，请直接选用已有版本' : '无法开始故事生成');
       return res.status(status).json({
-        error: claim?.reason === 'generating' ? '这个词包的专属世界正在生成，请稍后刷新' : '无法开始故事生成',
+        error: message,
         reason: claim?.reason || 'unknown',
       });
     }
+    activeVersionId = String(claim.versionId || '');
+    if (!activeVersionId) throw new Error('Story version was not allocated');
+    const versionNo = Number(claim.versionNo) || 1;
+    const generationSeed = crypto.createHash('sha256').update(`${signature}:${versionNo}:${activeVersionId}`).digest('hex');
+    if (retryVersionId && claim.story_data?.status === 'partial') activeFallbackStory = claim.story_data;
 
     const quota = await callRpc('reserve_ai_budget', {
       p_estimated_tokens: 14000,
-      p_kind: 'pack_story_generation',
+      p_kind: createNew ? 'pack_story_alternative' : 'pack_story_generation',
     }, authorization);
     if (!quota?.allowed) {
-      await finishFailure(pack.id, signature, 'AI 生成额度不足', authorization, activeFallbackStory);
+      await finishFailure(pack.id, activeVersionId, signature, 'AI 生成额度不足', authorization, activeFallbackStory);
       return res.status(429).json({ error: budgetError(quota?.reason) });
     }
 
@@ -82,15 +102,17 @@ module.exports = async function handler(req, res) {
           heroes: activeFallbackStory.heroes,
           art: activeFallbackStory.art,
         }
-      : await generateStory(pack, words, signature, existingStories, storyBeatCount);
-    const imageResult = await generateAndStoreArt(pack, generated, signature, authorization);
+      : await generateStory(pack, words, generationSeed, existingStories, storyBeatCount);
+    const imageResult = await generateAndStoreArt(pack, generated, generationSeed, authorization);
     const finalMapImage = imageResult.mapImage || generated.art.mapImage || '';
     const finalHeroImage = imageResult.heroImage || generated.art.heroImage || '';
     const artComplete = Boolean(finalMapImage && finalHeroImage);
     const storyData = {
-      version: 4,
+      version: 5,
       status: artComplete ? 'ready' : 'partial',
       signature,
+      worldVersionId: activeVersionId,
+      worldVersionNo: versionNo,
       chapterCount,
       maxWordsPerChapter: 10,
       generatedAt: new Date().toISOString(),
@@ -109,17 +131,17 @@ module.exports = async function handler(req, res) {
       },
     };
 
-    const saved = await callRpc('finish_vq_story_generation', {
+    const saved = await callRpc('finish_vq_story_version', {
       p_pack_id: pack.id,
-      p_signature: signature,
+      p_version_id: activeVersionId,
       p_story_data: storyData,
     }, authorization);
-    if (!saved) throw new Error('Generated story could not be saved');
-    return res.status(200).json({ cached: false, storyData });
+    if (!saved?.saved) throw new Error('Generated story could not be saved');
+    return res.status(200).json({ cached: false, storyData: saved.storyData || storyData, versionId: activeVersionId, versionNo, isActive: Boolean(saved.isActive) });
   } catch (error) {
     console.error('[pack-story]', error.message);
-    if (activePackId && activeSignature) {
-      await finishFailure(activePackId, activeSignature, error.message, authorization, activeFallbackStory);
+    if (activePackId && activeSignature && activeVersionId) {
+      await finishFailure(activePackId, activeVersionId, activeSignature, error.message, authorization, activeFallbackStory);
     }
     return res.status(error.status || 500).json({ error: error.publicMessage || '专属世界生成失败，请稍后重试' });
   }
@@ -160,6 +182,27 @@ async function getExistingStoryContext(packId, signature, authorization) {
       ]).filter(Boolean),
     }];
   }).slice(0, 12);
+}
+
+async function getStoryVersionLibrary(packId, authorization) {
+  try {
+    const library = await callRpc('list_vq_story_versions', { p_pack_id: packId }, authorization);
+    return (library?.versions || []).flatMap(version => storyContext(version?.storyData)).slice(0, 8);
+  } catch (error) {
+    console.warn('[pack-story] Version context unavailable:', error.message);
+    return [];
+  }
+}
+
+function storyContext(data) {
+  const story = data?.story;
+  if (!['ready', 'partial'].includes(data?.status) || !story) return [];
+  return [{
+    title: cleanText(story.title, 100),
+    premise: cleanText(story.premise, 280),
+    chapters: (story.beats || []).slice(0, 12).map(beat => cleanText(beat?.title, 80)).filter(Boolean),
+    branches: (story.beats || []).slice(0, 12).flatMap(beat => [cleanText(beat?.a?.[0], 80), cleanText(beat?.b?.[0], 80)]).filter(Boolean),
+  }];
 }
 
 async function callRpc(name, body, authorization) {
@@ -535,7 +578,7 @@ async function uploadAsset(packId, signature, kind, sourceUrl, authorization) {
   return `${SUPABASE_URL}/storage/v1/object/public/story-assets/${path}`;
 }
 
-async function finishFailure(packId, signature, message, authorization, fallbackStory = null) {
+async function finishFailure(packId, versionId, signature, message, authorization, fallbackStory = null) {
   const failureData = fallbackStory
     ? {
         ...fallbackStory,
@@ -545,16 +588,16 @@ async function finishFailure(packId, signature, message, authorization, fallback
         retryFailedAt: new Date().toISOString(),
       }
     : {
-        version: 3,
+        version: 5,
         status: 'failed',
         signature,
         failedAt: new Date().toISOString(),
         error: String(message).slice(0, 180),
       };
   try {
-    await callRpc('finish_vq_story_generation', {
+    await callRpc('finish_vq_story_version', {
       p_pack_id: packId,
-      p_signature: signature,
+      p_version_id: versionId,
       p_story_data: failureData,
     }, authorization);
   } catch (error) {
